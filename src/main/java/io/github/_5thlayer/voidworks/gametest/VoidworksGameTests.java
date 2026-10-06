@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 5thlayer
 // SPDX-License-Identifier: MIT
 
-package io.github._5thlayer.examplelib.gametest;
+package io.github._5thlayer.voidworks.gametest;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 import com.mojang.serialization.MapCodec;
-import io.github._5thlayer.examplelib.ExampleLib;
+import io.github._5thlayer.voidworks.Voidworks;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -26,24 +26,24 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * structure, a stone floor that {@code scripts/build-gametest-structures.py} writes, and sets up
  * what it needs itself, so the setup is in the diff.
  */
-public final class ExampleLibGameTests {
+public final class VoidworksGameTests {
 
     private static final Identifier PLATFORM = id("gametest/platform");
 
     private static final DeferredRegister<MapCodec<? extends GameTestInstance>> TEST_TYPES =
-            DeferredRegister.create(Registries.TEST_INSTANCE_TYPE, ExampleLib.MOD_ID);
+            DeferredRegister.create(Registries.TEST_INSTANCE_TYPE, Voidworks.MOD_ID);
 
     static {
         TEST_TYPES.register("code", () -> CodeGameTest.CODEC);
     }
 
-    private ExampleLibGameTests() {
+    private VoidworksGameTests() {
     }
 
     public static void register(IEventBus modBus) {
         TEST_TYPES.register(modBus);
         // Posted only when game tests are enabled, so a production server never registers the tests.
-        modBus.addListener(ExampleLibGameTests::registerTests);
+        modBus.addListener(VoidworksGameTests::registerTests);
     }
 
     private static void registerTests(RegisterGameTestsEvent event) {
@@ -54,7 +54,7 @@ public final class ExampleLibGameTests {
     }
 
     private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(ExampleLib.MOD_ID, path);
+        return Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, path);
     }
 
     /** What a test class is handed: a name, a tick budget and a body per test. */

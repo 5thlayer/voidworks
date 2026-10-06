@@ -14,7 +14,7 @@ Each change a Consumer can use or will notice adds its line under `## Unreleased
 
 1. sets `mod_version` and turns `## Unreleased` into `## <version>` under a fresh, empty Unreleased
 2. runs the build and the game tests, putting both files back if either fails
-3. commits `chore: release <version>`, runs `publishToMavenLocal`, and tags `v<version>` with the jar's sha256
+3. commits `chore: release <version>`, runs `publishToMavenLocal`, and tags `voidworks-v<version>` with the jar's sha256
 4. with `--upload`, uploads the jar to Modrinth and CurseForge with `scripts/upload.py` (below), or says it skipped the upload when `gradle.properties` names neither project. A failed upload leaves the local release and the tag in place; the script names the site that failed, and `scripts/upload.py --site <site> <version>` retries it. Without `--upload` it stops after the tag and prints `scripts/upload.py <version>`, since an upload is public and for good and waits on the user's word; the release train runs it once the user says to push. `release.sh` takes its flags in any position and refuses an unknown flag or a second version before it changes anything. Under `MAVEN_REPO_LOCAL`, a trial run, the upload is only a dry run.
 
 It pushes nothing to git, and ends by printing the push command. To try the script out, set `MAVEN_REPO_LOCAL` to a scratch folder and run it in a throwaway clone: a version published to the real `~/.m2` is permanent.
@@ -41,4 +41,4 @@ A version in `~/.m2` never changes. A fix is the next patch version. `publishToM
 
 ## Tags
 
-A release is tagged `v<version>`, annotated with its jar's sha256. `git tag -l 'v*' -n9` lists them.
+A release is tagged `voidworks-v<version>`, annotated with its jar's sha256. `git tag -l 'voidworks-v*' -n9` lists them.

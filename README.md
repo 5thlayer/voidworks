@@ -1,29 +1,23 @@
-# libworks
+# Voidworks
 
-The GitHub template every 5thlayer Library starts from (FactoryWorks ADR-0090). A Library is a 5thlayer mod the FactoryWorks Pack consumes as a pinned local jar.
+Voidworks harvests **void** from the world itself. Feed a block to a Void Displacer and it is pressed into the space between blocks, yielding motes and leaving indestructible Voidstone behind, for good. Motes crawl through Voidstone, ride Void Dragons between dimensions, and are spent on endgame gear and on **Mutation**: upgrading an item up its Family, or breaking it down into its ingredients.
 
-libworks holds no runtime code, and no Library depends on it. What it holds is copied: a NeoForge mod named `examplelib` that builds, passes its own tests, and does nothing else.
+**NeoForge, Minecraft 26.1.2 only.** Voidworks is in design: nothing is playable yet. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md), and the terms are in [CONTEXT.md](CONTEXT.md).
 
-## What a Library gets
+## What sets it apart
 
-- A ModDevGradle build on Java 25 and NeoForge 26.1.2, published to `~/.m2` only.
-- A GameTest harness: `runGameTestServer` runs the Library's game tests headless and fails if it ran none. `scripts/build-gametest-structures.py` writes the stone platform they stand on.
-- JUnit tests on a plain JVM, with no Minecraft.
-- `scripts/release.sh`, which releases a version to `~/.m2` and tags it; a published version never changes. The `skillworks:quicklaunch` skill opens the dev client into the most recent save in `run/saves`, one client per checkout.
-- CI on every push: the build, the JUnit tests, the game tests, and a REUSE lint. It never publishes.
-- MIT under REUSE, `CLAUDE.md`, a `CONTEXT.md` stub, `docs/agents/`, conventional commits.
-- ADR 0001, the versioning rule every Library inherits: below 1.0 an addition bumps the patch.
+- **Void never becomes ordinary items.** Unlike EMC or UU-matter, motes buy power, Mutation and void-only materials. Mutation is the only path from motes to an ordinary item, and it needs the item's Family or recipe to start from.
+- **Harvesting consumes the world.** Every harvested position becomes Voidstone and every Displacer ends as Voidstone, so void is bounded by the world you are willing to spend.
+- **Void runs downhill.** A mote is worth more the higher the Void Pressure where it was harvested, and the lower the Pressure where it is spent. The End is the reservoir and the Nether the turbine, and moving motes between them is the logistics game.
 
-## Starting a Library
+## For pack authors
 
-1. Create the repo from this template: `gh repo create 5thlayer/<mod_id> --template 5thlayer/libworks --public --clone`.
-2. Fill the placeholders: `scripts/fill-template.sh <mod_id> <ClassName> "<Display Name>" "<description>"`. It renames the package and every `examplelib`, `ExampleLib` and `Example Library`, and deletes itself.
-3. Replace this README with the Library's own, write `CONTEXT.md`'s first terms, and run `sh ./gradlew build runGameTestServer`.
+Planned, all as data: the Density of each block by tag, the displacement table that decides what an Overworld Displacer returns for a terrain block, the Families an upgrade climbs, and overrides for breakdowns.
 
-## Adopting it in an existing Library
+## Dependencies
 
-A Library that predates the template is not regenerated. Diff it against the template and take the template's version of each shared piece: `build.gradle`, the game test harness (`CodeGameTest` and the `*GameTests` registrar), the scripts, `REUSE.toml`, `docs/agents/`, `.github/workflows/`. Its own versioning ADR becomes a pointer to libworks' ADR 0001.
+None beyond NeoForge.
 
-## Changing the template
+## License
 
-A change here reaches no Library by itself: each adopts it by diff. If one tool keeps drifting between Libraries, it is promoted to a build-time Gradle artifact published from here, never a runtime jar.
+MIT. Source is on [GitHub](https://github.com/5thlayer/voidworks).

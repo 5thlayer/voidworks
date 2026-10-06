@@ -36,7 +36,7 @@ for arg in "$@"; do
     esac
 done
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "$usage"
-tag="v$version"
+tag="voidworks-v$version"
 repo="${MAVEN_REPO_LOCAL:-$HOME/.m2/repository}"
 published="$repo/${group//.//}/$artifact/$version"
 
