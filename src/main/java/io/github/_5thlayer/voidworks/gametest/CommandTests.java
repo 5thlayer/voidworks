@@ -6,7 +6,9 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
@@ -19,10 +21,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
 
 /**
- * The {@code /voidworks} commands, run on a real server by a real player: {@code pressure} reports
+ * The {@code /voidworks} commands, run on a real server by a server player: {@code pressure} reports
  * what {@link VoidPressure} says where the player stands, {@code mote} puts motes of a grade in the
  * player's inventory, and neither does anything for a player who is not an operator. A message is
  * checked by its translation key and arguments, since the server has no language loaded.
@@ -181,12 +184,15 @@ final class CommandTests {
         helper.succeed();
     }
 
-    /** A real player, standing on the platform and holding nothing: the mock player spawns outside the test box. */
+    /**
+     * A server player of its own, standing on the platform and holding nothing. It is NeoForge's
+     * fake player, as the game's own mock server player is deprecated for removal; a fake player
+     * ignores teleports, so it is placed directly.
+     */
     private static ServerPlayer playerOnThePlatform(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        var player = new FakePlayer(helper.getLevel(), new GameProfile(UUID.randomUUID(), "test-player"));
         Vec3 feet = helper.absoluteVec(new Vec3(4.5, 1, 4.5));
-        player.teleportTo(feet.x, feet.y, feet.z);
-        player.getInventory().clearContent();
+        player.setPos(feet.x, feet.y, feet.z);
         return player;
     }
 

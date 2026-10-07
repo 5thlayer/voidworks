@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
@@ -201,8 +202,11 @@ final class SpendTests {
         return stacks;
     }
 
+    /** Whether every slot holds what it held before, count and components alike. */
     private static boolean unchanged(Container container, List<ItemStack> before) {
-        return ItemStack.listMatches(snapshot(container), before);
+        var now = snapshot(container);
+        return now.size() == before.size()
+                && IntStream.range(0, now.size()).allMatch(slot -> ItemStack.matches(now.get(slot), before.get(slot)));
     }
 
     private static Map<Integer, Integer> moteCounts(Container container) {
