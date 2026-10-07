@@ -6,7 +6,6 @@ package io.github._5thlayer.voidworks.pressure;
 import java.util.Optional;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.Voidworks;
 import net.minecraft.core.BlockPos;
@@ -16,6 +15,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.neoforged.bus.api.IEventBus;
@@ -39,11 +39,7 @@ public final class VoidPressure {
     /** The map's id, {@code voidworks:void_pressure}, which names its file in a datapack. */
     public static final Identifier DATA_MAP_ID = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_pressure");
 
-    private static final Codec<HarvestKind> HARVEST_KIND_CODEC = Codec.STRING.comapFlatMap(
-            name -> HarvestKind.byName(name)
-                    .map(DataResult::success)
-                    .orElseGet(() -> DataResult.error(() -> "unknown harvest kind '" + name + "': end, overworld, nether or none")),
-            HarvestKind::serializedName);
+    private static final Codec<HarvestKind> HARVEST_KIND_CODEC = StringRepresentable.fromEnum(HarvestKind::values);
 
     /** An entry as the map spells it: {@code {"base": 3, "harvest_kind": "end"}}. */
     public static final Codec<DimensionPressure> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(

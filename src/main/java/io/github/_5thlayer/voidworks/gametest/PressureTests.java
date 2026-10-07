@@ -8,8 +8,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.gson.JsonParser;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
@@ -43,6 +45,28 @@ final class PressureTests {
         tests.test("void_pressure_unnamed_dimension_takes_the_overworlds", 1, PressureTests::unnamedDimensionTakesTheOverworlds);
         tests.test("void_pressure_datapack_entry_overrides_a_default", 1, PressureTests::datapackEntryOverridesADefault);
         tests.test("void_pressure_shipped_entries_match_the_defaults", 1, PressureTests::shippedEntriesMatchTheDefaults);
+        tests.test("void_pressure_entry_reads_harvest_kinds_by_lower_case_name", 1, PressureTests::entryReadsHarvestKindsByName);
+    }
+
+    /** An entry spells its harvest kind in lower case, and a name that is no kind is an error, not a default. */
+    private static void entryReadsHarvestKindsByName(GameTestHelper helper) {
+        for (var kind : HarvestKind.values()) {
+            var read = parseEntry("{\"base\": 1, \"harvest_kind\": \"" + kind.getSerializedName() + "\"}");
+            if (!read.result().equals(Optional.of(new DimensionPressure(1, kind)))) {
+                helper.fail("an entry naming " + kind.getSerializedName() + " reads as " + read);
+                return;
+            }
+        }
+        var unknown = parseEntry("{\"base\": 1, \"harvest_kind\": \"lava\"}");
+        if (unknown.isSuccess()) {
+            helper.fail("an entry naming the harvest kind lava should be refused, but reads as " + unknown);
+            return;
+        }
+        helper.succeed();
+    }
+
+    private static DataResult<DimensionPressure> parseEntry(String json) {
+        return VoidPressure.ENTRY_CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
     }
 
     /** The override pack's entry for the End, which is not the shipped one. */

@@ -44,7 +44,7 @@ final class CommandTests {
 
         var level = helper.getLevel();
         int pressure = VoidPressure.at(level, player.blockPosition());
-        var kind = VoidPressure.harvestKind(level).serializedName();
+        var kind = VoidPressure.harvestKind(level).getSerializedName();
         var message = onlyMessage(helper, messages);
         if (message == null) {
             return;

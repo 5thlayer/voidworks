@@ -73,9 +73,9 @@ class DimensionPressureTest {
 
     @Test
     void harvestKindsAreNamedInLowerCase() {
-        assertEquals(HarvestKind.END, HarvestKind.byName("end").orElseThrow());
-        assertEquals(HarvestKind.NONE, HarvestKind.byName("none").orElseThrow());
-        assertEquals(Optional.empty(), HarvestKind.byName("lava"));
-        assertEquals("overworld", HarvestKind.OVERWORLD.serializedName());
+        assertEquals("end", HarvestKind.END.getSerializedName());
+        assertEquals("overworld", HarvestKind.OVERWORLD.getSerializedName());
+        assertEquals("nether", HarvestKind.NETHER.getSerializedName());
+        assertEquals("none", HarvestKind.NONE.getSerializedName());
     }
 }

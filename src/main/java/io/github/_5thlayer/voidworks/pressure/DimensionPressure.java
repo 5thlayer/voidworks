@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
- * One dimension's entry in the Void Pressure data map, as plain logic with no Minecraft types: its
+ * One dimension's entry in the Void Pressure data map, as plain logic that reads no game state: its
  * base pressure and its harvest kind. The pressure is on the same integer scale as a mote's grade
  * ({@link io.github._5thlayer.voidworks.energy.VoidEnergy}).
  *

@@ -57,7 +57,7 @@ public final class VoidworksCommands {
     private static int pressure(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         int pressure = VoidPressure.at(player.level(), player.blockPosition());
-        String harvestKind = VoidPressure.harvestKind(player.level()).serializedName();
+        String harvestKind = VoidPressure.harvestKind(player.level()).getSerializedName();
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.pressure", pressure, harvestKind), false);
         return pressure;
     }
