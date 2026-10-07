@@ -18,12 +18,12 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 ### Void
 
 **Mote**:
-The unit of void, harvested, stored and moved. A mote carries a grade: the band of Void Pressure
-where it was harvested. Motes of one grade stack; motes of different grades never merge.
+The unit of void, harvested, stored and moved. A mote carries a grade: one step above the Void
+Pressure where it was harvested, so it is always worth something there. Motes of one grade stack; motes of different grades never merge.
 
 **Void energy**:
 What a mote releases when it is spent: the more its grade exceeds the Void Pressure where it is
-spent, the more it releases. Nothing stores void energy; everything stores motes. It is not FE.
+spent, the more it releases, doubling with each step. Nothing stores void energy; everything stores motes. It is not FE.
 Bare "void" means this mechanic; removing items is "destroying" or "trashing" them.
 _Avoid_: voiding (for destroying items), void as "needs no power"
 

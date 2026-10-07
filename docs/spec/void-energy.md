@@ -27,13 +27,16 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
   has a base, from a data map keyed by dimension: End above Overworld above Nether, and a dimension
   the map does not name takes the Overworld's. In the End, a position with no block beneath it down
   to the bottom of the world is open to the void and sits one step higher.
-- A mote's grade is the Void Pressure where it was harvested, on the same scale: Nether, Overworld,
-  End, and End over the open void.
-- Spending a mote releases void energy by how far its grade exceeds the local Void Pressure, in
-  whole steps of the scale. A machine refuses a mote whose grade is not above it, and spends the lowest grade still worth
-  something first.
+- A mote's grade is one step above the Void Pressure where it was harvested, so every mote is
+  worth something where it was harvested: Nether, Overworld, End, and End over the open void.
+- Spending a mote releases void energy by how far its grade exceeds the local Void Pressure, and
+  each further step doubles it: one step releases a provisional base amount, two steps twice that,
+  three steps four times. A machine refuses a mote whose grade is not above it, and spends the
+  lowest grade still worth something first.
 - So the End is the reservoir and the Nether the turbine: one mote does the most work in the
-  Nether, and moving motes downhill is why void logistics exists.
+  Nether, and moving motes downhill is why void logistics exists. A base runs on its own harvest
+  at the lowest value, and the cheap Nether and Overworld motes pay for a start before the End
+  pays off; carrying them downhill is what multiplies them.
 - Every spend follows this rule — Mutation, gear, zone upgrades, Displacer recipes, hatching,
   void-only materials — except healing the Void Dragon, which happens only at a Void Well.
 - What motes buy: power for endgame gear, Mutation, and void-only materials (a void alloy and the
