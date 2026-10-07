@@ -23,10 +23,14 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
 
 ## Motes and void energy
 
-- A mote's grade is the band of Void Pressure where it was harvested: a few bands, such as Nether,
-  Overworld, End, and End near the open void.
-- Spending a mote releases void energy by how far its grade exceeds the local Void Pressure. A
-  machine refuses a mote whose grade is not above it, and spends the lowest grade still worth
+- Void Pressure is a small integer, one scale shared by every rule that reads it. Each dimension
+  has a base, from a data map keyed by dimension: End above Overworld above Nether, and a dimension
+  the map does not name takes the Overworld's. In the End, a position with no block beneath it down
+  to the bottom of the world is open to the void and sits one step higher.
+- A mote's grade is the Void Pressure where it was harvested, on the same scale: Nether, Overworld,
+  End, and End over the open void.
+- Spending a mote releases void energy by how far its grade exceeds the local Void Pressure, in
+  whole steps of the scale. A machine refuses a mote whose grade is not above it, and spends the lowest grade still worth
   something first.
 - So the End is the reservoir and the Nether the turbine: one mote does the most work in the
   Nether, and moving motes downhill is why void logistics exists.

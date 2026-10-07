@@ -28,8 +28,8 @@ Bare "void" means this mechanic; removing items is "destroying" or "trashing" th
 _Avoid_: voiding (for destroying items), void as "needs no power"
 
 **Void Pressure**:
-The ambient void level of a place: a base per dimension, highest in the End, then the Overworld,
-lowest in the Nether, and raised near the End's open void. It sets the grade of motes harvested
+The ambient void level of a place, a small integer: a base per dimension, highest in the End, then
+the Overworld, lowest in the Nether, and one step higher where the End is open to the void below. It sets the grade of motes harvested
 there, the value of motes spent there, how fast a Void Crucible works there, and how fast a Void
 Dragon weakens there. Motes stored nearby never change it.
 _Avoid_: network pressure (the motes' own, which only steers flow)
