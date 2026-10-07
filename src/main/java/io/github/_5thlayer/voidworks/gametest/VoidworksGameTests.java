@@ -52,14 +52,15 @@ public final class VoidworksGameTests {
         TEST_TYPES.register(modBus);
         // Posted only when game tests are enabled, so a production server never registers the tests.
         modBus.addListener(VoidworksGameTests::registerTests);
-        // The packs that tests lean on are for the game test run alone, which names them in build.gradle.
+        // The packs that tests lean on are for the game test run alone, which names them in build.gradle;
+        // the jar leaves them out.
         if (Boolean.getBoolean(TEST_PACKS_PROPERTY)) {
             modBus.addListener(VoidworksGameTests::addTestPacks);
         }
     }
 
     private static void addTestPacks(AddPackFindersEvent event) {
-        event.addPackFinders(id("resourcepacks/gametest_pressure_override"), PackType.SERVER_DATA,
+        event.addPackFinders(id("gametest_datapacks/pressure_override"), PackType.SERVER_DATA,
                 Component.literal("Voidworks game test: Void Pressure override"), PackSource.BUILT_IN,
                 true, Pack.Position.TOP);
     }

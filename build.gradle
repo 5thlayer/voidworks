@@ -43,7 +43,7 @@ neoForge {
             type = 'gameTestServer'
             gameDirectory = project.file('run/gametest')
             programArguments.addAll '--tests', "${mod_id}:*", '--report', gameTestReport.absolutePath
-            // The datapacks under resourcepacks/ that only the game tests load (VoidworksGameTests).
+            // The datapacks under gametest_datapacks/ that only the game tests load (VoidworksGameTests).
             systemProperty 'voidworks.gametestPacks', 'true'
         }
     }
@@ -90,6 +90,12 @@ neoForge {
 }
 test {
     useJUnitPlatform()
+}
+
+// The datapacks only the game tests load stay in the resources the gameTestServer run reads, and out
+// of the jars a Consumer gets.
+tasks.withType(Jar).configureEach {
+    exclude 'gametest_datapacks/**'
 }
 
 // The jar is what players are handed, so it carries the MIT licence the Library is under.
