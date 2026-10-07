@@ -1,6 +1,7 @@
 # Void energy and Mutation — design
 
-Resolved in two grilling sessions on 2026-10-06, the second on void logistics, from the original
+Resolved in two grilling sessions on 2026-10-06, the second on void logistics, and a third on
+2026-10-07 that made motes a resource and never an item ([ADR 0002](../adr/0002-motes-are-a-resource-never-items.md)), from the original
 idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written.
 Factorio fidelity was not a constraint.
 
@@ -23,6 +24,9 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
 
 ## Motes and void energy
 
+- A mote is never an item. Only Voidstone, void machines (a Consumer's too, through the public
+  `voidworks:motes` capability) and the Void Siphon hold motes, pooled by grade; chests, hoppers,
+  belts and pipes never carry them. A broken store loses the motes it held.
 - Void Pressure is a small integer, one scale shared by every rule that reads it. Each dimension
   has a base, from a data map keyed by dimension: End above Overworld above Nether, and a dimension
   the map does not name takes the Overworld's. Each entry also names the dimension's harvest kind
@@ -54,7 +58,13 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
 
 Three Void Displacers, one per dimension, each working only in its own. All three consume fed
 blocks, yield motes by the fed block's Density at the grade of the local Void Pressure, and turn
-each harvested position into Voidstone.
+each harvested position into Voidstone. A Displacer holds no motes: each harvest goes into the
+Voidstone network it touches, and without one it stalls.
+
+Every harvest shows its motes. Each flies from the harvested position to whatever receives it, a
+Displacer or the player's Void Siphon, as a small butterfly with flapping wings, tinted by grade:
+our own sprite, after Boulder Dash's butterflies. They are cosmetic and credited at once, but the
+count is exact: like XP orbs, a butterfly stands for 1, 8 or 64 motes by its size.
 
 - **End**: places fed blocks into the empty air of its zone.
 - **Overworld**: swaps fed blocks with natural terrain in its zone — the blocks in a natural-block
@@ -71,8 +81,9 @@ stalls it. While its zone has anything left to convert — air, natural terrain,
 broken or moved; when nothing is left it becomes Voidstone itself, and relocating means building a
 new one. Zones can grow through upgrades paid in motes; relocation stays the main loop.
 
-Density rises steeply (shape: about 4^density): stone is the cheap start, storage blocks are how
-harvesting scales.
+Density rises steeply (shape: about 4^density, so 1, 4, 16, 64): stone is the cheap start, storage
+blocks are how harvesting scales. No fed block yields more than about 64 motes, so a harvest stays
+countable, and a mote releases correspondingly more void energy.
 
 ### By hand
 
@@ -85,9 +96,17 @@ far worse yield than a Displacer's and with an on/off toggle:
 - **Nether**: the block displaces a lava source, which fills an empty bucket or another mod's fluid
   item from the inventory. With none, it refuses.
 
+The Siphon holds motes, as many as its tier allows, and keeps them wherever it goes: dropped,
+stored, or carried through a portal. Only a player charges or empties it, by harvesting, by
+standing on Voidstone, or by gear spending from it; no block takes a Siphon, so item logistics
+moving Siphons still needs a player at both ends. A player may carry several. Even the top tier
+holds a small fraction of a Void Well: carrying by hand starts a base or powers gear, and never
+supplies one.
+
 ## Moving motes
 
-- **Voidstone conducts.** Motes crawl through face-touching Voidstone as a visible glint, at a
+- **Voidstone conducts.** Motes crawl through face-touching Voidstone, seen as the harvest's
+  butterflies, smaller, walking its faces, at a
   finite speed and without loss, from high network pressure to low. Each grade flows on its own.
 - Networks that touch merge, harmlessly: pressure, not topology, decides where motes go. There is no
   seal or valve.
@@ -115,7 +134,8 @@ Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Gh
 - **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension, carrying from high
   pressure to low until each Well's fill target is met. Several dragons share the work.
 - **Travel.** It flies visibly near its Wells and dives into the void between them, emerging after
-  a travel time set by distance. It is the only thing that carries motes between dimensions.
+  a travel time set by distance. It is the only thing that carries motes between dimensions at
+  scale; a player carries a Siphon's worth.
 - **Riding.** A player mounts it at a Void Well and picks another of their Wells; it dives and
   emerges there, in any dimension. It is not free flight. A rider costs nothing and the load
   travels as usual.
@@ -144,7 +164,9 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 
 ## Open
 
+- **Void Siphon tiers** — what a tier raises (capacity, yield) and how a Siphon climbs, perhaps by
+  smithing with a void alloy as netherite does.
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
-- **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, zone sizes and upgrade costs, upgrade chances per tier, breakdown yield against motes, mote speed, Void Well capacity
-  and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
+- **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, zone sizes and upgrade costs, upgrade chances per tier, breakdown yield against motes, mote speed, Void Well capacity,
+  the Void Siphon's capacity per tier, and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
   cost.

@@ -20,7 +20,10 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 **Mote**:
 The unit of void, harvested, stored and moved. A mote carries a grade: one step above the Void
 Pressure where it was harvested, so it is always worth something there. Grades run from the lowest
-any harvest gives, which a mote nothing has graded also has, to a fixed maximum. Motes of one grade stack; motes of different grades never merge.
+any harvest gives, which a mote nothing has graded also has, to a fixed maximum. A mote is never an
+item: only Voidstone, void machines (a Consumer's too) and the Void Siphon hold motes, pooled by
+grade, and motes of different grades never pool.
+_Avoid_: mote item, stack of motes
 
 **Void energy**:
 What a mote releases when it is spent: the more its grade exceeds the Void Pressure where it is
@@ -53,13 +56,14 @@ _Avoid_: bedrock, residue
 
 **Void Displacer**:
 A machine that harvests motes in its zone, attuned to the dimension it is built for and working
-only there. It cannot be broken or moved while its zone has anything left to convert; when nothing
+only there. It holds no motes: each harvest goes into the Voidstone network it touches, and without
+one it stops. It cannot be broken or moved while its zone has anything left to convert; when nothing
 is left it becomes Voidstone itself.
 _Avoid_: harvester, Void Well
 
 **Void Siphon**:
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It
-holds motes, and void gear draws from it.
+holds motes and keeps them wherever it goes, as many as its tier allows, and void gear draws from it.
 _Avoid_: glove
 
 ### Moving motes
