@@ -4,10 +4,12 @@
 package io.github._5thlayer.voidworks.pressure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Optional;
@@ -102,6 +104,27 @@ class DimensionPressureTest {
         // The End over the open void, one step above its pressure there.
         int highest = shipped("minecraft:the_end").pressure(() -> true) + 1;
         assertTrue(highest <= VoidEnergy.MAX_GRADE);
+    }
+
+    @Test
+    void aShippedFileWithoutTheOverworldIsRefusedWithAClearMessage() {
+        var withoutOverworld = "{\"values\": {\"minecraft:the_end\": {\"base\": 3, \"harvest_kind\": \"end\"}}}";
+        var e = assertThrows(IllegalStateException.class,
+                () -> DimensionPressure.parseShipped(new StringReader(withoutOverworld), "test.json"));
+        assertTrue(e.getMessage().contains("minecraft:overworld"), e.getMessage());
+        assertTrue(e.getMessage().contains("test.json"), e.getMessage());
+    }
+
+    @Test
+    void aShippedFileThatIsNotAnEntryMapIsRefusedWithAClearMessage() {
+        var e = assertThrows(IllegalStateException.class,
+                () -> DimensionPressure.parseShipped(new StringReader("not json"), "test.json"));
+        assertTrue(e.getMessage().contains("test.json"), e.getMessage());
+    }
+
+    @Test
+    void theShippedEntriesIncludeTheOverworld() {
+        assertTrue(DimensionPressure.shippedEntries().containsKey("minecraft:overworld"));
     }
 
     private static DimensionPressure shipped(String dimension) {

@@ -3,11 +3,6 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import com.google.gson.JsonParser;
@@ -80,26 +75,12 @@ final class PressureTests {
         helper.succeed();
     }
 
-    private static Map<String, DimensionPressure> readShippedEntries() {
-        var path = "/data/" + Voidworks.MOD_ID + "/data_maps/dimension/" + VoidPressure.DATA_MAP_ID.getPath() + ".json";
-        try (var reader = new InputStreamReader(PressureTests.class.getResourceAsStream(path), StandardCharsets.UTF_8)) {
-            var values = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("values");
-            var entries = new HashMap<String, DimensionPressure>();
-            for (var entry : values.entrySet()) {
-                entries.put(entry.getKey(), VoidPressure.ENTRY_CODEC.parse(JsonOps.INSTANCE, entry.getValue()).getOrThrow());
-            }
-            return entries;
-        } catch (IOException | RuntimeException e) {
-            throw new IllegalStateException("cannot read the shipped " + path, e);
-        }
-    }
-
     /** The test's own dimension is the Overworld, whose entry is the middle of the three. */
     private static void herePressureMatchesTheDefaults(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
         int pressure = VoidPressure.at(level, pos);
-        var overworld = readShippedEntries().get("minecraft:overworld");
+        var overworld = DimensionPressure.shippedEntries().get("minecraft:overworld");
         if (pressure != overworld.base()) {
             helper.fail("the Void Pressure here is " + pressure + ", not the Overworld's shipped "
                     + overworld.base());
@@ -115,7 +96,7 @@ final class PressureTests {
 
     private static void netherMatchesTheDefault(GameTestHelper helper) {
         var entry = VoidPressure.dimension(helper.getLevel().registryAccess(), Level.NETHER);
-        var shipped = readShippedEntries().get("minecraft:the_nether");
+        var shipped = DimensionPressure.shippedEntries().get("minecraft:the_nether");
         if (!entry.equals(shipped)) {
             helper.fail("the Nether's entry is " + entry + ", not its shipped " + shipped);
             return;
