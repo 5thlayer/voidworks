@@ -17,6 +17,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
+import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
 
 /**
  * A mote's grade is part of what the mote is: motes of one grade stack in a real inventory, motes
@@ -100,7 +101,7 @@ final class MoteTests {
 
         var stacks = stacksIn(inventory);
         if (stacks.size() != 1 || stacks.getFirst().getCount() != 30 || MoteItem.gradeOf(stacks.getFirst()) != 3) {
-            helper.fail("two stacks of grade 3 should merge into one of 30, found " + describe(stacks));
+            helper.fail("two stacks of grade 3 should merge into one of 30, found " + describe(inventory));
             return;
         }
         helper.succeed();
@@ -113,11 +114,11 @@ final class MoteTests {
 
         var stacks = stacksIn(inventory);
         if (stacks.size() != 2 || stacks.stream().anyMatch(stack -> stack.getCount() != 10)) {
-            helper.fail("grades 2 and 3 should stay two stacks of 10, found " + describe(stacks));
+            helper.fail("grades 2 and 3 should stay two stacks of 10, found " + describe(inventory));
             return;
         }
         if (MoteItem.gradeOf(stacks.get(0)) == MoteItem.gradeOf(stacks.get(1))) {
-            helper.fail("the two stacks lost their grades: " + describe(stacks));
+            helper.fail("the two stacks lost their grades: " + describe(inventory));
             return;
         }
         helper.succeed();
@@ -140,7 +141,7 @@ final class MoteTests {
         return inventory.getNonEquipmentItems().stream().filter(stack -> !stack.isEmpty()).toList();
     }
 
-    private static String describe(List<ItemStack> stacks) {
-        return stacks.stream().map(stack -> stack.getCount() + " x grade " + MoteItem.gradeOf(stack)).toList().toString();
+    private static String describe(Inventory inventory) {
+        return stacksIn(inventory).size() + " stacks, grade to count " + MoteItem.countByGrade(PlayerInventoryWrapper.of(inventory));
     }
 }

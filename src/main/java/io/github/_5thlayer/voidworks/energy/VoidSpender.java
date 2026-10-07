@@ -3,13 +3,11 @@
 
 package io.github._5thlayer.voidworks.energy;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
-import java.util.TreeMap;
 
 import io.github._5thlayer.voidworks.energy.VoidEnergy.Spend;
-import io.github._5thlayer.voidworks.item.VoidworksDataComponents;
+import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.item.VoidworksItems;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
@@ -50,35 +48,28 @@ public final class VoidSpender {
      * knows the Void Pressure where it stands.
      */
     static Optional<Spend> spend(ResourceHandler<ItemResource> inventory, int pressure, long required) {
-        // A grade can be spelled by more than one resource: the bare item and one carrying the
-        // grade component are different resources of the same grade.
-        var resourcesByGrade = new TreeMap<Integer, Map<ItemResource, Integer>>();
-        var countsByGrade = new LinkedHashMap<Integer, Integer>();
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            var resource = inventory.getResource(slot);
-            if (resource.isEmpty() || !resource.is(VoidworksItems.MOTE.get())) {
-                continue;
-            }
-            int count = inventory.getAmountAsInt(slot);
-            int grade = resource.getComponents().getOrDefault(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE);
-            resourcesByGrade.computeIfAbsent(grade, g -> new LinkedHashMap<>()).merge(resource, count, Integer::sum);
-            countsByGrade.merge(grade, count, Integer::sum);
-        }
-
-        var plan = VoidEnergy.plan(countsByGrade, pressure, required);
+        var plan = VoidEnergy.plan(MoteItem.countByGrade(inventory), pressure, required);
         if (plan.isEmpty()) {
             return plan;
         }
+        // Taken slot by slot: the motes of one grade can lie in several slots, and as different
+        // resources when they differ in another component, such as a name given in an anvil.
+        var left = new HashMap<>(plan.get().motes());
         // Closed without a commit, the transaction puts back whatever was taken.
         try (var transaction = Transaction.openRoot()) {
-            for (var taking : plan.get().motes().entrySet()) {
-                int left = taking.getValue();
-                for (var held : resourcesByGrade.get(taking.getKey()).entrySet()) {
-                    left -= inventory.extract(held.getKey(), Math.min(left, held.getValue()), transaction);
+            for (int slot = 0; slot < inventory.size(); slot++) {
+                var resource = inventory.getResource(slot);
+                if (!resource.is(VoidworksItems.MOTE.get())) {
+                    continue;
                 }
-                if (left > 0) {
-                    return Optional.empty();
+                int grade = MoteItem.gradeOf(resource);
+                int wanted = left.getOrDefault(grade, 0);
+                if (wanted > 0) {
+                    left.put(grade, wanted - inventory.extract(slot, resource, wanted, transaction));
                 }
+            }
+            if (left.values().stream().anyMatch(count -> count > 0)) {
+                return Optional.empty();
             }
             transaction.commit();
         }

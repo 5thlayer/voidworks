@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.gametest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.item.MoteItem;
@@ -18,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
 
 /**
  * The {@code /voidworks} commands, run on a real server by a real player: {@code pressure} reports
@@ -48,7 +50,7 @@ final class CommandTests {
         run(player, true, "voidworks mote " + VoidEnergy.MAX_GRADE);
 
         var held = motesHeldBy(player);
-        if (!held.equals(List.of(new Held(VoidEnergy.MAX_GRADE, 1)))) {
+        if (!held.equals(Map.of(VoidEnergy.MAX_GRADE, 1))) {
             helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MAX_GRADE + ", holds " + held);
             return;
         }
@@ -72,7 +74,7 @@ final class CommandTests {
         run(player, true, "voidworks mote " + VoidEnergy.MIN_GRADE);
 
         var held = motesHeldBy(player);
-        if (!held.equals(List.of(new Held(VoidEnergy.MIN_GRADE, 1)))) {
+        if (!held.equals(Map.of(VoidEnergy.MIN_GRADE, 1))) {
             helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MIN_GRADE + ", holds " + held);
             return;
         }
@@ -124,7 +126,7 @@ final class CommandTests {
         var messages = run(player, true, "voidworks mote 3 20");
 
         var held = motesHeldBy(player);
-        if (!held.equals(List.of(new Held(3, 20)))) {
+        if (!held.equals(Map.of(3, 20))) {
             helper.fail("the player should hold 20 motes of grade 3, holds " + held);
             return;
         }
@@ -144,7 +146,7 @@ final class CommandTests {
         run(player, true, "voidworks mote 5");
 
         var held = motesHeldBy(player);
-        if (!held.equals(List.of(new Held(5, 1)))) {
+        if (!held.equals(Map.of(5, 1))) {
             helper.fail("the player should hold 1 mote of grade 5, holds " + held);
             return;
         }
@@ -157,8 +159,11 @@ final class CommandTests {
         run(player, true, "voidworks mote 2 100");
 
         var held = motesHeldBy(player);
-        if (held.stream().mapToInt(Held::count).sum() != 100 || held.stream().anyMatch(h -> h.grade() != 2 || h.count() > 64)) {
-            helper.fail("the player should hold 100 motes of grade 2 in stacks of at most 64, holds " + held);
+        var stackSizes = player.getInventory().getNonEquipmentItems().stream()
+                .filter(stack -> !stack.isEmpty()).map(ItemStack::getCount).toList();
+        if (!held.equals(Map.of(2, 100)) || stackSizes.stream().anyMatch(count -> count > 64)) {
+            helper.fail("the player should hold 100 motes of grade 2 in stacks of at most 64, holds " + held
+                    + " in stacks of " + stackSizes);
             return;
         }
         helper.succeed();
@@ -235,16 +240,8 @@ final class CommandTests {
         return message.getKey() + " " + List.of(message.getArgs());
     }
 
-    private static List<Held> motesHeldBy(ServerPlayer player) {
-        var held = new ArrayList<Held>();
-        for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
-            if (stack.getItem() instanceof MoteItem) {
-                held.add(new Held(MoteItem.gradeOf(stack), stack.getCount()));
-            }
-        }
-        return held;
-    }
-
-    private record Held(int grade, int count) {
+    /** The motes the player holds, grade to count. */
+    private static Map<Integer, Integer> motesHeldBy(ServerPlayer player) {
+        return MoteItem.countByGrade(PlayerInventoryWrapper.of(player));
     }
 }

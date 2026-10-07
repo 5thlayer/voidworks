@@ -6,7 +6,6 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
@@ -14,7 +13,9 @@ import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.item.VoidworksItems;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
@@ -43,6 +44,30 @@ final class SpendTests {
         tests.test("spend_moves_up_a_grade_when_the_lower_runs_out", 1, SpendTests::movesUpAGradeWhenTheLowerRunsOut);
         tests.test("spend_leaves_an_inventory_that_cannot_afford_it_untouched", 1, SpendTests::cannotAffordLeavesInventoryUntouched);
         tests.test("spend_takes_a_bare_mote_in_the_nether", 1, SpendTests::takesABareMoteInTheNether);
+        tests.test("spend_takes_motes_of_a_grade_that_differ_in_another_component", 1, SpendTests::takesMotesThatDifferInAnotherComponent);
+    }
+
+    /** A mote named in an anvil is still a mote of its grade, though it no longer stacks with the others. */
+    private static void takesMotesThatDifferInAnotherComponent(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
+        var named = MoteItem.stack(pressure + 1, 1);
+        named.set(DataComponents.CUSTOM_NAME, Component.literal("Kept"));
+        var machine = new SimpleContainer(9);
+        machine.addItem(MoteItem.stack(pressure + 1, 1));
+        machine.addItem(named);
+
+        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
+
+        if (spend.isEmpty() || !spend.get().motes().equals(Map.of(pressure + 1, 2))) {
+            helper.fail("a spend of " + 2 * VoidEnergy.BASE + " should take both grade " + (pressure + 1)
+                    + " motes, the named one too, but gave " + spend);
+            return;
+        }
+        if (!machine.isEmpty()) {
+            helper.fail("the spend left " + describe(machine));
+            return;
+        }
+        helper.succeed();
     }
 
     /** A machine's inventory holding only motes the pressure here makes worthless: the lowest grade, at the pressure. */
@@ -181,13 +206,7 @@ final class SpendTests {
     }
 
     private static Map<Integer, Integer> moteCounts(Container container) {
-        var counts = new TreeMap<Integer, Integer>();
-        for (var stack : snapshot(container)) {
-            if (stack.is(VoidworksItems.MOTE.get())) {
-                counts.merge(MoteItem.gradeOf(stack), stack.getCount(), Integer::sum);
-            }
-        }
-        return counts;
+        return MoteItem.countByGrade(VanillaContainerWrapper.of(container));
     }
 
     private static String describe(Container container) {

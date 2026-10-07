@@ -3,10 +3,17 @@
 
 package io.github._5thlayer.voidworks.item;
 
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import com.google.common.primitives.Ints;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import net.minecraft.core.component.DataComponentHolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 
 /**
  * The mote, the unit of void. Its grade is a data component on the stack, so motes of one grade
@@ -36,11 +43,26 @@ public final class MoteItem extends Item {
     }
 
     /**
-     * The grade of the motes in {@code stack}, which must be a stack of motes: a mote nothing has
-     * graded has {@link VoidEnergy#MIN_GRADE}.
+     * The grade of {@code motes}, a stack or an inventory's resource that must be motes: a mote
+     * nothing has graded has {@link VoidEnergy#MIN_GRADE}.
      */
-    public static int gradeOf(ItemStack stack) {
-        return stack.getOrDefault(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE);
+    public static int gradeOf(DataComponentHolder motes) {
+        return motes.getOrDefault(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE);
+    }
+
+    /**
+     * The motes in {@code inventory}, any NeoForge item inventory, as grade to count, lowest grade
+     * first; whatever is not a mote is left out. A count past {@link Integer#MAX_VALUE} stays there.
+     */
+    public static SortedMap<Integer, Integer> countByGrade(ResourceHandler<ItemResource> inventory) {
+        var counts = new TreeMap<Integer, Integer>();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            var resource = inventory.getResource(slot);
+            if (resource.is(VoidworksItems.MOTE.get())) {
+                counts.merge(gradeOf(resource), inventory.getAmountAsInt(slot), (a, b) -> Ints.saturatedCast((long) a + b));
+            }
+        }
+        return counts;
     }
 
     @Override
