@@ -3,6 +3,8 @@
 
 package io.github._5thlayer.voidworks.energy;
 
+import java.util.Map;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 
 /**
@@ -32,5 +34,19 @@ public final class VoidEnergy {
             return OptionalLong.empty();
         }
         return OptionalLong.of(BASE << (grade - pressure - 1));
+    }
+
+    /**
+     * The grade a spend takes first from the motes on hand: the lowest grade still worth something
+     * at {@code pressure}, so the higher grades are kept for where they are worth more.
+     *
+     * @param stacks the mote stacks on hand, grade to count; a grade with no motes is skipped
+     * @return the lowest grade above the pressure with motes, or empty when there is none
+     */
+    public static OptionalInt chooseGrade(Map<Integer, Integer> stacks, int pressure) {
+        return stacks.entrySet().stream()
+                .filter(stack -> stack.getValue() > 0 && stack.getKey() > pressure)
+                .mapToInt(Map.Entry::getKey)
+                .min();
     }
 }
