@@ -25,7 +25,8 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
 
 - Void Pressure is a small integer, one scale shared by every rule that reads it. Each dimension
   has a base, from a data map keyed by dimension: End above Overworld above Nether, and a dimension
-  the map does not name takes the Overworld's. In the End, a position with no block beneath it down
+  the map does not name takes the Overworld's. Each entry also names the dimension's harvest kind
+  (End, Overworld, Nether or none), which the Void Siphon follows; an unnamed dimension has none. In the End, a position with no block beneath it down
   to the bottom of the world is open to the void and sits one step higher.
 - A mote's grade is one step above the Void Pressure where it was harvested, so every mote is
   worth something where it was harvested: Nether, Overworld, End, and End over the open void.
@@ -33,6 +34,9 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
   each further step doubles it: one step releases a provisional base amount, two steps twice that,
   three steps four times. A machine refuses a mote whose grade is not above it, and spends the
   lowest grade still worth something first.
+- Local means where the spender stands: a machine's own block, the player's feet for gear and the
+  Void Siphon, the egg's block for hatching. The open void's extra step counts for spending too, so
+  a machine built over it refuses all but the top grade.
 - So the End is the reservoir and the Nether the turbine: one mote does the most work in the
   Nether, and moving motes downhill is why void logistics exists. A base runs on its own harvest
   at the lowest value, and the cheap Nether and Overworld motes pay for a start before the End
@@ -68,7 +72,8 @@ harvesting scales.
 
 ### By hand
 
-The **Void Siphon** is one item that behaves by the dimension it is in, fed from the off hand, at a
+The **Void Siphon** is one item that behaves by the harvest kind of the dimension it is in, and refuses
+in a dimension with none, fed from the off hand, at a
 far worse yield than a Displacer's and with an on/off toggle:
 
 - **End**: the block goes into air and becomes Voidstone; nothing comes back.
