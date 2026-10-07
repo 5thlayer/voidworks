@@ -35,6 +35,10 @@ there, the value of motes spent there, how fast a Void Crucible works there, and
 Dragon weakens there. Motes stored nearby never change it.
 _Avoid_: network pressure (the motes' own, which only steers flow)
 
+**Harvest kind**:
+What a dimension harvests, named by its Void Pressure entry: `end`, `overworld`, `nether`, or `none`
+for a dimension that harvests nothing. The Void Siphon behaves by it.
+
 **Density**:
 How many motes a block yields when fed to a Void Displacer. It is set per block, by tag, and
 steepens sharply with each step: stone is cheap, and storage blocks are how harvesting scales.
