@@ -6,6 +6,8 @@ A 5thlayer Library: a mod the FactoryWorks Pack consumes as a pinned local jar. 
 
 Commit on the current branch; open a feature branch only when the user asks for one. Nothing is pushed without the user's word.
 
+Pull requests are squash-merged, the PR title becoming the conventional commit on `main`. Work after a merge starts on a new branch from `main`, never on the merged one.
+
 Anything that changes the Library's behaviour gets a `/code-review`. That is the project skill in `.claude/skills/code-review`, from mattpocock/skills; never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, and tooling or CI config.
 
 ## Commits
