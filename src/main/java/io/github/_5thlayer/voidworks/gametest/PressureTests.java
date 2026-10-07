@@ -33,6 +33,14 @@ import net.minecraft.world.level.Level;
  */
 final class PressureTests {
 
+    /*
+     * The defaults docs/spec/void-energy.md gives, which the shipped file must hold. The code's own
+     * copy, for a dimension the map does not name, is held to the spec by DimensionPressureTest.
+     */
+    private static final DimensionPressure NETHER_DEFAULT = new DimensionPressure(1, HarvestKind.NETHER);
+    private static final DimensionPressure OVERWORLD_DEFAULT = new DimensionPressure(2, HarvestKind.OVERWORLD);
+    private static final DimensionPressure END_DEFAULT = new DimensionPressure(3, HarvestKind.END);
+
     private static final ResourceKey<Level> UNNAMED_DIMENSION =
             ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "unnamed"));
 
@@ -81,13 +89,13 @@ final class PressureTests {
         helper.succeed();
     }
 
-    /** The shipped file is where the defaults are, and the code's constants must agree with it. */
+    /** The shipped file is where the defaults are, and it must hold the spec's. */
     private static void shippedEntriesMatchTheDefaults(GameTestHelper helper) {
         var shipped = readShippedEntries();
         var expected = Map.of(
-                "minecraft:the_nether", DimensionPressure.NETHER_DEFAULT,
-                "minecraft:overworld", DimensionPressure.OVERWORLD_DEFAULT,
-                "minecraft:the_end", DimensionPressure.END_DEFAULT);
+                "minecraft:the_nether", NETHER_DEFAULT,
+                "minecraft:overworld", OVERWORLD_DEFAULT,
+                "minecraft:the_end", END_DEFAULT);
         if (!shipped.equals(expected)) {
             helper.fail("the shipped void_pressure.json holds " + shipped + ", not the defaults " + expected);
             return;
@@ -114,9 +122,9 @@ final class PressureTests {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
         int pressure = VoidPressure.at(level, pos);
-        if (pressure != DimensionPressure.OVERWORLD_DEFAULT.base()) {
+        if (pressure != OVERWORLD_DEFAULT.base()) {
             helper.fail("the Void Pressure here is " + pressure + ", not the Overworld's default "
-                    + DimensionPressure.OVERWORLD_DEFAULT.base());
+                    + OVERWORLD_DEFAULT.base());
             return;
         }
         var kind = VoidPressure.harvestKind(level);
@@ -129,8 +137,8 @@ final class PressureTests {
 
     private static void netherMatchesTheDefault(GameTestHelper helper) {
         var entry = VoidPressure.dimension(helper.getLevel().registryAccess(), Level.NETHER);
-        if (!entry.equals(DimensionPressure.NETHER_DEFAULT)) {
-            helper.fail("the Nether's entry is " + entry + ", not its default " + DimensionPressure.NETHER_DEFAULT);
+        if (!entry.equals(NETHER_DEFAULT)) {
+            helper.fail("the Nether's entry is " + entry + ", not its default " + NETHER_DEFAULT);
             return;
         }
         helper.succeed();

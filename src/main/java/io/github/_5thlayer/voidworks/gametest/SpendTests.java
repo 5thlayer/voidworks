@@ -12,7 +12,7 @@ import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.item.VoidworksItems;
-import io.github._5thlayer.voidworks.pressure.DimensionPressure;
+import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
@@ -26,13 +26,12 @@ import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 /**
  * Spending motes from a real inventory at a position: a spend takes the lowest worthwhile grade
  * first, refuses motes that are not above the local Void Pressure, and leaves an inventory that
- * cannot afford it untouched. The tests stand in the Overworld, whose default pressure is 2, so
- * grade 3 releases {@link VoidEnergy#BASE} per mote and grade 4 twice that. A machine's inventory
- * is a plain container behind the item handler, and a player's is the real thing.
+ * cannot afford it untouched. The tests stand in the Overworld and read its pressure there, 2 by
+ * default, so grade 3 releases {@link VoidEnergy#BASE} per mote and grade 4 twice that. A
+ * machine's inventory is a plain container behind the item handler, and a player's is the real
+ * thing.
  */
 final class SpendTests {
-
-    private static final int PRESSURE = DimensionPressure.OVERWORLD_DEFAULT.base();
 
     private SpendTests() {
     }
@@ -46,15 +45,16 @@ final class SpendTests {
 
     /** A machine's inventory holding only motes the pressure here makes worthless. */
     private static void refusesMotesNotAboveThePressure(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var machine = new SimpleContainer(9);
-        machine.addItem(MoteItem.stack(PRESSURE, 40));
-        machine.addItem(MoteItem.stack(PRESSURE - 1, 40));
+        machine.addItem(MoteItem.stack(pressure, 40));
+        machine.addItem(MoteItem.stack(pressure - 1, 40));
         var before = snapshot(machine);
 
         var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 1);
 
         if (spend.isPresent()) {
-            helper.fail("motes not above the pressure " + PRESSURE + " should be refused, but the spend released "
+            helper.fail("motes not above the pressure " + pressure + " should be refused, but the spend released "
                     + spend.get().released());
             return;
         }
@@ -67,21 +67,22 @@ final class SpendTests {
 
     /** A player's inventory holding a worthless grade, two worthwhile grades and an item that is no mote. */
     private static void takesTheLowestWorthwhileGradeFirst(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(PRESSURE - 1, 50));
-        inventory.add(MoteItem.stack(PRESSURE + 2, 10));
-        inventory.add(MoteItem.stack(PRESSURE + 1, 10));
+        inventory.add(MoteItem.stack(pressure - 1, 50));
+        inventory.add(MoteItem.stack(pressure + 2, 10));
+        inventory.add(MoteItem.stack(pressure + 1, 10));
         inventory.add(new ItemStack(Items.COBBLESTONE, 64));
 
         var spend = VoidSpender.spend(PlayerInventoryWrapper.of(player), helper.getLevel(), here(helper), 3 * VoidEnergy.BASE);
 
         if (spend.isEmpty() || spend.get().released() != 3 * VoidEnergy.BASE) {
-            helper.fail("a spend of " + 3 * VoidEnergy.BASE + " should release exactly that from grade " + (PRESSURE + 1)
+            helper.fail("a spend of " + 3 * VoidEnergy.BASE + " should release exactly that from grade " + (pressure + 1)
                     + " motes, but gave " + spend);
             return;
         }
-        var expected = Map.of(PRESSURE - 1, 50, PRESSURE + 1, 7, PRESSURE + 2, 10);
+        var expected = Map.of(pressure - 1, 50, pressure + 1, 7, pressure + 2, 10);
         if (!moteCounts(inventory).equals(expected)) {
             helper.fail("the motes left should be " + expected + " (grade to count), but are " + moteCounts(inventory));
             return;
@@ -94,9 +95,10 @@ final class SpendTests {
     }
 
     private static void movesUpAGradeWhenTheLowerRunsOut(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var machine = new SimpleContainer(9);
-        machine.addItem(MoteItem.stack(PRESSURE + 1, 2));
-        machine.addItem(MoteItem.stack(PRESSURE + 2, 5));
+        machine.addItem(MoteItem.stack(pressure + 1, 2));
+        machine.addItem(MoteItem.stack(pressure + 2, 5));
 
         // The two grade 3 motes release 2 x BASE, then one grade 4 mote releases 2 x BASE more.
         var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE);
@@ -105,7 +107,7 @@ final class SpendTests {
             helper.fail("a spend of " + 4 * VoidEnergy.BASE + " should release exactly that, but gave " + spend);
             return;
         }
-        var expected = Map.of(PRESSURE + 2, 4);
+        var expected = Map.of(pressure + 2, 4);
         if (!moteCounts(machine).equals(expected)) {
             helper.fail("the motes left should be " + expected + " (grade to count), but are " + moteCounts(machine));
             return;
@@ -115,11 +117,12 @@ final class SpendTests {
 
     /** All the worthwhile motes together release less than asked, and the worthless ones do not count. */
     private static void cannotAffordLeavesInventoryUntouched(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(PRESSURE - 1, 64));
-        inventory.add(MoteItem.stack(PRESSURE + 1, 2));
-        inventory.add(MoteItem.stack(PRESSURE + 2, 1));
+        inventory.add(MoteItem.stack(pressure - 1, 64));
+        inventory.add(MoteItem.stack(pressure + 1, 2));
+        inventory.add(MoteItem.stack(pressure + 2, 1));
         var before = snapshot(inventory);
 
         // 2 x BASE from the grade 3 motes and 2 x BASE from the grade 4 mote: 4 x BASE in all.

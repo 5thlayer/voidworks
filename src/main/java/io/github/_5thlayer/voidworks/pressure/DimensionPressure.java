@@ -17,22 +17,22 @@ import java.util.function.BooleanSupplier;
 public record DimensionPressure(int base, HarvestKind harvestKind) {
 
     /*
-     * The provisional numbers (docs/spec/void-energy.md leaves them open), kept in step with the
-     * entries the Library ships in data/voidworks/data_maps/dimension/void_pressure.json, which is
-     * what a Consumer or a datapack overrides. A game test holds the two together. Only the
-     * Overworld's is read in code: it is what an unnamed dimension takes.
+     * The provisional defaults in docs/spec/void-energy.md, kept in step with the entries the Library
+     * ships in data/voidworks/data_maps/dimension/void_pressure.json, which is what a Consumer or a
+     * datapack overrides: DimensionPressureTest holds these to the spec, and a game test the shipped
+     * file. Only the Overworld's is read in code, for an unnamed dimension; none is the Library's API.
      */
-    public static final DimensionPressure NETHER_DEFAULT = new DimensionPressure(1, HarvestKind.NETHER);
-    public static final DimensionPressure OVERWORLD_DEFAULT = new DimensionPressure(2, HarvestKind.OVERWORLD);
-    public static final DimensionPressure END_DEFAULT = new DimensionPressure(3, HarvestKind.END);
+    static final DimensionPressure NETHER_DEFAULT = new DimensionPressure(1, HarvestKind.NETHER);
+    static final DimensionPressure OVERWORLD_DEFAULT = new DimensionPressure(2, HarvestKind.OVERWORLD);
+    static final DimensionPressure END_DEFAULT = new DimensionPressure(3, HarvestKind.END);
 
     /**
      * The entry that counts for a dimension: its own, or for a dimension the map does not name, the
      * Overworld's pressure with no harvest kind.
      *
      * @param named the dimension's own entry, if the map names it
-     * @param overworld the Overworld's entry, if the map names it; {@link #OVERWORLD_DEFAULT} stands
-     *        in when a datapack has removed it
+     * @param overworld the Overworld's entry, if the map names it; the shipped default stands in
+     *        when a datapack has removed it
      */
     public static DimensionPressure resolve(Optional<DimensionPressure> named, Optional<DimensionPressure> overworld) {
         return named.orElseGet(() ->

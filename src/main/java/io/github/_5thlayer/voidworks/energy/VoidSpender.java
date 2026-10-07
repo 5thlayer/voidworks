@@ -50,7 +50,7 @@ public final class VoidSpender {
      * As {@link #spend(ResourceHandler, ServerLevel, BlockPos, long)}, for a caller that already
      * knows the Void Pressure where it stands.
      */
-    public static Optional<Spend> spend(ResourceHandler<ItemResource> inventory, int pressure, long required) {
+    static Optional<Spend> spend(ResourceHandler<ItemResource> inventory, int pressure, long required) {
         // A grade can be spelled by more than one resource: the bare item and one carrying the
         // grade component are different resources of the same grade.
         var resourcesByGrade = new TreeMap<Integer, Map<ItemResource, Integer>>();

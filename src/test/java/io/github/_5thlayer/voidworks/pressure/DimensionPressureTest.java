@@ -66,6 +66,13 @@ class DimensionPressureTest {
     }
 
     @Test
+    void theDefaultsAreTheSpecs() {
+        assertEquals(new DimensionPressure(1, HarvestKind.NETHER), DimensionPressure.NETHER_DEFAULT);
+        assertEquals(new DimensionPressure(2, HarvestKind.OVERWORLD), DimensionPressure.OVERWORLD_DEFAULT);
+        assertEquals(new DimensionPressure(3, HarvestKind.END), DimensionPressure.END_DEFAULT);
+    }
+
+    @Test
     void theDefaultsRiseFromNetherThroughOverworldToEnd() {
         assertTrue(DimensionPressure.NETHER_DEFAULT.base() < DimensionPressure.OVERWORLD_DEFAULT.base());
         assertTrue(DimensionPressure.OVERWORLD_DEFAULT.base() < DimensionPressure.END_DEFAULT.base());
