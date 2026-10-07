@@ -39,6 +39,32 @@ final class CommandTests {
         tests.test("mote_command_refuses_a_player_who_is_not_an_operator", 1, CommandTests::moteRefusesNonOperators);
         tests.test("mote_command_gives_the_lowest_grade", 1, CommandTests::moteGivesTheLowestGrade);
         tests.test("mote_command_refuses_a_grade_below_the_lowest", 1, CommandTests::moteRefusesAGradeBelowTheLowest);
+        tests.test("mote_command_gives_the_highest_grade", 1, CommandTests::moteGivesTheHighestGrade);
+        tests.test("mote_command_refuses_a_grade_above_the_highest", 1, CommandTests::moteRefusesAGradeAboveTheHighest);
+    }
+
+    private static void moteGivesTheHighestGrade(GameTestHelper helper) {
+        var player = playerOnThePlatform(helper);
+        run(player, true, "voidworks mote " + VoidEnergy.MAX_GRADE);
+
+        var held = motesHeldBy(player);
+        if (!held.equals(List.of(new Held(VoidEnergy.MAX_GRADE, 1)))) {
+            helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MAX_GRADE + ", holds " + held);
+            return;
+        }
+        helper.succeed();
+    }
+
+    private static void moteRefusesAGradeAboveTheHighest(GameTestHelper helper) {
+        var player = playerOnThePlatform(helper);
+        run(player, true, "voidworks mote " + (VoidEnergy.MAX_GRADE + 1));
+
+        var held = motesHeldBy(player);
+        if (!held.isEmpty()) {
+            helper.fail("grade " + (VoidEnergy.MAX_GRADE + 1) + " is above the highest, but the player was given " + held);
+            return;
+        }
+        helper.succeed();
     }
 
     private static void moteGivesTheLowestGrade(GameTestHelper helper) {

@@ -4,7 +4,9 @@
 package io.github._5thlayer.voidworks.energy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -33,26 +35,46 @@ class VoidEnergyTest {
 
     @Test
     void aGradeBelowThePressureIsRefused() {
-        assertEquals(OptionalLong.empty(), VoidEnergy.release(1, 2));
-        assertEquals(OptionalLong.empty(), VoidEnergy.release(0, 3));
+        assertEquals(OptionalLong.empty(), VoidEnergy.release(2, 3));
+        assertEquals(OptionalLong.empty(), VoidEnergy.release(3, 5));
+    }
+
+    @Test
+    void theHighestGradeReleasesItsFullDoubling() {
+        long expected = BigInteger.valueOf(VoidEnergy.BASE).shiftLeft(VoidEnergy.MAX_GRADE - 1).longValueExact();
+        assertEquals(OptionalLong.of(expected), VoidEnergy.release(VoidEnergy.MAX_GRADE, 0));
+    }
+
+    @Test
+    void aGradeNoMoteHasIsRefusedOutright() {
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(VoidEnergy.MAX_GRADE + 1, 0));
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(VoidEnergy.MIN_GRADE - 1, 0));
+        // Far enough above the maximum that a long shift would wrap around to a small number.
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(66, 0));
+    }
+
+    @Test
+    void aNegativePressureIsRefusedOutright() {
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(VoidEnergy.MIN_GRADE, -1));
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.plan(Map.of(3, 1), -1, 1));
     }
 
     @Test
     void theLowestGradeAboveThePressureIsChosen() {
-        var stacks = Map.of(1, 5, 2, 5, 3, 5, 4, 5);
-        assertEquals(OptionalInt.of(3), VoidEnergy.chooseGrade(stacks, 2));
+        var stacks = Map.of(2, 5, 3, 5, 4, 5, 5, 5);
+        assertEquals(OptionalInt.of(4), VoidEnergy.chooseGrade(stacks, 3));
     }
 
     @Test
     void aGradeAtOrBelowThePressureIsNeverChosen() {
-        var stacks = Map.of(1, 9, 2, 9, 4, 1);
-        assertEquals(OptionalInt.of(4), VoidEnergy.chooseGrade(stacks, 2));
+        var stacks = Map.of(2, 9, 3, 9, 5, 1);
+        assertEquals(OptionalInt.of(5), VoidEnergy.chooseGrade(stacks, 3));
     }
 
     @Test
     void nothingIsChosenWhenNoGradeIsAboveThePressure() {
-        var stacks = Map.of(1, 3, 2, 3);
-        assertEquals(OptionalInt.empty(), VoidEnergy.chooseGrade(stacks, 2));
+        var stacks = Map.of(2, 3, 3, 3);
+        assertEquals(OptionalInt.empty(), VoidEnergy.chooseGrade(stacks, 3));
         assertEquals(OptionalInt.empty(), VoidEnergy.chooseGrade(Map.of(), 0));
     }
 
@@ -64,8 +86,8 @@ class VoidEnergyTest {
 
     @Test
     void aSpendTakesTheLowestWorthwhileGradeFirst() {
-        // Pressure 2: grade 3 releases BASE, grade 4 releases 2 x BASE. Grade 1 is worth nothing.
-        var stacks = Map.of(1, 50, 3, 10, 4, 10);
+        // Pressure 2: grade 3 releases BASE, grade 4 releases 2 x BASE. Grade 2 is worth nothing.
+        var stacks = Map.of(2, 50, 3, 10, 4, 10);
         var spend = VoidEnergy.plan(stacks, 2, 3 * VoidEnergy.BASE).orElseThrow();
         assertEquals(Map.of(3, 3), spend.motes());
         assertEquals(3 * VoidEnergy.BASE, spend.released());
@@ -98,7 +120,44 @@ class VoidEnergyTest {
 
     @Test
     void motesNotAboveThePressureAreRefusedWhateverTheirNumber() {
-        assertEquals(Optional.empty(), VoidEnergy.plan(Map.of(1, 500, 2, 500), 2, 1));
+        assertEquals(Optional.empty(), VoidEnergy.plan(Map.of(2, 500, 3, 500), 3, 1));
+    }
+
+    @Test
+    void aGradeNoMoteHasIsNeverTaken() {
+        // Grade 1 would be worth something at pressure 0, and grade 17 more than any other, if motes had them.
+        var stacks = Map.of(VoidEnergy.MIN_GRADE - 1, 500, VoidEnergy.MAX_GRADE + 1, 500, 64, 500, 66, 500);
+        assertEquals(OptionalInt.empty(), VoidEnergy.chooseGrade(stacks, 0));
+        assertEquals(Optional.empty(), VoidEnergy.plan(stacks, 0, 1));
+    }
+
+    @Test
+    void theHighestGradeIsTaken() {
+        var spend = VoidEnergy.plan(Map.of(VoidEnergy.MAX_GRADE, 1), 0, 1).orElseThrow();
+        assertEquals(Map.of(VoidEnergy.MAX_GRADE, 1), spend.motes());
+        assertEquals(VoidEnergy.release(VoidEnergy.MAX_GRADE, 0).orElseThrow(), spend.released());
+    }
+
+    @Test
+    void theMostMotesOfTheHighestGradesAddUpExactly() {
+        // As many motes as an int counts of the two highest grades, at the lowest pressure: every
+        // grade-15 mote and a thousand grade-16 ones, with nothing wrapping around a long.
+        int all = Integer.MAX_VALUE;
+        long each15 = VoidEnergy.release(VoidEnergy.MAX_GRADE - 1, 0).orElseThrow();
+        long each16 = VoidEnergy.release(VoidEnergy.MAX_GRADE, 0).orElseThrow();
+        long required = all * each15 + 1000 * each16;
+        var stacks = Map.of(VoidEnergy.MAX_GRADE - 1, all, VoidEnergy.MAX_GRADE, all);
+
+        var spend = VoidEnergy.plan(stacks, 0, required).orElseThrow();
+
+        assertEquals(Map.of(VoidEnergy.MAX_GRADE - 1, all, VoidEnergy.MAX_GRADE, 1000), spend.motes());
+        assertEquals(required, spend.released());
+    }
+
+    @Test
+    void theLargestSpendIsRefusedWithoutOverflow() {
+        var stacks = Map.of(VoidEnergy.MAX_GRADE, Integer.MAX_VALUE);
+        assertEquals(Optional.empty(), VoidEnergy.plan(stacks, 0, Long.MAX_VALUE));
     }
 
     @Test

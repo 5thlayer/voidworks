@@ -88,6 +88,13 @@ class DimensionPressureTest {
     }
 
     @Test
+    void theHighestDefaultHarvestIsAGrade() {
+        // The End over the open void, one step above its pressure there.
+        int highest = DimensionPressure.END_DEFAULT.pressure(() -> true) + 1;
+        assertTrue(highest <= VoidEnergy.MAX_GRADE);
+    }
+
+    @Test
     void harvestKindsAreNamedInLowerCase() {
         assertEquals("end", HarvestKind.END.getSerializedName());
         assertEquals("overworld", HarvestKind.OVERWORLD.getSerializedName());

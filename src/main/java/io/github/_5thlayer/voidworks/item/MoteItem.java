@@ -22,12 +22,13 @@ public final class MoteItem extends Item {
     /**
      * A stack of {@code count} motes of {@code grade}.
      *
-     * @throws IllegalArgumentException when no mote has {@code grade}: it is below
-     *         {@link VoidEnergy#MIN_GRADE}
+     * @throws IllegalArgumentException when no mote has {@code grade}, outside
+     *         {@link VoidEnergy#MIN_GRADE} to {@link VoidEnergy#MAX_GRADE}
      */
     public static ItemStack stack(int grade, int count) {
-        if (grade < VoidEnergy.MIN_GRADE) {
-            throw new IllegalArgumentException("no mote has grade " + grade + ": the lowest is " + VoidEnergy.MIN_GRADE);
+        if (grade < VoidEnergy.MIN_GRADE || grade > VoidEnergy.MAX_GRADE) {
+            throw new IllegalArgumentException("no mote has grade " + grade + ": grades run from "
+                    + VoidEnergy.MIN_GRADE + " to " + VoidEnergy.MAX_GRADE);
         }
         var stack = new ItemStack(VoidworksItems.MOTE.get(), count);
         stack.set(VoidworksDataComponents.GRADE.get(), grade);

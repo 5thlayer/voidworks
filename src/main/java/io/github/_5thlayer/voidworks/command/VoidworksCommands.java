@@ -25,8 +25,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * <ul>
  *   <li>{@code /voidworks pressure} reports the Void Pressure where the player stands, the open
  *       void's extra step included, and the dimension's harvest kind.</li>
- *   <li>{@code /voidworks mote <grade> [count]} gives the player motes of that grade, one by
- *       default, in full stacks and dropped at the player's feet when the inventory is full.</li>
+ *   <li>{@code /voidworks mote <grade> [count]} gives the player motes of that grade, from
+ *       {@link VoidEnergy#MIN_GRADE} to {@link VoidEnergy#MAX_GRADE}, one by default, in full
+ *       stacks and dropped at the player's feet when the inventory is full.</li>
  * </ul>
  */
 public final class VoidworksCommands {
@@ -48,7 +49,7 @@ public final class VoidworksCommands {
                 .then(Commands.literal("pressure")
                         .executes(VoidworksCommands::pressure))
                 .then(Commands.literal("mote")
-                        .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE))
+                        .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE, VoidEnergy.MAX_GRADE))
                                 .executes(context -> mote(context, 1))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, MAX_COUNT))
                                         .executes(context -> mote(context, IntegerArgumentType.getInteger(context, "count")))))));

@@ -20,12 +20,12 @@ public final class VoidworksDataComponents {
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Voidworks.MOD_ID);
 
     /**
-     * A mote's grade, a small integer on the Void Pressure scale, never below
-     * {@link VoidEnergy#MIN_GRADE}. Read it with {@link MoteItem#gradeOf}.
+     * A mote's grade, a small integer on the Void Pressure scale, from {@link VoidEnergy#MIN_GRADE}
+     * to {@link VoidEnergy#MAX_GRADE}. Read it with {@link MoteItem#gradeOf}.
      */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> GRADE =
             COMPONENTS.registerComponentType("grade", builder -> builder
-                    .persistent(ExtraCodecs.intRange(VoidEnergy.MIN_GRADE, Integer.MAX_VALUE))
+                    .persistent(ExtraCodecs.intRange(VoidEnergy.MIN_GRADE, VoidEnergy.MAX_GRADE))
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
 
     private VoidworksDataComponents() {
