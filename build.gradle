@@ -43,6 +43,8 @@ neoForge {
             type = 'gameTestServer'
             gameDirectory = project.file('run/gametest')
             programArguments.addAll '--tests', "${mod_id}:*", '--report', gameTestReport.absolutePath
+            // The datapacks under gametest_datapacks/ that only the game tests load (VoidworksGameTests).
+            systemProperty 'voidworks.gametestPacks', 'true'
         }
     }
 
@@ -79,11 +81,21 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// The JUnit tests run on a plain JVM, with no Minecraft on their classpath: they test the rules
-// that read no game state, and the game tests test the rest. A Library whose rules need game types
-// adds `addModdingDependenciesTo sourceSets.test` to the neoForge block.
+// The JUnit tests run on a plain JVM, with no game running: they test the rules that read no game
+// state, and the game tests test the rest. Minecraft is on their classpath only for the game types
+// those rules name, such as HarvestKind's StringRepresentable; a test that needs the game running
+// is a game test.
+neoForge {
+    addModdingDependenciesTo sourceSets.test
+}
 test {
     useJUnitPlatform()
+}
+
+// The datapacks only the game tests load stay in the resources the gameTestServer run reads, and out
+// of the jars a Consumer gets.
+tasks.withType(Jar).configureEach {
+    exclude 'gametest_datapacks/**'
 }
 
 // The jar is what players are handed, so it carries the MIT licence the Library is under.

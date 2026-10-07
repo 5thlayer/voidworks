@@ -19,7 +19,8 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 
 **Mote**:
 The unit of void, harvested, stored and moved. A mote carries a grade: one step above the Void
-Pressure where it was harvested, so it is always worth something there. Motes of one grade stack; motes of different grades never merge.
+Pressure where it was harvested, so it is always worth something there. Grades run from the lowest
+any harvest gives, which a mote nothing has graded also has, to a fixed maximum. Motes of one grade stack; motes of different grades never merge.
 
 **Void energy**:
 What a mote releases when it is spent: the more its grade exceeds the Void Pressure where it is
@@ -33,6 +34,10 @@ the Overworld, lowest in the Nether, and one step higher where the End is open t
 there, the value of motes spent there, how fast a Void Crucible works there, and how fast a Void
 Dragon weakens there. Motes stored nearby never change it.
 _Avoid_: network pressure (the motes' own, which only steers flow)
+
+**Harvest kind**:
+What a dimension harvests, named by its Void Pressure entry: `end`, `overworld`, `nether`, or `none`
+for a dimension that harvests nothing. The Void Siphon behaves by it.
 
 **Density**:
 How many motes a block yields when fed to a Void Displacer. It is set per block, by tag, and
