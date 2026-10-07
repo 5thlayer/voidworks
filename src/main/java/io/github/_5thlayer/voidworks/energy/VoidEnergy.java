@@ -3,7 +3,9 @@
 
 package io.github._5thlayer.voidworks.energy;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
@@ -21,6 +23,15 @@ public final class VoidEnergy {
     public static final long BASE = 100;
 
     private VoidEnergy() {
+    }
+
+    /**
+     * What a spend takes.
+     *
+     * @param motes the motes to take, grade to count, lowest grade first; no grade with none
+     * @param released the void energy they release together, at least what the spend asked for
+     */
+    public record Spend(Map<Integer, Integer> motes, long released) {
     }
 
     /**
@@ -48,5 +59,38 @@ public final class VoidEnergy {
                 .filter(stack -> stack.getValue() > 0 && stack.getKey() > pressure)
                 .mapToInt(Map.Entry::getKey)
                 .min();
+    }
+
+    /**
+     * Plans a spend of at least {@code required} void energy at {@code pressure}: the lowest worthwhile
+     * grade first, moving up a grade only when the lower ones are used up, and in each grade only as
+     * many motes as are needed. A grade not above the pressure is never taken.
+     *
+     * @param stacks the mote stacks on hand, grade to count
+     * @param required the void energy to release at least, not negative
+     * @return what to take, or empty when the motes on hand cannot release {@code required}: the
+     *         spend is refused, and a caller takes nothing
+     */
+    public static Optional<Spend> plan(Map<Integer, Integer> stacks, int pressure, long required) {
+        if (required < 0) {
+            throw new IllegalArgumentException("cannot release a negative amount: " + required);
+        }
+        var motes = new LinkedHashMap<Integer, Integer>();
+        var remaining = new LinkedHashMap<>(stacks);
+        long released = 0;
+        while (released < required) {
+            var grade = chooseGrade(remaining, pressure);
+            if (grade.isEmpty()) {
+                return Optional.empty();
+            }
+            int g = grade.getAsInt();
+            long each = release(g, pressure).orElseThrow();
+            long needed = (required - released + each - 1) / each;
+            int taken = (int) Math.min(needed, remaining.get(g));
+            motes.put(g, taken);
+            released += taken * each;
+            remaining.remove(g);
+        }
+        return Optional.of(new Spend(motes, released));
     }
 }
