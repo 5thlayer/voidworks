@@ -4,7 +4,7 @@ Resolved in two grilling sessions on 2026-10-06, the second on void logistics, f
 idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written.
 Factorio fidelity was not a constraint.
 
-The terms are in [`CONTEXT.md`](../../CONTEXT.md).
+The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
 
 ## Where it lives
 
