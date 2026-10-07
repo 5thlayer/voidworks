@@ -19,7 +19,8 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 
 **Mote**:
 The unit of void, harvested, stored and moved. A mote carries a grade: one step above the Void
-Pressure where it was harvested, so it is always worth something there. Motes of one grade stack; motes of different grades never merge.
+Pressure where it was harvested, so it is always worth something there. Grades run from the lowest
+any harvest gives, which a mote nothing has graded also has, to a fixed maximum. Motes of one grade stack; motes of different grades never merge.
 
 **Void energy**:
 What a mote releases when it is spent: the more its grade exceeds the Void Pressure where it is

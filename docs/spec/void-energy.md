@@ -30,6 +30,10 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
   to the bottom of the world is open to the void and sits one step higher.
 - A mote's grade is one step above the Void Pressure where it was harvested, so every mote is
   worth something where it was harvested: Nether, Overworld, End, and End over the open void.
+- The grade bands, provisional like every number: the default pressures are Nether 1, Overworld 2
+  and End 3, 4 over the open void, so harvests give grades 2 to 5. A grade runs from 2, the lowest
+  any harvest gives and the grade of a mote nothing has graded, to 16, which leaves room for the
+  numbers to grow and keeps a spend's arithmetic exact. No mote has a grade outside it.
 - Spending a mote releases void energy by how far its grade exceeds the local Void Pressure, and
   each further step doubles it: one step releases a provisional base amount, two steps twice that,
   three steps four times. A machine refuses a mote whose grade is not above it, and spends the
@@ -141,6 +145,6 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 ## Open
 
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
-- **Numbers** — the grades, the Density curve, zone sizes and upgrade costs, upgrade chances per tier, breakdown yield against motes, mote speed, Void Well capacity
+- **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, zone sizes and upgrade costs, upgrade chances per tier, breakdown yield against motes, mote speed, Void Well capacity
   and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
   cost.
