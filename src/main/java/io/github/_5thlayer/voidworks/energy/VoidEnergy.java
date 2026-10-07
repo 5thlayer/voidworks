@@ -87,7 +87,8 @@ public final class VoidEnergy {
      * Plans a spend of at least {@code required} void energy at {@code pressure}: the lowest worthwhile
      * grade first, moving up a grade only when the lower ones are used up, and in each grade only as
      * many motes as are needed. A grade not above the pressure is never taken, nor is one outside
-     * {@link #MIN_GRADE} to {@link #MAX_GRADE}, which no mote has.
+     * {@link #MIN_GRADE} to {@link #MAX_GRADE}, which no mote has. Using up the lower grades first
+     * can release more than a higher grade alone would have.
      *
      * @param stacks the mote stacks on hand, grade to count
      * @param pressure the Void Pressure where the motes are spent, not negative

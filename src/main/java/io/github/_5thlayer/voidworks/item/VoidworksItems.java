@@ -19,6 +19,7 @@ public final class VoidworksItems {
 
     /** The mote. Make a stack of one with {@link MoteItem#stack}: the bare item has the lowest grade. */
     public static final DeferredItem<MoteItem> MOTE = ITEMS.registerItem("mote", MoteItem::new,
+            // GRADE.get() resolves here only because NeoForge registers data component types before items.
             properties -> properties.component(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE));
 
     private VoidworksItems() {
