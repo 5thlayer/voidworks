@@ -43,6 +43,8 @@ neoForge {
             type = 'gameTestServer'
             gameDirectory = project.file('run/gametest')
             programArguments.addAll '--tests', "${mod_id}:*", '--report', gameTestReport.absolutePath
+            // The datapacks under resourcepacks/ that only the game tests load (VoidworksGameTests).
+            systemProperty 'voidworks.gametestPacks', 'true'
         }
     }
 

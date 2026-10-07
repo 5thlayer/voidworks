@@ -3,6 +3,14 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
@@ -33,6 +41,48 @@ final class PressureTests {
         tests.test("void_pressure_here_matches_the_defaults", 1, PressureTests::herePressureMatchesTheDefaults);
         tests.test("void_pressure_nether_matches_the_default", 1, PressureTests::netherMatchesTheDefault);
         tests.test("void_pressure_unnamed_dimension_takes_the_overworlds", 1, PressureTests::unnamedDimensionTakesTheOverworlds);
+        tests.test("void_pressure_datapack_entry_overrides_a_default", 1, PressureTests::datapackEntryOverridesADefault);
+        tests.test("void_pressure_shipped_entries_match_the_defaults", 1, PressureTests::shippedEntriesMatchTheDefaults);
+    }
+
+    /** The override pack's entry for the End, which is not the shipped one. */
+    private static final DimensionPressure OVERRIDDEN_END = new DimensionPressure(9, HarvestKind.NETHER);
+
+    private static void datapackEntryOverridesADefault(GameTestHelper helper) {
+        var entry = VoidPressure.dimension(helper.getLevel().registryAccess(), Level.END);
+        if (!entry.equals(OVERRIDDEN_END)) {
+            helper.fail("the End's entry is " + entry + ", not the datapack's " + OVERRIDDEN_END);
+            return;
+        }
+        helper.succeed();
+    }
+
+    /** The shipped file is where the defaults are, and the code's constants must agree with it. */
+    private static void shippedEntriesMatchTheDefaults(GameTestHelper helper) {
+        var shipped = readShippedEntries();
+        var expected = Map.of(
+                "minecraft:the_nether", DimensionPressure.NETHER_DEFAULT,
+                "minecraft:overworld", DimensionPressure.OVERWORLD_DEFAULT,
+                "minecraft:the_end", DimensionPressure.END_DEFAULT);
+        if (!shipped.equals(expected)) {
+            helper.fail("the shipped void_pressure.json holds " + shipped + ", not the defaults " + expected);
+            return;
+        }
+        helper.succeed();
+    }
+
+    private static Map<String, DimensionPressure> readShippedEntries() {
+        var path = "/data/" + Voidworks.MOD_ID + "/data_maps/dimension/" + VoidPressure.DATA_MAP_ID.getPath() + ".json";
+        try (var reader = new InputStreamReader(PressureTests.class.getResourceAsStream(path), StandardCharsets.UTF_8)) {
+            var values = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("values");
+            var entries = new HashMap<String, DimensionPressure>();
+            for (var entry : values.entrySet()) {
+                entries.put(entry.getKey(), VoidPressure.ENTRY_CODEC.parse(JsonOps.INSTANCE, entry.getValue()).getOrThrow());
+            }
+            return entries;
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalStateException("cannot read the shipped " + path, e);
+        }
     }
 
     /** The test's own dimension is the Overworld, whose entry is the middle of the three. */

@@ -45,7 +45,8 @@ public final class VoidPressure {
                     .orElseGet(() -> DataResult.error(() -> "unknown harvest kind '" + name + "': end, overworld, nether or none")),
             HarvestKind::serializedName);
 
-    private static final Codec<DimensionPressure> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    /** An entry as the map spells it: {@code {"base": 3, "harvest_kind": "end"}}. */
+    public static final Codec<DimensionPressure> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ExtraCodecs.NON_NEGATIVE_INT.fieldOf("base").forGetter(DimensionPressure::base),
             HARVEST_KIND_CODEC.fieldOf("harvest_kind").forGetter(DimensionPressure::harvestKind)
     ).apply(instance, DimensionPressure::new));
