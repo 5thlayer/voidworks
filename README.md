@@ -2,7 +2,7 @@
 
 Voidworks harvests **void** from the world itself. Feed a block to a Void Displacer and it is pressed into the space between blocks, yielding motes and leaving indestructible Voidstone behind, for good. Motes crawl through Voidstone, ride Void Dragons between dimensions, and are spent on endgame gear and on **Mutation**: upgrading an item up its Family, or breaking it down into its ingredients.
 
-**NeoForge, Minecraft 26.1.2 only.** Voidworks is in design: nothing is playable yet. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md), and the terms are in [CONTEXT.md](CONTEXT.md).
+**NeoForge, Minecraft 26.1.2 only.** Voidworks is in design: nothing is playable yet. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md), and the terms are in [GLOSSARY.md](GLOSSARY.md).
 
 ## What sets it apart
 
