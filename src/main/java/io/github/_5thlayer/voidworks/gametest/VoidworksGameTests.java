@@ -71,6 +71,7 @@ public final class VoidworksGameTests {
         LoadTests.register(tests);
         MoteTests.register(tests);
         PressureTests.register(tests);
+        SpendTests.register(tests);
     }
 
     private static Identifier id(String path) {
