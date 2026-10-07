@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.item;
 
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -14,23 +15,31 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class MoteItem extends Item {
 
-    /** The grade of a mote nothing has graded: the bare item, as {@code /give} makes it. */
-    public static final int LOWEST_GRADE = 1;
-
     public MoteItem(Properties properties) {
         super(properties);
     }
 
-    /** A stack of {@code count} motes of {@code grade}. */
+    /**
+     * A stack of {@code count} motes of {@code grade}.
+     *
+     * @throws IllegalArgumentException when no mote has {@code grade}: it is below
+     *         {@link VoidEnergy#MIN_GRADE}
+     */
     public static ItemStack stack(int grade, int count) {
+        if (grade < VoidEnergy.MIN_GRADE) {
+            throw new IllegalArgumentException("no mote has grade " + grade + ": the lowest is " + VoidEnergy.MIN_GRADE);
+        }
         var stack = new ItemStack(VoidworksItems.MOTE.get(), count);
         stack.set(VoidworksDataComponents.GRADE.get(), grade);
         return stack;
     }
 
-    /** The grade of the motes in {@code stack}, which must be a stack of motes. */
+    /**
+     * The grade of the motes in {@code stack}, which must be a stack of motes: a mote nothing has
+     * graded has {@link VoidEnergy#MIN_GRADE}.
+     */
     public static int gradeOf(ItemStack stack) {
-        return stack.getOrDefault(VoidworksDataComponents.GRADE.get(), LOWEST_GRADE);
+        return stack.getOrDefault(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE);
     }
 
     @Override

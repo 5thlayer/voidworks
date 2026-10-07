@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.commands.CommandSource;
@@ -36,6 +37,32 @@ final class CommandTests {
         tests.test("mote_command_gives_one_by_default", 1, CommandTests::moteGivesOneByDefault);
         tests.test("mote_command_splits_a_count_into_full_stacks", 1, CommandTests::moteSplitsIntoStacks);
         tests.test("mote_command_refuses_a_player_who_is_not_an_operator", 1, CommandTests::moteRefusesNonOperators);
+        tests.test("mote_command_gives_the_lowest_grade", 1, CommandTests::moteGivesTheLowestGrade);
+        tests.test("mote_command_refuses_a_grade_below_the_lowest", 1, CommandTests::moteRefusesAGradeBelowTheLowest);
+    }
+
+    private static void moteGivesTheLowestGrade(GameTestHelper helper) {
+        var player = playerOnThePlatform(helper);
+        run(player, true, "voidworks mote " + VoidEnergy.MIN_GRADE);
+
+        var held = motesHeldBy(player);
+        if (!held.equals(List.of(new Held(VoidEnergy.MIN_GRADE, 1)))) {
+            helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MIN_GRADE + ", holds " + held);
+            return;
+        }
+        helper.succeed();
+    }
+
+    private static void moteRefusesAGradeBelowTheLowest(GameTestHelper helper) {
+        var player = playerOnThePlatform(helper);
+        run(player, true, "voidworks mote " + (VoidEnergy.MIN_GRADE - 1));
+
+        var held = motesHeldBy(player);
+        if (!held.isEmpty()) {
+            helper.fail("grade " + (VoidEnergy.MIN_GRADE - 1) + " is below the lowest, but the player was given " + held);
+            return;
+        }
+        helper.succeed();
     }
 
     private static void pressureReportsHere(GameTestHelper helper) {

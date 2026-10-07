@@ -20,6 +20,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
 import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 
@@ -41,14 +42,14 @@ final class SpendTests {
         tests.test("spend_takes_the_lowest_worthwhile_grade_first", 1, SpendTests::takesTheLowestWorthwhileGradeFirst);
         tests.test("spend_moves_up_a_grade_when_the_lower_runs_out", 1, SpendTests::movesUpAGradeWhenTheLowerRunsOut);
         tests.test("spend_leaves_an_inventory_that_cannot_afford_it_untouched", 1, SpendTests::cannotAffordLeavesInventoryUntouched);
+        tests.test("spend_takes_a_bare_mote_in_the_nether", 1, SpendTests::takesABareMoteInTheNether);
     }
 
-    /** A machine's inventory holding only motes the pressure here makes worthless. */
+    /** A machine's inventory holding only motes the pressure here makes worthless: the lowest grade, at the pressure. */
     private static void refusesMotesNotAboveThePressure(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var machine = new SimpleContainer(9);
         machine.addItem(MoteItem.stack(pressure, 40));
-        machine.addItem(MoteItem.stack(pressure - 1, 40));
         var before = snapshot(machine);
 
         var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 1);
@@ -70,7 +71,7 @@ final class SpendTests {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(pressure - 1, 50));
+        inventory.add(MoteItem.stack(pressure, 50));
         inventory.add(MoteItem.stack(pressure + 2, 10));
         inventory.add(MoteItem.stack(pressure + 1, 10));
         inventory.add(new ItemStack(Items.COBBLESTONE, 64));
@@ -82,7 +83,7 @@ final class SpendTests {
                     + " motes, but gave " + spend);
             return;
         }
-        var expected = Map.of(pressure - 1, 50, pressure + 1, 7, pressure + 2, 10);
+        var expected = Map.of(pressure, 50, pressure + 1, 7, pressure + 2, 10);
         if (!moteCounts(inventory).equals(expected)) {
             helper.fail("the motes left should be " + expected + " (grade to count), but are " + moteCounts(inventory));
             return;
@@ -120,7 +121,7 @@ final class SpendTests {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(pressure - 1, 64));
+        inventory.add(MoteItem.stack(pressure, 64));
         inventory.add(MoteItem.stack(pressure + 1, 2));
         inventory.add(MoteItem.stack(pressure + 2, 1));
         var before = snapshot(inventory);
@@ -134,6 +135,29 @@ final class SpendTests {
         }
         if (!unchanged(inventory, before)) {
             helper.fail("a refused spend changed the inventory: " + describe(inventory));
+            return;
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A mote nothing has graded, as {@code /give} makes it, is worth something at the lowest default
+     * pressure, the Nether's: it has the lowest grade any harvest gives.
+     */
+    private static void takesABareMoteInTheNether(GameTestHelper helper) {
+        var nether = helper.getLevel().getServer().getLevel(Level.NETHER);
+        var machine = new SimpleContainer(9);
+        machine.addItem(new ItemStack(VoidworksItems.MOTE.get()));
+
+        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), nether, BlockPos.ZERO, 1);
+
+        if (spend.isEmpty() || spend.get().released() != VoidEnergy.BASE) {
+            helper.fail("a bare mote spent at the Nether's pressure " + VoidPressure.at(nether, BlockPos.ZERO)
+                    + " should release " + VoidEnergy.BASE + ", but gave " + spend);
+            return;
+        }
+        if (!machine.isEmpty()) {
+            helper.fail("the spend left " + describe(machine));
             return;
         }
         helper.succeed();

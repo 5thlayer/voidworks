@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import org.junit.jupiter.api.Test;
 
 /** What a dimension's entry in the map gives: its base, its harvest kind, and the open void's step. */
@@ -76,6 +77,14 @@ class DimensionPressureTest {
     void theDefaultsRiseFromNetherThroughOverworldToEnd() {
         assertTrue(DimensionPressure.NETHER_DEFAULT.base() < DimensionPressure.OVERWORLD_DEFAULT.base());
         assertTrue(DimensionPressure.OVERWORLD_DEFAULT.base() < DimensionPressure.END_DEFAULT.base());
+    }
+
+    @Test
+    void theLowestGradeIsWhatTheLowestDefaultPressureHarvests() {
+        // The Nether's is the lowest default (theDefaultsRiseFromNetherThroughOverworldToEnd), and a
+        // harvest grades its motes one step above the pressure.
+        assertEquals(DimensionPressure.NETHER_DEFAULT.base() + 1, VoidEnergy.MIN_GRADE);
+        assertTrue(VoidEnergy.release(VoidEnergy.MIN_GRADE, DimensionPressure.NETHER_DEFAULT.base()).isPresent());
     }
 
     @Test

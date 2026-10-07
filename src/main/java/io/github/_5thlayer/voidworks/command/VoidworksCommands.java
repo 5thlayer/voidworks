@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,7 +48,7 @@ public final class VoidworksCommands {
                 .then(Commands.literal("pressure")
                         .executes(VoidworksCommands::pressure))
                 .then(Commands.literal("mote")
-                        .then(Commands.argument("grade", IntegerArgumentType.integer(MoteItem.LOWEST_GRADE))
+                        .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE))
                                 .executes(context -> mote(context, 1))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, MAX_COUNT))
                                         .executes(context -> mote(context, IntegerArgumentType.getInteger(context, "count")))))));

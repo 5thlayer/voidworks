@@ -9,7 +9,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 import io.github._5thlayer.voidworks.energy.VoidEnergy.Spend;
-import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.item.VoidworksDataComponents;
 import io.github._5thlayer.voidworks.item.VoidworksItems;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
@@ -61,7 +60,7 @@ public final class VoidSpender {
                 continue;
             }
             int count = inventory.getAmountAsInt(slot);
-            int grade = resource.getComponents().getOrDefault(VoidworksDataComponents.GRADE.get(), MoteItem.LOWEST_GRADE);
+            int grade = resource.getComponents().getOrDefault(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE);
             resourcesByGrade.computeIfAbsent(grade, g -> new LinkedHashMap<>()).merge(resource, count, Integer::sum);
             countsByGrade.merge(grade, count, Integer::sum);
         }

@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.item;
 
 import io.github._5thlayer.voidworks.Voidworks;
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -18,7 +19,7 @@ public final class VoidworksItems {
 
     /** The mote. Make a stack of one with {@link MoteItem#stack}: the bare item has the lowest grade. */
     public static final DeferredItem<MoteItem> MOTE = ITEMS.registerItem("mote", MoteItem::new,
-            properties -> properties.component(VoidworksDataComponents.GRADE.get(), MoteItem.LOWEST_GRADE));
+            properties -> properties.component(VoidworksDataComponents.GRADE.get(), VoidEnergy.MIN_GRADE));
 
     private VoidworksItems() {
     }
