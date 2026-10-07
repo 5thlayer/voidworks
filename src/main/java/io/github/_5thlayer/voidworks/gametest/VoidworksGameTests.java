@@ -69,6 +69,7 @@ public final class VoidworksGameTests {
         var environment = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
         var tests = new Registrar(event, environment);
         LoadTests.register(tests);
+        MoteTests.register(tests);
         PressureTests.register(tests);
     }
 
