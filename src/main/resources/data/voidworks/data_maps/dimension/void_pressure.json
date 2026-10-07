@@ -1,0 +1,16 @@
+{
+  "values": {
+    "minecraft:the_nether": {
+      "base": 1,
+      "harvest_kind": "nether"
+    },
+    "minecraft:overworld": {
+      "base": 2,
+      "harvest_kind": "overworld"
+    },
+    "minecraft:the_end": {
+      "base": 3,
+      "harvest_kind": "end"
+    }
+  }
+}
