@@ -54,6 +54,14 @@ class VoidEnergyTest {
     }
 
     @Test
+    void requireGradeKeepsEveryGradeAMoteHasAndRefusesTheRest() {
+        assertEquals(VoidEnergy.MIN_GRADE, VoidEnergy.requireGrade(VoidEnergy.MIN_GRADE));
+        assertEquals(VoidEnergy.MAX_GRADE, VoidEnergy.requireGrade(VoidEnergy.MAX_GRADE));
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.requireGrade(VoidEnergy.MIN_GRADE - 1));
+        assertThrows(IllegalArgumentException.class, () -> VoidEnergy.requireGrade(VoidEnergy.MAX_GRADE + 1));
+    }
+
+    @Test
     void aNegativePressureIsRefusedOutright() {
         assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(VoidEnergy.MIN_GRADE, -1));
         assertThrows(IllegalArgumentException.class, () -> VoidEnergy.plan(Map.of(3, 1), -1, 1));

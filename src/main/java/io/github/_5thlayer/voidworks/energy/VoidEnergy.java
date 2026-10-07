@@ -58,9 +58,7 @@ public final class VoidEnergy {
      *         to {@link #MAX_GRADE}, or the pressure is negative, which no place has
      */
     public static OptionalLong release(int grade, int pressure) {
-        if (!isGrade(grade)) {
-            throw new IllegalArgumentException("no mote has grade " + grade + ": grades run from " + MIN_GRADE + " to " + MAX_GRADE);
-        }
+        requireGrade(grade);
         requireNonNegative(pressure);
         if (grade <= pressure) {
             return OptionalLong.empty();
@@ -109,16 +107,29 @@ public final class VoidEnergy {
             if (grade.isEmpty()) {
                 return Optional.empty();
             }
-            int g = grade.getAsInt();
-            long each = release(g, pressure).orElseThrow();
+            int chosen = grade.getAsInt();
+            long each = release(chosen, pressure).orElseThrow();
             // Rounded up, without the overflow of adding each - 1 to a required near Long.MAX_VALUE.
             long needed = (required - released - 1) / each + 1;
-            int taken = (int) Math.min(needed, remaining.get(g));
-            motes.put(g, taken);
+            int taken = (int) Math.min(needed, remaining.get(chosen));
+            motes.put(chosen, taken);
             released += taken * each;
-            remaining.remove(g);
+            remaining.remove(chosen);
         }
         return Optional.of(new Spend(motes, released));
+    }
+
+    /**
+     * Refuses a grade no mote has.
+     *
+     * @return {@code grade}, when it runs from {@link #MIN_GRADE} to {@link #MAX_GRADE}
+     * @throws IllegalArgumentException when no mote has {@code grade}
+     */
+    public static int requireGrade(int grade) {
+        if (!isGrade(grade)) {
+            throw new IllegalArgumentException("no mote has grade " + grade + ": grades run from " + MIN_GRADE + " to " + MAX_GRADE);
+        }
+        return grade;
     }
 
     private static boolean isGrade(int grade) {

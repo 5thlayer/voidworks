@@ -33,10 +33,7 @@ public final class MoteItem extends Item {
      *         {@link VoidEnergy#MIN_GRADE} to {@link VoidEnergy#MAX_GRADE}
      */
     public static ItemStack stack(int grade, int count) {
-        if (grade < VoidEnergy.MIN_GRADE || grade > VoidEnergy.MAX_GRADE) {
-            throw new IllegalArgumentException("no mote has grade " + grade + ": grades run from "
-                    + VoidEnergy.MIN_GRADE + " to " + VoidEnergy.MAX_GRADE);
-        }
+        VoidEnergy.requireGrade(grade);
         var stack = new ItemStack(VoidworksItems.MOTE.get(), count);
         stack.set(VoidworksDataComponents.GRADE.get(), grade);
         return stack;

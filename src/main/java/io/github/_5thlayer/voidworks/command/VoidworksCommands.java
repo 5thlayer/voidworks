@@ -33,7 +33,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 public final class VoidworksCommands {
 
     /** The most motes one {@code /voidworks mote} gives, as many as 64 full stacks: a typo should not flood the world with items. */
-    public static final int MAX_COUNT = 4096;
+    static final int MAX_COUNT = 4096;
 
     private VoidworksCommands() {
     }
