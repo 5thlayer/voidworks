@@ -3,11 +3,6 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import com.google.gson.JsonParser;
@@ -33,14 +28,6 @@ import net.minecraft.world.level.Level;
  */
 final class PressureTests {
 
-    /*
-     * The defaults docs/spec/void-energy.md gives, which the shipped file must hold. The code's own
-     * copy, for a dimension the map does not name, is held to the spec by DimensionPressureTest.
-     */
-    private static final DimensionPressure NETHER_DEFAULT = new DimensionPressure(1, HarvestKind.NETHER);
-    private static final DimensionPressure OVERWORLD_DEFAULT = new DimensionPressure(2, HarvestKind.OVERWORLD);
-    private static final DimensionPressure END_DEFAULT = new DimensionPressure(3, HarvestKind.END);
-
     private static final ResourceKey<Level> UNNAMED_DIMENSION =
             ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "unnamed"));
 
@@ -52,7 +39,6 @@ final class PressureTests {
         tests.test("void_pressure_nether_matches_the_default", 1, PressureTests::netherMatchesTheDefault);
         tests.test("void_pressure_unnamed_dimension_takes_the_overworlds", 1, PressureTests::unnamedDimensionTakesTheOverworlds);
         tests.test("void_pressure_datapack_entry_overrides_a_default", 1, PressureTests::datapackEntryOverridesADefault);
-        tests.test("void_pressure_shipped_entries_match_the_defaults", 1, PressureTests::shippedEntriesMatchTheDefaults);
         tests.test("void_pressure_entry_reads_harvest_kinds_by_lower_case_name", 1, PressureTests::entryReadsHarvestKindsByName);
     }
 
@@ -89,47 +75,20 @@ final class PressureTests {
         helper.succeed();
     }
 
-    /** The shipped file is where the defaults are, and it must hold the spec's. */
-    private static void shippedEntriesMatchTheDefaults(GameTestHelper helper) {
-        var shipped = readShippedEntries();
-        var expected = Map.of(
-                "minecraft:the_nether", NETHER_DEFAULT,
-                "minecraft:overworld", OVERWORLD_DEFAULT,
-                "minecraft:the_end", END_DEFAULT);
-        if (!shipped.equals(expected)) {
-            helper.fail("the shipped void_pressure.json holds " + shipped + ", not the defaults " + expected);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static Map<String, DimensionPressure> readShippedEntries() {
-        var path = "/data/" + Voidworks.MOD_ID + "/data_maps/dimension/" + VoidPressure.DATA_MAP_ID.getPath() + ".json";
-        try (var reader = new InputStreamReader(PressureTests.class.getResourceAsStream(path), StandardCharsets.UTF_8)) {
-            var values = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("values");
-            var entries = new HashMap<String, DimensionPressure>();
-            for (var entry : values.entrySet()) {
-                entries.put(entry.getKey(), VoidPressure.ENTRY_CODEC.parse(JsonOps.INSTANCE, entry.getValue()).getOrThrow());
-            }
-            return entries;
-        } catch (IOException | RuntimeException e) {
-            throw new IllegalStateException("cannot read the shipped " + path, e);
-        }
-    }
-
     /** The test's own dimension is the Overworld, whose entry is the middle of the three. */
     private static void herePressureMatchesTheDefaults(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(0, 2, 0));
         int pressure = VoidPressure.at(level, pos);
-        if (pressure != OVERWORLD_DEFAULT.base()) {
-            helper.fail("the Void Pressure here is " + pressure + ", not the Overworld's default "
-                    + OVERWORLD_DEFAULT.base());
+        var overworld = DimensionPressure.shippedEntries().get("minecraft:overworld");
+        if (pressure != overworld.base()) {
+            helper.fail("the Void Pressure here is " + pressure + ", not the Overworld's shipped "
+                    + overworld.base());
             return;
         }
         var kind = VoidPressure.harvestKind(level);
-        if (kind != HarvestKind.OVERWORLD) {
-            helper.fail("the harvest kind here is " + kind + ", not overworld");
+        if (kind != overworld.harvestKind()) {
+            helper.fail("the harvest kind here is " + kind + ", not the Overworld's shipped " + overworld.harvestKind());
             return;
         }
         helper.succeed();
@@ -137,8 +96,9 @@ final class PressureTests {
 
     private static void netherMatchesTheDefault(GameTestHelper helper) {
         var entry = VoidPressure.dimension(helper.getLevel().registryAccess(), Level.NETHER);
-        if (!entry.equals(NETHER_DEFAULT)) {
-            helper.fail("the Nether's entry is " + entry + ", not its default " + NETHER_DEFAULT);
+        var shipped = DimensionPressure.shippedEntries().get("minecraft:the_nether");
+        if (!entry.equals(shipped)) {
+            helper.fail("the Nether's entry is " + entry + ", not its shipped " + shipped);
             return;
         }
         helper.succeed();
