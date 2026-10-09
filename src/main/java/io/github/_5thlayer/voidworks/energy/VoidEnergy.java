@@ -24,8 +24,7 @@ public final class VoidEnergy {
 
     /**
      * The lowest grade a mote has: what the lowest default Void Pressure, the Nether's, harvests, so
-     * every mote is worth something there. A mote nothing has graded, such as {@code /give} makes,
-     * has it. Provisional, with the pressures it follows.
+     * every mote is worth something there. Provisional, with the pressures it follows.
      */
     public static final int MIN_GRADE = 2;
 
