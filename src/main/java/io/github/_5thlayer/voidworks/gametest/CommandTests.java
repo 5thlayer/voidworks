@@ -5,12 +5,9 @@ package io.github._5thlayer.voidworks.gametest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
-import io.github._5thlayer.voidworks.energy.VoidEnergy;
-import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
@@ -19,16 +16,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
 
 /**
  * The {@code /voidworks} commands, run on a real server by a server player: {@code pressure} reports
- * what {@link VoidPressure} says where the player stands, {@code mote} puts motes of a grade in the
- * player's inventory, and neither does anything for a player who is not an operator. A message is
- * checked by its translation key and arguments, since the server has no language loaded.
+ * what {@link VoidPressure} says where the player stands, and nothing to a player who is not an
+ * operator. A message is checked by its translation key and arguments, since the server has no language loaded.
  */
 final class CommandTests {
 
@@ -38,62 +32,6 @@ final class CommandTests {
     static void register(VoidworksGameTests.Registrar tests) {
         tests.test("pressure_command_reports_the_pressure_and_harvest_kind_here", 1, CommandTests::pressureReportsHere);
         tests.test("pressure_command_refuses_a_player_who_is_not_an_operator", 1, CommandTests::pressureRefusesNonOperators);
-        tests.test("mote_command_gives_the_grade_and_count", 1, CommandTests::moteGivesGradeAndCount);
-        tests.test("mote_command_gives_one_by_default", 1, CommandTests::moteGivesOneByDefault);
-        tests.test("mote_command_splits_a_count_into_full_stacks", 1, CommandTests::moteSplitsIntoStacks);
-        tests.test("mote_command_refuses_a_player_who_is_not_an_operator", 1, CommandTests::moteRefusesNonOperators);
-        tests.test("mote_command_gives_the_lowest_grade", 1, CommandTests::moteGivesTheLowestGrade);
-        tests.test("mote_command_refuses_a_grade_below_the_lowest", 1, CommandTests::moteRefusesAGradeBelowTheLowest);
-        tests.test("mote_command_gives_the_highest_grade", 1, CommandTests::moteGivesTheHighestGrade);
-        tests.test("mote_command_refuses_a_grade_above_the_highest", 1, CommandTests::moteRefusesAGradeAboveTheHighest);
-    }
-
-    private static void moteGivesTheHighestGrade(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote " + VoidEnergy.MAX_GRADE);
-
-        var held = motesHeldBy(player);
-        if (!held.equals(Map.of(VoidEnergy.MAX_GRADE, 1))) {
-            helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MAX_GRADE + ", holds " + held);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteRefusesAGradeAboveTheHighest(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote " + (VoidEnergy.MAX_GRADE + 1));
-
-        var held = motesHeldBy(player);
-        if (!held.isEmpty()) {
-            helper.fail("grade " + (VoidEnergy.MAX_GRADE + 1) + " is above the highest, but the player was given " + held);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteGivesTheLowestGrade(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote " + VoidEnergy.MIN_GRADE);
-
-        var held = motesHeldBy(player);
-        if (!held.equals(Map.of(VoidEnergy.MIN_GRADE, 1))) {
-            helper.fail("the player should hold 1 mote of grade " + VoidEnergy.MIN_GRADE + ", holds " + held);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteRefusesAGradeBelowTheLowest(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote " + (VoidEnergy.MIN_GRADE - 1));
-
-        var held = motesHeldBy(player);
-        if (!held.isEmpty()) {
-            helper.fail("grade " + (VoidEnergy.MIN_GRADE - 1) + " is below the lowest, but the player was given " + held);
-            return;
-        }
-        helper.succeed();
     }
 
     private static void pressureReportsHere(GameTestHelper helper) {
@@ -119,66 +57,6 @@ final class CommandTests {
         var messages = run(playerOnThePlatform(helper), false, "voidworks pressure");
         if (messages.stream().anyMatch(CommandTests::isPressureReport)) {
             helper.fail("a player who is not an operator was told the pressure: " + messages);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteGivesGradeAndCount(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        var messages = run(player, true, "voidworks mote 3 20");
-
-        var held = motesHeldBy(player);
-        if (!held.equals(Map.of(3, 20))) {
-            helper.fail("the player should hold 20 motes of grade 3, holds " + held);
-            return;
-        }
-        var message = onlyMessage(helper, messages);
-        if (message == null) {
-            return;
-        }
-        if (!"commands.voidworks.mote".equals(message.getKey()) || !List.of(3, 20).equals(List.of(message.getArgs()))) {
-            helper.fail("the command said " + describe(message) + ", not 20 motes of grade 3");
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteGivesOneByDefault(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote 5");
-
-        var held = motesHeldBy(player);
-        if (!held.equals(Map.of(5, 1))) {
-            helper.fail("the player should hold 1 mote of grade 5, holds " + held);
-            return;
-        }
-        helper.succeed();
-    }
-
-    /** A count beyond one stack arrives as several full stacks, as {@code /give} hands them out. */
-    private static void moteSplitsIntoStacks(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, true, "voidworks mote 2 100");
-
-        var held = motesHeldBy(player);
-        var stackSizes = player.getInventory().getNonEquipmentItems().stream()
-                .filter(stack -> !stack.isEmpty()).map(ItemStack::getCount).toList();
-        if (!held.equals(Map.of(2, 100)) || stackSizes.stream().anyMatch(count -> count > 64)) {
-            helper.fail("the player should hold 100 motes of grade 2 in stacks of at most 64, holds " + held
-                    + " in stacks of " + stackSizes);
-            return;
-        }
-        helper.succeed();
-    }
-
-    private static void moteRefusesNonOperators(GameTestHelper helper) {
-        var player = playerOnThePlatform(helper);
-        run(player, false, "voidworks mote 3 20");
-
-        var held = motesHeldBy(player);
-        if (!held.isEmpty()) {
-            helper.fail("a player who is not an operator was given motes: " + held);
             return;
         }
         helper.succeed();
@@ -244,10 +122,5 @@ final class CommandTests {
 
     private static String describe(TranslatableContents message) {
         return message.getKey() + " " + List.of(message.getArgs());
-    }
-
-    /** The motes the player holds, grade to count. */
-    private static Map<Integer, Integer> motesHeldBy(ServerPlayer player) {
-        return MoteItem.countByGrade(PlayerInventoryWrapper.of(player));
     }
 }
