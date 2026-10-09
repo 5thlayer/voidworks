@@ -60,8 +60,12 @@ public record MoteFlight(Vec3 source, Vec3 target, int targetEntity, int grade, 
      * @throws IllegalArgumentException when no mote has {@code grade} or {@code count} is negative
      */
     public static int toEntity(ServerLevel level, Vec3 source, Entity target, int grade, int count) {
-        var aim = target.position().add(0, target.getBbHeight() / 2, 0);
-        return send(level, new MoteFlight(source, aim, target.getId(), VoidEnergy.requireGrade(grade), count));
+        return send(level, new MoteFlight(source, aimAt(target), target.getId(), VoidEnergy.requireGrade(grade), count));
+    }
+
+    /** @return where butterflies flying to {@code entity} aim: the middle of its body */
+    public static Vec3 aimAt(Entity entity) {
+        return entity.position().add(0, entity.getBbHeight() / 2, 0);
     }
 
     private static int send(ServerLevel level, MoteFlight flight) {

@@ -12,10 +12,27 @@ import java.util.List;
  */
 public final class Butterflies {
 
+    /** A butterfly size: the motes it stands for and its scale, in blocks; 1, 8 and 64 read small, middling and large. */
+    private record Size(int motes, float scale) {
+    }
+
+    /** Every size, largest first: the one place a size is defined. */
+    private static final List<Size> TABLE = List.of(new Size(64, 0.5F), new Size(8, 0.3F), new Size(1, 0.17F));
+
     /** The motes one butterfly stands for, largest first. */
-    public static final List<Integer> SIZES = List.of(64, 8, 1);
+    public static final List<Integer> SIZES = TABLE.stream().map(Size::motes).toList();
 
     private Butterflies() {
+    }
+
+    /**
+     * @return the scale, in blocks, of the butterfly that stands for {@code motes}
+     * @throws IllegalArgumentException when no butterfly stands for {@code motes}
+     */
+    public static float scale(int motes) {
+        return TABLE.stream().filter(size -> size.motes() == motes).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("no butterfly stands for " + motes + " motes"))
+                .scale();
     }
 
     /**

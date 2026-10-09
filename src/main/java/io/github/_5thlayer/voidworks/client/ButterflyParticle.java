@@ -9,8 +9,11 @@ import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.function.Consumer;
 
 /**
  * One butterfly of a {@link MoteFlight}: it flutters out of the source, then flies to the target,
@@ -41,12 +44,7 @@ final class ButterflyParticle extends SingleQuadParticle {
         this.gravity = 0;
         this.friction = 1;
         this.lifetime = MAX_LIFETIME;
-        // 1, 8 and 64 motes read small, middling and large: half a block at most.
-        this.quadSize = switch (motes) {
-            case 64 -> 0.5F;
-            case 8 -> 0.3F;
-            default -> 0.17F;
-        };
+        this.quadSize = Butterflies.scale(motes);
         int rgb = GradeColor.of(grade);
         setColor((rgb >> 16 & 0xFF) / 255F, (rgb >> 8 & 0xFF) / 255F, (rgb & 0xFF) / 255F);
         // A scattered take-off, so a harvest's butterflies part before they converge.
@@ -57,7 +55,7 @@ final class ButterflyParticle extends SingleQuadParticle {
     }
 
     /** Shows a flight's butterflies, one per size its count splits into. */
-    static void show(ClientLevel level, MoteFlight flight, SpriteSet sprites, java.util.function.Consumer<ButterflyParticle> add) {
+    static void show(ClientLevel level, MoteFlight flight, SpriteSet sprites, Consumer<ButterflyParticle> add) {
         for (int motes : Butterflies.sizes(flight.count())) {
             add.accept(new ButterflyParticle(level, flight.source(), flight.target(), flight.targetEntity(),
                     flight.grade(), motes, sprites));
@@ -76,7 +74,7 @@ final class ButterflyParticle extends SingleQuadParticle {
         if (targetEntity != MoteFlight.NO_ENTITY) {
             var entity = level.getEntity(targetEntity);
             if (entity != null) {
-                target = entity.position().add(0, entity.getBbHeight() / 2, 0);
+                target = MoteFlight.aimAt(entity);
             }
         }
         var toTarget = target.subtract(x, y, z);
@@ -96,7 +94,7 @@ final class ButterflyParticle extends SingleQuadParticle {
     }
 
     /** The wing frame now: down through the frames and back up, so the wings beat. */
-    private net.minecraft.client.renderer.texture.TextureAtlasSprite frame() {
+    private TextureAtlasSprite frame() {
         int t = (age + phase) % WINGBEAT;
         int half = WINGBEAT / 2;
         int step = t <= half ? t : WINGBEAT - t;
