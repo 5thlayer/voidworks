@@ -131,7 +131,8 @@ public final class VoidEnergy {
         return grade;
     }
 
-    private static boolean isGrade(int grade) {
+    /** @return whether a mote can have {@code grade}: from {@link #MIN_GRADE} to {@link #MAX_GRADE} */
+    public static boolean isGrade(int grade) {
         return grade >= MIN_GRADE && grade <= MAX_GRADE;
     }
 

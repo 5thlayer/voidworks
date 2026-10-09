@@ -28,7 +28,7 @@ public final class MoteResource implements Resource {
 
     /** A mote saved as its grade; it refuses a grade no mote has. Not for {@link #EMPTY}. */
     public static final Codec<MoteResource> CODEC = Codec.INT.comapFlatMap(
-            grade -> grade >= VoidEnergy.MIN_GRADE && grade <= VoidEnergy.MAX_GRADE
+            grade -> VoidEnergy.isGrade(grade)
                     ? DataResult.success(of(grade))
                     : DataResult.error(() -> "no mote has grade " + grade),
             MoteResource::grade);

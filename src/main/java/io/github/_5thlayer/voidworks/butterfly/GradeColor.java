@@ -28,7 +28,6 @@ public final class GradeColor {
 
     /** @return the RGB that tints butterflies of {@code grade}, or {@link #FALLBACK} for a grade no mote has */
     public static int of(int grade) {
-        boolean isGrade = grade >= VoidEnergy.MIN_GRADE && grade <= VoidEnergy.MAX_GRADE;
-        return isGrade ?PALETTE[grade - VoidEnergy.MIN_GRADE] : FALLBACK;
+        return VoidEnergy.isGrade(grade) ? PALETTE[grade - VoidEnergy.MIN_GRADE] : FALLBACK;
     }
 }
