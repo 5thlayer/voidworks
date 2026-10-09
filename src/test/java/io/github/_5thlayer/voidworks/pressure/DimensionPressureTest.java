@@ -4,10 +4,18 @@
 package io.github._5thlayer.voidworks.pressure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import org.junit.jupiter.api.Test;
 
@@ -37,8 +45,8 @@ class DimensionPressureTest {
     }
 
     @Test
-    void anUnnamedDimensionWithNoOverworldEntryTakesTheDefaultOverworld() {
-        assertEquals(new DimensionPressure(DimensionPressure.OVERWORLD_DEFAULT.base(), HarvestKind.NONE),
+    void anUnnamedDimensionWithNoOverworldEntryTakesTheShippedOverworldsPressure() {
+        assertEquals(new DimensionPressure(shippedFile("minecraft:overworld").get("base").getAsInt(), HarvestKind.NONE),
                 DimensionPressure.resolve(Optional.empty(), Optional.empty()));
     }
 
@@ -67,31 +75,70 @@ class DimensionPressureTest {
     }
 
     @Test
-    void theDefaultsAreTheSpecs() {
-        assertEquals(new DimensionPressure(1, HarvestKind.NETHER), DimensionPressure.NETHER_DEFAULT);
-        assertEquals(new DimensionPressure(2, HarvestKind.OVERWORLD), DimensionPressure.OVERWORLD_DEFAULT);
-        assertEquals(new DimensionPressure(3, HarvestKind.END), DimensionPressure.END_DEFAULT);
+    void theShippedEntriesAreTheFilesOwn() {
+        for (var dimension : new String[] {"minecraft:the_nether", "minecraft:overworld", "minecraft:the_end"}) {
+            var file = shippedFile(dimension);
+            var kind = HarvestKind.valueOf(file.get("harvest_kind").getAsString().toUpperCase(Locale.ROOT));
+            assertEquals(new DimensionPressure(file.get("base").getAsInt(), kind),
+                    DimensionPressure.shippedEntries().get(dimension), dimension);
+        }
     }
 
     @Test
-    void theDefaultsRiseFromNetherThroughOverworldToEnd() {
-        assertTrue(DimensionPressure.NETHER_DEFAULT.base() < DimensionPressure.OVERWORLD_DEFAULT.base());
-        assertTrue(DimensionPressure.OVERWORLD_DEFAULT.base() < DimensionPressure.END_DEFAULT.base());
+    void theShippedDefaultsRiseFromNetherThroughOverworldToEnd() {
+        assertTrue(shipped("minecraft:the_nether").base() < shipped("minecraft:overworld").base());
+        assertTrue(shipped("minecraft:overworld").base() < shipped("minecraft:the_end").base());
     }
 
     @Test
-    void theLowestGradeIsWhatTheLowestDefaultPressureHarvests() {
-        // The Nether's is the lowest default (theDefaultsRiseFromNetherThroughOverworldToEnd), and a
-        // harvest grades its motes one step above the pressure.
-        assertEquals(DimensionPressure.NETHER_DEFAULT.base() + 1, VoidEnergy.MIN_GRADE);
-        assertTrue(VoidEnergy.release(VoidEnergy.MIN_GRADE, DimensionPressure.NETHER_DEFAULT.base()).isPresent());
+    void theLowestGradeIsWhatTheLowestShippedPressureHarvests() {
+        // The Nether's is the lowest default (theShippedDefaultsRiseFromNetherThroughOverworldToEnd),
+        // and a harvest grades its motes one step above the pressure.
+        int lowest = shipped("minecraft:the_nether").base();
+        assertEquals(lowest + 1, VoidEnergy.MIN_GRADE);
+        assertTrue(VoidEnergy.release(VoidEnergy.MIN_GRADE, lowest).isPresent());
     }
 
     @Test
-    void theHighestDefaultHarvestIsAGrade() {
+    void theHighestShippedHarvestIsAGrade() {
         // The End over the open void, one step above its pressure there.
-        int highest = DimensionPressure.END_DEFAULT.pressure(() -> true) + 1;
+        int highest = shipped("minecraft:the_end").pressure(() -> true) + 1;
         assertTrue(highest <= VoidEnergy.MAX_GRADE);
+    }
+
+    @Test
+    void aShippedFileWithoutTheOverworldIsRefusedWithAClearMessage() {
+        var withoutOverworld = "{\"values\": {\"minecraft:the_end\": {\"base\": 3, \"harvest_kind\": \"end\"}}}";
+        var e = assertThrows(IllegalStateException.class,
+                () -> DimensionPressure.parseShipped(new StringReader(withoutOverworld), "test.json"));
+        assertTrue(e.getMessage().contains("minecraft:overworld"), e.getMessage());
+        assertTrue(e.getMessage().contains("test.json"), e.getMessage());
+    }
+
+    @Test
+    void aShippedFileThatIsNotAnEntryMapIsRefusedWithAClearMessage() {
+        var e = assertThrows(IllegalStateException.class,
+                () -> DimensionPressure.parseShipped(new StringReader("not json"), "test.json"));
+        assertTrue(e.getMessage().contains("test.json"), e.getMessage());
+    }
+
+    @Test
+    void theShippedEntriesIncludeTheOverworld() {
+        assertTrue(DimensionPressure.shippedEntries().containsKey("minecraft:overworld"));
+    }
+
+    private static DimensionPressure shipped(String dimension) {
+        return DimensionPressure.shippedEntries().get(dimension);
+    }
+
+    /** The file's own text for a dimension, read with no codec, as an independent check of the codec's reading. */
+    private static JsonObject shippedFile(String dimension) {
+        var path = "/data/voidworks/data_maps/dimension/void_pressure.json";
+        try (var reader = new InputStreamReader(DimensionPressureTest.class.getResourceAsStream(path), StandardCharsets.UTF_8)) {
+            return JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("values").getAsJsonObject(dimension);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test
