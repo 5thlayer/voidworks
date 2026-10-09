@@ -4,6 +4,8 @@
 package io.github._5thlayer.voidworks.energy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigInteger;
@@ -51,6 +53,14 @@ class VoidEnergyTest {
         assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(VoidEnergy.MIN_GRADE - 1, 0));
         // Far enough above the maximum that a long shift would wrap around to a small number.
         assertThrows(IllegalArgumentException.class, () -> VoidEnergy.release(66, 0));
+    }
+
+    @Test
+    void isGradeHoldsFromTwoToSixteenOnly() {
+        assertTrue(VoidEnergy.isGrade(2));
+        assertTrue(VoidEnergy.isGrade(16));
+        assertFalse(VoidEnergy.isGrade(1));
+        assertFalse(VoidEnergy.isGrade(17));
     }
 
     @Test

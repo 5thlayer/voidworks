@@ -36,7 +36,7 @@ Nothing forces the first Displacer into the End; the End is where harvesting pay
   worth something where it was harvested: Nether, Overworld, End, and End over the open void.
 - The grade bands, provisional like every number: the default pressures are Nether 1, Overworld 2
   and End 3, 4 over the open void, so harvests give grades 2 to 5. A grade runs from 2, the lowest
-  any harvest gives and the grade of a mote nothing has graded, to 16, which leaves room for the
+  any harvest gives, to 16, which leaves room for the
   numbers to grow and keeps a spend's arithmetic exact. No mote has a grade outside it.
 - Spending a mote releases void energy by how far its grade exceeds the local Void Pressure, and
   each further step doubles it: one step releases a provisional base amount, two steps twice that,

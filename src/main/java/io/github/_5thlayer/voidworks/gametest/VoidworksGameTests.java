@@ -52,10 +52,12 @@ public final class VoidworksGameTests {
         TEST_TYPES.register(modBus);
         // Posted only when game tests are enabled, so a production server never registers the tests.
         modBus.addListener(VoidworksGameTests::registerTests);
-        // The packs that tests lean on are for the game test run alone, which names them in build.gradle;
-        // the jar leaves them out.
+        // The packs and capabilities that tests lean on are for the game test run alone, which names
+        // them in build.gradle; the jar leaves them out.
         if (Boolean.getBoolean(TEST_PACKS_PROPERTY)) {
             modBus.addListener(VoidworksGameTests::addTestPacks);
+            // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
+            modBus.addListener(SpendTests::registerCapabilities);
         }
     }
 
@@ -69,6 +71,7 @@ public final class VoidworksGameTests {
         // Registered rather than borrowed, since the event hands out no lookup for vanilla's.
         var environment = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
         var tests = new Registrar(event, environment);
+        ButterflyTests.register(tests);
         CommandTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);

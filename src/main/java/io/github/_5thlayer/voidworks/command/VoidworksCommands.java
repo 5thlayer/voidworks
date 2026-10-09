@@ -6,33 +6,33 @@ package io.github._5thlayer.voidworks.command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
-import io.github._5thlayer.voidworks.item.MoteItem;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.IEventBus;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
  * The {@code /voidworks} commands, a way to check the mote mechanic by hand in game before any
- * machine exists. Both are for operators only.
+ * machine exists. They are for operators only.
  *
  * <ul>
  *   <li>{@code /voidworks pressure} reports the Void Pressure where the player stands, the open
  *       void's extra step included, and the dimension's harvest kind.</li>
- *   <li>{@code /voidworks mote <grade> [count]} gives the player motes of that grade, from
- *       {@link VoidEnergy#MIN_GRADE} to {@link VoidEnergy#MAX_GRADE}, one by default, in full
- *       stacks and dropped at the player's feet when the inventory is full.</li>
+ *   <li>{@code /voidworks butterflies <grade> <count>} shows {@code count} motes of {@code grade}
+ *       flying to the player as butterflies, before any harvest exists.</li>
  * </ul>
+ *
+ * <p>{@code /voidworks mote <pos> <grade> [count]} comes with the first mote store (ADR 0002).
  */
 public final class VoidworksCommands {
 
-    /** The most motes one {@code /voidworks mote} gives, as many as 64 full stacks: a typo should not flood the world with items. */
+    /** The most motes one {@code /voidworks butterflies} shows. */
     static final int MAX_COUNT = 4096;
 
     private VoidworksCommands() {
@@ -48,11 +48,10 @@ public final class VoidworksCommands {
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("pressure")
                         .executes(VoidworksCommands::pressure))
-                .then(Commands.literal("mote")
+                .then(Commands.literal("butterflies")
                         .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE, VoidEnergy.MAX_GRADE))
-                                .executes(context -> mote(context, 1))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, MAX_COUNT))
-                                        .executes(context -> mote(context, IntegerArgumentType.getInteger(context, "count")))))));
+                                        .executes(VoidworksCommands::butterflies)))));
     }
 
     /** @return the Void Pressure at the player's feet */
@@ -64,23 +63,15 @@ public final class VoidworksCommands {
         return pressure;
     }
 
-    /** @return how many motes the player was given */
-    private static int mote(CommandContext<CommandSourceStack> context, int count) throws CommandSyntaxException {
+    /** Shows the motes flying to the player from four blocks ahead of them. @return how many butterflies */
+    private static int butterflies(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         int grade = IntegerArgumentType.getInteger(context, "grade");
-        int maxStackSize = MoteItem.stack(grade, 1).getMaxStackSize();
-        for (int left = count; left > 0; left -= maxStackSize) {
-            give(player, MoteItem.stack(grade, Math.min(left, maxStackSize)));
-        }
-        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.mote", grade, count), true);
-        return count;
-    }
-
-    /** Puts {@code stack} in the player's inventory, or drops what does not fit, as {@code /give} does. */
-    private static void give(ServerPlayer player, ItemStack stack) {
-        player.getInventory().add(stack);
-        if (!stack.isEmpty()) {
-            player.drop(stack, false);
-        }
+        int count = IntegerArgumentType.getInteger(context, "count");
+        Vec3 ahead = player.getEyePosition().add(player.getLookAngle().multiply(4, 0, 4));
+        int butterflies = MoteFlight.toEntity(player.level(), ahead, player, grade, count);
+        context.getSource().sendSuccess(
+                () -> Component.translatable("commands.voidworks.butterflies", butterflies, count, grade), false);
+        return butterflies;
     }
 }

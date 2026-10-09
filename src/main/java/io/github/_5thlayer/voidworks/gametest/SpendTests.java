@@ -3,38 +3,37 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.IntStream;
+import java.util.concurrent.ConcurrentHashMap;
 
+import io.github._5thlayer.voidworks.VoidworksCapabilities;
+import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
-import io.github._5thlayer.voidworks.item.MoteItem;
-import io.github._5thlayer.voidworks.item.VoidworksItems;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.transfer.item.PlayerInventoryWrapper;
-import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 
 /**
- * Spending motes from a real inventory at a position: a spend takes the lowest worthwhile grade
- * first, refuses motes that are not above the local Void Pressure, and leaves an inventory that
- * cannot afford it untouched. The tests stand in the Overworld and read its pressure there, 2 by
- * default, so grade 3 releases {@link VoidEnergy#BASE} per mote and grade 4 twice that. A
- * machine's inventory is a plain container behind the item handler, and a player's is the real
- * thing.
+ * Spending motes from a store at a position: a spend takes the lowest worthwhile grade first,
+ * refuses motes that are not above the local Void Pressure, and leaves a store that cannot afford it
+ * untouched. The tests stand in the Overworld and read its pressure there, 2 by default, so grade 3
+ * releases {@link VoidEnergy#BASE} per mote and grade 4 twice that. A store is a plain
+ * {@code ResourceHandler<MoteResource>}, and one is reached through a block's
+ * {@code voidworks:motes} capability.
  */
 final class SpendTests {
+
+    /** The block that stands in for a void machine: the game test run gives it {@code voidworks:motes}. */
+    static final Block MACHINE = Blocks.LODESTONE;
+
+    /** The store each placed machine holds, by its position; a machine with none provides no capability. */
+    private static final Map<BlockPos, ResourceHandler<MoteResource>> MACHINES = new ConcurrentHashMap<>();
 
     private SpendTests() {
     }
@@ -43,66 +42,90 @@ final class SpendTests {
         tests.test("spend_refuses_motes_not_above_the_pressure", 1, SpendTests::refusesMotesNotAboveThePressure);
         tests.test("spend_takes_the_lowest_worthwhile_grade_first", 1, SpendTests::takesTheLowestWorthwhileGradeFirst);
         tests.test("spend_moves_up_a_grade_when_the_lower_runs_out", 1, SpendTests::movesUpAGradeWhenTheLowerRunsOut);
-        tests.test("spend_leaves_an_inventory_that_cannot_afford_it_untouched", 1, SpendTests::cannotAffordLeavesInventoryUntouched);
-        tests.test("spend_takes_a_bare_mote_in_the_nether", 1, SpendTests::takesABareMoteInTheNether);
-        tests.test("spend_takes_motes_of_a_grade_that_differ_in_another_component", 1, SpendTests::takesMotesThatDifferInAnotherComponent);
+        tests.test("spend_leaves_a_store_that_cannot_afford_it_untouched", 1, SpendTests::cannotAffordLeavesStoreUntouched);
+        tests.test("spend_takes_the_lowest_grade_in_the_nether", 1, SpendTests::takesTheLowestGradeInTheNether);
+        tests.test("spend_takes_motes_of_a_grade_from_several_slots", 1, SpendTests::takesMotesFromSeveralSlots);
+        tests.test("spend_takes_from_a_block_through_the_motes_capability", 1, SpendTests::takesFromABlockThroughTheCapability);
     }
 
-    /** A mote named in an anvil is still a mote of its grade, though it no longer stacks with the others. */
-    private static void takesMotesThatDifferInAnotherComponent(GameTestHelper helper) {
-        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
-        var named = MoteItem.stack(pressure + 1, 1);
-        named.set(DataComponents.CUSTOM_NAME, Component.literal("Kept"));
-        var machine = new SimpleContainer(9);
-        machine.addItem(MoteItem.stack(pressure + 1, 1));
-        machine.addItem(named);
+    /** Gives {@link #MACHINE} the {@code voidworks:motes} capability, for the game test run only. */
+    static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlock(VoidworksCapabilities.MOTES, (level, pos, state, blockEntity, side) -> MACHINES.get(pos.immutable()), MACHINE);
+    }
 
-        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
+    /** A Consumer's void machine, as the spender finds it: a block that provides {@code voidworks:motes}. */
+    private static void takesFromABlockThroughTheCapability(GameTestHelper helper) {
+        var pos = helper.absolutePos(new BlockPos(1, 2, 1));
+        helper.getLevel().setBlockAndUpdate(pos, MACHINE.defaultBlockState());
+        int pressure = VoidPressure.at(helper.getLevel(), pos);
+        MACHINES.put(pos, new MoteStore().add(pressure + 1, 5));
+
+        var handler = helper.getLevel().getCapability(VoidworksCapabilities.MOTES, pos, null);
+        if (handler == null) {
+            helper.fail("the machine at " + pos + " provides no voidworks:motes");
+            return;
+        }
+        var spend = VoidSpender.spend(handler, helper.getLevel(), pos, 2 * VoidEnergy.BASE);
+
+        if (spend.isEmpty() || !spend.get().motes().equals(Map.of(pressure + 1, 2))) {
+            helper.fail("a spend of " + 2 * VoidEnergy.BASE + " should take two grade " + (pressure + 1) + " motes, but gave " + spend);
+            return;
+        }
+        if (!VoidSpender.countByGrade(MACHINES.get(pos)).equals(Map.of(pressure + 1, 3))) {
+            helper.fail("the machine should hold 3 motes after the spend, holds " + VoidSpender.countByGrade(MACHINES.get(pos)));
+            return;
+        }
+        MACHINES.remove(pos);
+        helper.succeed();
+    }
+
+    /** One grade can lie in several slots, as a store that does not pool its motes keeps them. */
+    private static void takesMotesFromSeveralSlots(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
+        var store = new MoteStore();
+        store.set(0, MoteResource.of(pressure + 1), 1);
+        store.set(4, MoteResource.of(pressure + 1), 1);
+
+        var spend = VoidSpender.spend(store, helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
 
         if (spend.isEmpty() || !spend.get().motes().equals(Map.of(pressure + 1, 2))) {
             helper.fail("a spend of " + 2 * VoidEnergy.BASE + " should take both grade " + (pressure + 1)
-                    + " motes, the named one too, but gave " + spend);
+                    + " motes, from both slots, but gave " + spend);
             return;
         }
-        if (!machine.isEmpty()) {
-            helper.fail("the spend left " + describe(machine));
+        if (!VoidSpender.countByGrade(store).isEmpty()) {
+            helper.fail("the spend left " + VoidSpender.countByGrade(store));
             return;
         }
         helper.succeed();
     }
 
-    /** A machine's inventory holding only motes the pressure here makes worthless: the lowest grade, at the pressure. */
+    /** A store holding only motes the pressure here makes worthless: the lowest grade, at the pressure. */
     private static void refusesMotesNotAboveThePressure(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
-        var machine = new SimpleContainer(9);
-        machine.addItem(MoteItem.stack(pressure, 40));
-        var before = snapshot(machine);
+        var store = new MoteStore().add(pressure, 40);
+        var before = store.snapshot();
 
-        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 1);
+        var spend = VoidSpender.spend(store, helper.getLevel(), here(helper), 1);
 
         if (spend.isPresent()) {
             helper.fail("motes not above the pressure " + pressure + " should be refused, but the spend released "
                     + spend.get().released());
             return;
         }
-        if (!unchanged(machine, before)) {
-            helper.fail("a refused spend changed the inventory: " + describe(machine));
+        if (!store.snapshot().equals(before)) {
+            helper.fail("a refused spend changed the store: " + store.snapshot());
             return;
         }
         helper.succeed();
     }
 
-    /** A player's inventory holding a worthless grade, two worthwhile grades and an item that is no mote. */
+    /** A store holding a worthless grade and two worthwhile grades. */
     private static void takesTheLowestWorthwhileGradeFirst(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
-        var player = helper.makeMockPlayer(GameType.SURVIVAL);
-        var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(pressure, 50));
-        inventory.add(MoteItem.stack(pressure + 2, 10));
-        inventory.add(MoteItem.stack(pressure + 1, 10));
-        inventory.add(new ItemStack(Items.COBBLESTONE, 64));
+        var store = new MoteStore().add(pressure, 50).add(pressure + 2, 10).add(pressure + 1, 10);
 
-        var spend = VoidSpender.spend(PlayerInventoryWrapper.of(player), helper.getLevel(), here(helper), 3 * VoidEnergy.BASE);
+        var spend = VoidSpender.spend(store, helper.getLevel(), here(helper), 3 * VoidEnergy.BASE);
 
         if (spend.isEmpty() || spend.get().released() != 3 * VoidEnergy.BASE) {
             helper.fail("a spend of " + 3 * VoidEnergy.BASE + " should release exactly that from grade " + (pressure + 1)
@@ -110,12 +133,8 @@ final class SpendTests {
             return;
         }
         var expected = Map.of(pressure, 50, pressure + 1, 7, pressure + 2, 10);
-        if (!moteCounts(inventory).equals(expected)) {
-            helper.fail("the motes left should be " + expected + " (grade to count), but are " + moteCounts(inventory));
-            return;
-        }
-        if (inventory.countItem(Items.COBBLESTONE) != 64) {
-            helper.fail("a spend of motes took something else: " + inventory.countItem(Items.COBBLESTONE) + " cobblestone left");
+        if (!VoidSpender.countByGrade(store).equals(expected)) {
+            helper.fail("the motes left should be " + expected + " (grade to count), but are " + VoidSpender.countByGrade(store));
             return;
         }
         helper.succeed();
@@ -123,67 +142,57 @@ final class SpendTests {
 
     private static void movesUpAGradeWhenTheLowerRunsOut(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
-        var machine = new SimpleContainer(9);
-        machine.addItem(MoteItem.stack(pressure + 1, 2));
-        machine.addItem(MoteItem.stack(pressure + 2, 5));
+        var store = new MoteStore().add(pressure + 1, 2).add(pressure + 2, 5);
 
         // The two grade 3 motes release 2 x BASE, then one grade 4 mote releases 2 x BASE more.
-        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE);
+        var spend = VoidSpender.spend(store, helper.getLevel(), here(helper), 4 * VoidEnergy.BASE);
 
         if (spend.isEmpty() || spend.get().released() != 4 * VoidEnergy.BASE) {
             helper.fail("a spend of " + 4 * VoidEnergy.BASE + " should release exactly that, but gave " + spend);
             return;
         }
         var expected = Map.of(pressure + 2, 4);
-        if (!moteCounts(machine).equals(expected)) {
-            helper.fail("the motes left should be " + expected + " (grade to count), but are " + moteCounts(machine));
+        if (!VoidSpender.countByGrade(store).equals(expected)) {
+            helper.fail("the motes left should be " + expected + " (grade to count), but are " + VoidSpender.countByGrade(store));
             return;
         }
         helper.succeed();
     }
 
     /** All the worthwhile motes together release less than asked, and the worthless ones do not count. */
-    private static void cannotAffordLeavesInventoryUntouched(GameTestHelper helper) {
+    private static void cannotAffordLeavesStoreUntouched(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
-        var player = helper.makeMockPlayer(GameType.SURVIVAL);
-        var inventory = player.getInventory();
-        inventory.add(MoteItem.stack(pressure, 64));
-        inventory.add(MoteItem.stack(pressure + 1, 2));
-        inventory.add(MoteItem.stack(pressure + 2, 1));
-        var before = snapshot(inventory);
+        var store = new MoteStore().add(pressure, 64).add(pressure + 1, 2).add(pressure + 2, 1);
+        var before = store.snapshot();
 
         // 2 x BASE from the grade 3 motes and 2 x BASE from the grade 4 mote: 4 x BASE in all.
-        var spend = VoidSpender.spend(PlayerInventoryWrapper.of(player), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE + 1);
+        var spend = VoidSpender.spend(store, helper.getLevel(), here(helper), 4 * VoidEnergy.BASE + 1);
 
         if (spend.isPresent()) {
-            helper.fail("the inventory cannot release " + (4 * VoidEnergy.BASE + 1) + ", but the spend released " + spend.get().released());
+            helper.fail("the store cannot release " + (4 * VoidEnergy.BASE + 1) + ", but the spend released " + spend.get().released());
             return;
         }
-        if (!unchanged(inventory, before)) {
-            helper.fail("a refused spend changed the inventory: " + describe(inventory));
+        if (!store.snapshot().equals(before)) {
+            helper.fail("a refused spend changed the store: " + store.snapshot());
             return;
         }
         helper.succeed();
     }
 
-    /**
-     * A mote nothing has graded, as {@code /give} makes it, is worth something at the lowest default
-     * pressure, the Nether's: it has the lowest grade any harvest gives.
-     */
-    private static void takesABareMoteInTheNether(GameTestHelper helper) {
+    /** A mote of the lowest grade is worth something at the lowest default pressure, the Nether's. */
+    private static void takesTheLowestGradeInTheNether(GameTestHelper helper) {
         var nether = helper.getLevel().getServer().getLevel(Level.NETHER);
-        var machine = new SimpleContainer(9);
-        machine.addItem(new ItemStack(VoidworksItems.MOTE.get()));
+        var store = new MoteStore().add(VoidEnergy.MIN_GRADE, 1);
 
-        var spend = VoidSpender.spend(VanillaContainerWrapper.of(machine), nether, BlockPos.ZERO, 1);
+        var spend = VoidSpender.spend(store, nether, BlockPos.ZERO, 1);
 
         if (spend.isEmpty() || spend.get().released() != VoidEnergy.BASE) {
-            helper.fail("a bare mote spent at the Nether's pressure " + VoidPressure.at(nether, BlockPos.ZERO)
+            helper.fail("a lowest grade mote spent at the Nether's pressure " + VoidPressure.at(nether, BlockPos.ZERO)
                     + " should release " + VoidEnergy.BASE + ", but gave " + spend);
             return;
         }
-        if (!machine.isEmpty()) {
-            helper.fail("the spend left " + describe(machine));
+        if (!VoidSpender.countByGrade(store).isEmpty()) {
+            helper.fail("the spend left " + VoidSpender.countByGrade(store));
             return;
         }
         helper.succeed();
@@ -192,28 +201,5 @@ final class SpendTests {
     /** Where the spender stands: the platform's floor, in the Overworld. */
     private static BlockPos here(GameTestHelper helper) {
         return helper.absolutePos(new BlockPos(0, 2, 0));
-    }
-
-    private static List<ItemStack> snapshot(Container container) {
-        var stacks = new ArrayList<ItemStack>();
-        for (int slot = 0; slot < container.getContainerSize(); slot++) {
-            stacks.add(container.getItem(slot).copy());
-        }
-        return stacks;
-    }
-
-    /** Whether every slot holds what it held before, count and components alike. */
-    private static boolean unchanged(Container container, List<ItemStack> before) {
-        var now = snapshot(container);
-        return now.size() == before.size()
-                && IntStream.range(0, now.size()).allMatch(slot -> ItemStack.matches(now.get(slot), before.get(slot)));
-    }
-
-    private static Map<Integer, Integer> moteCounts(Container container) {
-        return MoteItem.countByGrade(VanillaContainerWrapper.of(container));
-    }
-
-    private static String describe(Container container) {
-        return moteCounts(container).toString();
     }
 }
