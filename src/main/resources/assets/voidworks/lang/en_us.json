@@ -1,6 +1,7 @@
 {
   "item.voidworks.mote": "Mote",
   "item.voidworks.mote.graded": "Mote (grade %s)",
+  "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",
   "commands.voidworks.pressure": "Void Pressure here is %s, harvest kind %s",
   "commands.voidworks.mote": "Gave grade %s x %s motes"
 }

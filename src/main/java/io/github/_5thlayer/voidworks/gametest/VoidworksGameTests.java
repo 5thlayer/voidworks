@@ -69,6 +69,7 @@ public final class VoidworksGameTests {
         // Registered rather than borrowed, since the event hands out no lookup for vanilla's.
         var environment = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
         var tests = new Registrar(event, environment);
+        ButterflyTests.register(tests);
         CommandTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);

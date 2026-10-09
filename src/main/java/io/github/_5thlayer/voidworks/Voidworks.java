@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks;
 
+import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.item.VoidworksDataComponents;
@@ -25,6 +26,7 @@ public final class Voidworks {
         VoidworksDataComponents.register(modBus);
         VoidworksItems.register(modBus);
         VoidPressure.register(modBus);
+        VoidworksButterflies.register(modBus);
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);
     }
