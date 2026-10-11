@@ -17,8 +17,8 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 
 ### Void
 
-**Mote**:
-The unit of void, harvested, stored and moved. A mote carries a grade: one step above the Void
+**Void Mote**:
+The unit of void, harvested, stored and moved; "mote" for short. A mote carries a grade: one step above the Void
 Pressure where it was harvested, so it is always worth something there. Grades run from the lowest
 any harvest gives to a fixed maximum. A mote is never an
 item: only Voidstone, void machines (a Consumer's too) and the Void Siphon hold motes, pooled by
@@ -44,7 +44,10 @@ for a dimension that harvests nothing. The Void Siphon behaves by it.
 
 **Density**:
 How many motes a block yields when fed to a Void Displacer. It is set per block, by tag, and
-steepens sharply with each step: stone is cheap, and storage blocks are how harvesting scales.
+steepens sharply with each step: storage blocks are how harvesting scales. Only listed blocks have a
+Density; every other block, easily renewed and abundant ones above all (cobblestone, stone, dirt,
+sand, netherrack, end stone), has Density 0 and nothing harvests it, so every harvest, and every
+Voidstone, costs something mined.
 
 ### Harvesting
 
@@ -55,16 +58,29 @@ carries motes.
 _Avoid_: bedrock, residue
 
 **Void Displacer**:
-A machine that harvests motes in its zone, attuned to the dimension it is built for and working
-only there. It holds no motes: each harvest goes into the Voidstone network it touches, and without
-one it stalls. It cannot be broken or moved while its zone has anything left to convert; when nothing
-is left it becomes Voidstone itself.
+A machine that harvests motes until its Zone is spent, attuned to the dimension it is built for
+and working only there. It holds no motes and needs no network to start: it harvests outward from
+itself, only positions touching it or the Voidstone it has already left, nearest first, so what it
+has harvested is the network its motes go into. It cannot be broken or moved while its Zone is
+unspent and it can still reach something to convert; then it becomes Voidstone itself.
 _Avoid_: harvester, Void Well
+
+**Zone**:
+How many positions a Void Displacer harvests in its life. It is a count, not a region: the
+Displacer grows outward until its Zone is spent, and upgrades paid in motes raise it.
+_Avoid_: area, range, radius
 
 **Void Siphon**:
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It
 holds motes and keeps them wherever it goes, as many as its tier allows, and void gear draws from it.
+Standing on Voidstone, it charges from the network or empties into it, as its holder sets it.
 _Avoid_: glove
+
+**Dormant**:
+A void machine placed but not yet paid for: it soaks its cost in motes where it stands, from a
+touching network or an emptying Void Siphon, and works once it is paid. A machine that costs no
+motes, such as the Overworld's Void Displacer, is never dormant.
+_Avoid_: frame, uncharged (charging is the Void Siphon's)
 
 ### Moving motes
 
