@@ -2,7 +2,8 @@
 
 Resolved in two grilling sessions on 2026-10-06, the second on void logistics, and a third on
 2026-10-07 that made motes a resource and never an item ([ADR 0002](../adr/0002-motes-are-a-resource-never-items.md)), and a fourth on
-2026-10-11 that started void in the Overworld, before the End ([ADR 0003](../adr/0003-void-starts-in-the-overworld-before-the-end.md)), from the original
+2026-10-11 that started void in the Overworld, before the End ([ADR 0003](../adr/0003-void-starts-in-the-overworld-before-the-end.md)), and a fifth the same day
+on Families, from the original
 idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written.
 Factorio fidelity was not a constraint.
 
@@ -119,8 +120,8 @@ Only blocks a Density tag names can be harvested. Every other block is Density 0
 it, and it leaves no Voidstone: the renewable and abundant blocks above all (cobblestone, stone,
 deepslate, dirt, sand, gravel, netherrack, blackstone, basalt, end stone, obsidian, snow, ice), and
 everything made from them, so a generator never feeds a harvest. Density rises steeply (shape: about
-4^(density − 1), so 1, 4, 16, 64) and follows the Family ladders, shipped as Density tags of their
-own so a pack retunes one without the other:
+4^(density − 1), so 1, 4, 16, 64). Density tags and Families are separate data and need not agree:
+amethyst, quartz and glowstone climb the gem and dust Families but stay Density 0, being renewable.
 
 | Density | Motes | Blocks, raw and refined alike |
 |---|---|---|
@@ -129,7 +130,7 @@ own so a pack retunes one without the other:
 | 3 | 16 | gold, emerald |
 | 4 | 64 | diamond, netherite |
 
-One Mutation up a Family so multiplies a block's harvest by four. No fed block yields more than about
+One Mutation up a metal block Family so multiplies a block's harvest by four. No fed block yields more than about
 64 motes, so a harvest stays countable, and a mote releases correspondingly more void energy.
 
 ### By hand
@@ -204,16 +205,58 @@ Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Gh
 
 - The **Mutation Chamber** is a smithing table, amethyst shards and crying obsidian, placed Dormant.
   It is the first thing motes buy, before the Nether. It does two things for motes:
-  - **Upgrade**: an item to the next tier of its **Family**. A chance roll; on failure the item is
-    kept and the motes are spent.
+  - **Upgrade**: items to the next Rung of their **Family**, by that Rung's count, void energy cost
+    and chance. A chance roll; on failure the items are kept and the motes are spent.
   - **Breakdown**: an item into its crafting recipe's ingredients, read from the recipe in reverse,
     with a datapack override list. Items with no recipe or several are skipped unless overridden.
     It returns about 25% of the ingredients, more as more motes are spent, never more than went in.
-- Families are data: tags or datapack ladders, shipped as separate metal and gem ladders, so other
-  mods' materials can join.
 - The **Void Crucible** upgrades items for free, slowly, at a rate set by Void Pressure, so items go
-  to the End while motes leave it. Upgrade only, no breakdown. Progresses only while its chunk is
-  loaded. Hoppers and belts feed and empty it.
+  to the End while motes leave it. It takes each Rung's count, and a Rung's void energy cost sets
+  how long it takes there, so a steep Rung is slow in the Crucible too. Upgrade only, no breakdown.
+  Progresses only while its chunk is loaded. Hoppers and belts feed and empty it.
+
+### Families
+
+A Family is a ladder of Rungs, one item form to a Family: metal ingots are one Family, metal blocks
+another. Each Family is a datapack registry entry listing its Rungs in order. A Rung names:
+
+- **items**: what it accepts, an item tag of Voidworks' own per Rung that takes in the conventional
+  tag (`#c:ingots/copper` on copper's ingot Rung), so another mod's item joins a Rung without code;
+- **result**: the one item an upgrade from the Rung below lands on, never implied by order;
+- **count**: how many items the upgrade takes per result, 1 unless set;
+- **cost** and **chance**: the void energy a Mutation Chamber spends on the upgrade, and its odds.
+
+A datapack adds a Family with a file of its own and replaces one by overriding its file. An item on
+the top Rung, or in no Family, has no upgrade. An item in several Families upgrades if they agree on
+its next result; if they disagree, it has none, and loading warns, naming them. Every upgrade gives
+one result for its count of items.
+
+What Voidworks ships:
+
+- **Metals**: ingots, nuggets, blocks, raw metal and raw blocks, each copper → iron → gold. Ores
+  are left out, since Fortune makes an ore worth more than its ingot and Displacers swap ores.
+- **Gems**: lapis → amethyst shard → quartz → emerald → diamond → netherite scrap, the last steep.
+  Gem blocks are left out: amethyst and quartz blocks hold four, the others nine.
+- **Dusts**: redstone → glowstone dust → blaze powder, the last steep.
+- **Hostile drops**, one ladder through the dimensions, steep at each border: rotten flesh → bone →
+  string → spider eye → gunpowder → slimeball → phantom membrane → breeze rod, then magma cream →
+  blaze rod → ghast tear → wither skeleton skull, then ender pearl → shulker shell. Boss drops
+  (nether star, dragon egg, dragon's breath) are left out.
+- **Passive drops**: feather → leather → rabbit hide → ink sac → glow ink sac → rabbit's foot →
+  armadillo scute → turtle scute.
+
+The shipped Families keep three rules, which a pack may break on purpose:
+
+- **Gates are paid through, never barred.** A **gate item** (the Siphon's ghast tear and blaze rod,
+  blaze powder for the eye of ender, netherite, shulker shells) is reached only by a steep Rung, a
+  high count and cost; ratios multiply up a ladder, so reaching a Nether drop from Overworld ones
+  costs every border crossed. Crying obsidian has no ladder and stays out: ruined portals and
+  piglin barter are its sources.
+- **No Rung beats vanilla.** Where a vanilla recipe turns one item into another, a Rung between them
+  is no better a rate: leather sits below rabbit hide, which crafts four to one into it.
+- **No food.** Meats, eggs and crops are trivially farmed and feed their own cooking.
+
+Farming up a ladder is allowed, the farm's yield halving or worse at each step.
 
 ## Loops
 
@@ -225,7 +268,11 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Void Siphon tiers** — what a tier raises (capacity, yield) and how a Siphon climbs, perhaps by
   smithing with a void alloy as netherite does. Dragon's breath goes into a tier above the first.
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
+- **Tool and armour Families** — wooden → stone → copper → iron → golden → diamond, and what an
+  upgrade carries over: enchantments, damage, names, trims.
 - **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
-  each Dormant machine's cost, how much a Voidstone holds, upgrade chances per tier, breakdown yield against motes, mote speed, Void Well capacity,
+  each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (shape: metal, gem
+  and dust Rungs count 1, drop Rungs 2, steep Rungs and dimension borders 8, cost rising up each ladder and
+  sharply at the steep Rungs), breakdown yield against motes, mote speed, Void Well capacity,
   the Void Siphon's capacity per tier, and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
   cost.

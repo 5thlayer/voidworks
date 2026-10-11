@@ -125,6 +125,20 @@ only time, and progresses only while its chunk is loaded.
 _Avoid_: altar, cradle
 
 **Family**:
-An ordered ladder of materials that an upgrade climbs, such as copper → iron → gold. Families are
-data, so other mods' materials can join one.
-_Avoid_: tier, quality
+An ordered ladder of Rungs that an upgrade climbs, one item form to a Family: metal ingots climb
+copper → iron → gold, metal blocks have a Family of their own. Families are data, so other mods'
+items can join a Rung, and an item on the top Rung or in no Family has no upgrade.
+_Avoid_: tier, quality, material ladder
+
+**Rung**:
+One step of a Family: the items accepted there, and the one result item an upgrade from the Rung
+below lands on, with what the step costs: how many items it takes per result, how much void energy
+a Mutation Chamber spends on it, and its chance. Another mod's item joins a Rung as an input; the
+result changes only on purpose.
+_Avoid_: tier, level
+
+**Gate item**:
+An item the progression uses as a toll before the step that earns it: the Void Siphon's ghast tear
+and blaze rod, crying obsidian, netherite, blaze powder (the eye of ender), shulker shells. A Family
+may reach one, but only by a steep Rung, so a gate is paid through, never barred.
+_Avoid_: key item, progression item
