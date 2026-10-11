@@ -1,6 +1,6 @@
 # Creating the Modrinth and CurseForge projects
 
-A Library goes to Modrinth and CurseForge only once its projects exist there. Creating them is done by hand, once, on each site's website; after that, `sh ./gradlew release -PreleaseVersion=<version> -Pupload` uploads each release (`docs/agents/releases.md`). A Library that never goes to the sites skips this page.
+A Library goes to Modrinth and CurseForge only once its projects exist there. Creating them is done by hand, once, on each site's website; after that, `sh ./gradlew release -Pupload` uploads every release (`docs/agents/releases.md`). A Library that never goes to the sites skips this page.
 
 The sources were read on 2026-09-28. The sites change their forms, so check the linked page when a field here no longer matches.
 
@@ -16,7 +16,7 @@ Most answers are in the repo. Keep them the same on both sites and in the repo: 
 | Licence | MIT (`LICENSE`), SPDX id `MIT`; a Library that carries other licences (Beltworks' CC-BY-4.0 assets) names them in the description |
 | Source and issues links | `https://github.com/5thlayer/<repo>` and its `/issues` |
 | Loader, game version | NeoForge and `minecraft_version`; each upload sets them per version |
-| Environment | Client and Server, as the plugin's `upload` task sends |
+| Environment | Client and Server, as the `upload` task sends |
 | Dependencies | `modrinth_dependencies` and `curseforge_dependencies` in `gradle.properties` |
 
 What the repo lacks: the icon, any gallery images, and the categories. The icon and gallery must show the Library honestly and must not be AI-generated on Modrinth ([§5.5, §6.2](https://modrinth.com/legal/rules)).
@@ -65,5 +65,5 @@ The project ID the `upload` task needs is the numeric one, not the slug.
 ## After both projects exist
 
 1. Set `modrinth_project_id` and `curseforge_project_id` in `gradle.properties`, and the dependencies, if any, in `modrinth_dependencies` and `curseforge_dependencies`. The upload step is on from the next release.
-2. Try it: `sh ./gradlew upload -PreleaseVersion=<version> -PdryRun` for a released version prints what it would send, and contacts nothing.
+2. Try it: `sh ./gradlew upload -PdryRun -PreleaseVersion=<version>` for a released version prints what it would send, and contacts nothing.
 3. Add the projects' links to `README.md`.
