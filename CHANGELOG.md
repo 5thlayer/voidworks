@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+## 0.1.0
+
 - Harvested motes are seen as butterflies: grade-tinted (`GradeColor.of(grade)`), with flapping wings, each standing for 1, 8 or 64 motes by its size so they add up to the exact count (`Butterflies.sizes(count)`). They are cosmetic and client-side; a harvest shows them from the server with `MoteFlight.toBlock(level, source, pos, grade, count)` or `MoteFlight.toEntity(level, source, entity, grade, count)`, which sends them to players within 64 blocks. Until a harvest exists, an operator shows them with `/voidworks butterflies <grade> <count>`, flying to the player.
 - Void Pressure now reads from a data map, `voidworks:void_pressure`, keyed by dimension (`data/<namespace>/data_maps/dimension/void_pressure.json`). Each entry gives a `base` pressure and a `harvest_kind` (`end`, `overworld`, `nether` or `none`); Voidworks ships the three vanilla dimensions, and a Consumer or datapack adds or overrides an entry. A dimension the map does not name takes the Overworld's pressure and harvest kind `none`. Read it with `VoidPressure.at(level, pos)` and `VoidPressure.harvestKind(level)`; the numbers are provisional.
 - Motes, as a NeoForge transfer resource rather than an item: `MoteResource.of(grade)` is the one resource for each grade, so motes of one grade pool and motes of different grades never do, and `MoteResource.CODEC` saves one as its grade. A grade runs from `VoidEnergy.MIN_GRADE`, 2, what the Nether harvests, to `VoidEnergy.MAX_GRADE`, 16; `VoidEnergy.requireGrade` and `MoteResource.of` refuse any other. No item, data component or `/give` makes a mote.
