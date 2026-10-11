@@ -9,9 +9,9 @@ plugins {
 neoForge {
     runs {
         gameTestServer {
-            // The datapacks under gametest_datapacks/ that only the game tests load
+            // Marks this run as the Module's own, which is when it gives a vanilla block voidworks:motes
             // (VoidworksGameTests).
-            systemProperty 'voidworks.gametestPacks', 'true'
+            systemProperty 'voidworks.gametest', 'true'
         }
     }
 
@@ -20,10 +20,4 @@ neoForge {
     // game types those rules name, such as HarvestKind's StringRepresentable; a test that needs the
     // game running is a game test.
     addModdingDependenciesTo sourceSets.test
-}
-
-// The datapacks only the game tests load stay in the resources the gameTestServer run reads, and
-// out of the jars a Consumer gets.
-tasks.withType(Jar).configureEach {
-    exclude 'gametest_datapacks/**'
 }

@@ -22,9 +22,8 @@ import net.minecraft.world.level.Level;
 /**
  * The Void Pressure at a position, read from the dimension data map on a real server: the shipped
  * defaults, a dimension the map does not name, and a datapack entry overriding a default. The
- * override is a pack that only the game test server loads
- * ({@code gametest_datapacks/pressure_override}); it overrides the End, so the End's default is
- * checked in the shipped file itself.
+ * override is the game-test pack, which only the game test server loads ({@code gametest_pack/});
+ * it overrides the End, so the End's default is checked in the shipped file itself.
  */
 final class PressureTests {
 

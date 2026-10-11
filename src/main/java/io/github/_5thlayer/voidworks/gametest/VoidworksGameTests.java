@@ -14,14 +14,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.repository.Pack;
-import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.AddPackFindersEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -33,8 +28,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  */
 public final class VoidworksGameTests {
 
-    /** The system property that build.gradle's {@code gameTestServer} run sets, to load the test packs. */
-    private static final String TEST_PACKS_PROPERTY = "voidworks.gametestPacks";
+    /** The system property that build.gradle's {@code gameTestServer} run sets, for what only it registers. */
+    private static final String OWN_RUN = "voidworks.gametest";
 
     private static final Identifier PLATFORM = id("gametest/platform");
 
@@ -52,19 +47,12 @@ public final class VoidworksGameTests {
         TEST_TYPES.register(modBus);
         // Posted only when game tests are enabled, so a production server never registers the tests.
         modBus.addListener(VoidworksGameTests::registerTests);
-        // The packs and capabilities that tests lean on are for the game test run alone, which names
-        // them in build.gradle; the jar leaves them out.
-        if (Boolean.getBoolean(TEST_PACKS_PROPERTY)) {
-            modBus.addListener(VoidworksGameTests::addTestPacks);
+        // The capabilities that tests lean on are for the game test run alone, which build.gradle marks
+        // with voidworks.gametest. DevPacks switches on the run's datapack, gametest_pack/ (libworks ADR 0004).
+        if (Boolean.getBoolean(OWN_RUN)) {
             // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
             modBus.addListener(SpendTests::registerCapabilities);
         }
-    }
-
-    private static void addTestPacks(AddPackFindersEvent event) {
-        event.addPackFinders(id("gametest_datapacks/pressure_override"), PackType.SERVER_DATA,
-                Component.literal("Voidworks game test: Void Pressure override"), PackSource.BUILT_IN,
-                true, Pack.Position.TOP);
     }
 
     private static void registerTests(RegisterGameTestsEvent event) {
