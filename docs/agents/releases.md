@@ -10,7 +10,7 @@ Each change a Consumer can use or will notice adds its line under `## Unreleased
 
 ## Cutting a release
 
-`sh ./gradlew release -PreleaseVersion=<version>` from a clean main; the libworks convention plugin carries the script and runs it here (libworks ADR 0003). ADR 0001 sets the semver: below 1.0 only a breaking change bumps the minor version, and an addition or a fix is the next patch. The script refuses a version that is already tagged or in `~/.m2`, and an empty Unreleased. It then:
+`sh ./gradlew release -PreleaseVersion=<version>` from a clean main; the libworks convention plugin carries the script, `release.sh`, and runs it here (libworks ADR 0003). ADR 0001 sets the semver: below 1.0 only a breaking change bumps the minor version, and an addition or a fix is the next patch. The script refuses a version that is already tagged or in `~/.m2`, and an empty Unreleased. It then:
 
 1. sets `mod_version` and turns `## Unreleased` into `## <version>` under a fresh, empty Unreleased
 2. runs the build and the game tests, putting both files back if either fails

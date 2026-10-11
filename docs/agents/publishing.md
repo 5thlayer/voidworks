@@ -1,6 +1,6 @@
 # Creating the Modrinth and CurseForge projects
 
-A Library goes to Modrinth and CurseForge only once its projects exist there. Creating them is done by hand, once, on each site's website; after that, the release (`sh ./gradlew release -PreleaseVersion=<version> -Pupload`) uploads every release (`docs/agents/releases.md`). A Library that never goes to the sites skips this page.
+A Library goes to Modrinth and CurseForge only once its projects exist there. Creating them is done by hand, once, on each site's website; after that, `sh ./gradlew release -PreleaseVersion=<version> -Pupload` uploads each release (`docs/agents/releases.md`). A Library that never goes to the sites skips this page.
 
 The sources were read on 2026-09-28. The sites change their forms, so check the linked page when a field here no longer matches.
 
