@@ -1,18 +1,23 @@
 # Voidworks
 
-Voidworks harvests void from the world itself, at a permanent cost to the world, moves it between dimensions on dragons, and spends it to power gear and mutate items. It requires nothing but Minecraft and NeoForge. Its first Consumer is the FactoryWorks Pack, whose Showcase fills the displacement table. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md).
+Voidworks harvests void from the world itself, at a permanent cost to the world, moves it between dimensions on dragons, and spends it to power gear and mutate items. It requires nothing but Minecraft and NeoForge. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md).
 
 ## Language
 
-The Library's terms, each with what it is and the words to avoid. `/domain-modeling` adds them as they are resolved.
+The Module's terms, each with what it is and the words to avoid. `/domain-modeling` adds them as they are resolved.
 
 ### Parties
 
+**Module**:
+One of the 5thlayer mods, each owning one capability, playing alone in vanilla and requiring no
+other Module.
+_Avoid_: Library
+
 **Voidworks**:
-This Library: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing but Minecraft and NeoForge.
+This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing but Minecraft and NeoForge.
 
 **Consumer**:
-A mod that builds against this Library: the FactoryWorks Pack, or another Library.
+A mod or a pack that builds against or loads this Module.
 _Avoid_: client (collides with the game's client side), dependent, integration
 
 ### Void

@@ -1,6 +1,6 @@
 // ModDevGradle on Java 25, the dev client and its -PquickPlay, the game test server that names each
 // test, the jar's licensing, ~/.m2-only publishing and the release and upload tasks come from the
-// libworks convention plugin (libworks ADR 0003). Voidworks requires no other Library, so it
+// libworks convention plugin (libworks ADR 0003). Voidworks requires no other Module, so it
 // declares no upstreams, and its tags are the plugin's default, voidworks-v<version>.
 plugins {
     id 'io.github.5thlayer.libworks.module' version '0.1.2'

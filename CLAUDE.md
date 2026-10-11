@@ -1,6 +1,6 @@
 # Voidworks
 
-A 5thlayer Library: a mod its Consumers, other Libraries or a pack, read from the local maven repository by version. See `GLOSSARY.md` for the domain glossary.
+A 5thlayer Module: a mod its Consumers, other Modules or a pack, read from the local maven repository by version. See `GLOSSARY.md` for the domain glossary.
 
 ## Workflow
 
@@ -8,7 +8,7 @@ Commit on the current branch; open a feature branch only when the user asks for 
 
 Pull requests are squash-merged, the PR title becoming the conventional commit on `main`. Work after a merge starts on a new branch from `main`, never on the merged one.
 
-Anything that changes the Library's behaviour gets a `/code-review`. That is the project skill in `.claude/skills/code-review`, from mattpocock/skills; never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, and tooling or CI config.
+Anything that changes the Module's behaviour gets a `/code-review`. That is the project skill in `.claude/skills/code-review`, from mattpocock/skills; never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, and tooling or CI config.
 
 ## Commits
 
@@ -24,7 +24,7 @@ The `skillworks:quicklaunch` skill opens the dev client into the most recent sav
 
 A change a Consumer can use or will notice adds its line under `## Unreleased` in `CHANGELOG.md` as it lands. Before bumping `mod_version`, publishing to `~/.m2`, tagging a release or uploading to Modrinth or CurseForge, read `docs/agents/releases.md`: releases go through the libworks plugin's `release` task, which uploads last with its `upload` task when `gradle.properties` names a project, and a published version never changes, in `~/.m2` or on either site. ADR 0001, inherited from 5thlayer/libworks, sets the version bumps.
 
-A release that must reach a Consumer in another checkout, a Library or a pack that pins the jar, follows the `release-train` skill: one owning session per checkout, and pushes only on the user's word.
+A release that must reach a Consumer in another checkout, a Module or a pack that pins the jar, follows the `release-train` skill: one owning session per checkout, and pushes only on the user's word.
 
 ## Agent skills
 

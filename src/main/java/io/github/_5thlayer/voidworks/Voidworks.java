@@ -12,7 +12,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 
 /**
- * The Library's entry point. It registers the Void Pressure data map (and checks the defaults it
+ * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
  * ships), the {@code /voidworks} commands and the game tests, which exist only when game tests are
  * enabled.
  */

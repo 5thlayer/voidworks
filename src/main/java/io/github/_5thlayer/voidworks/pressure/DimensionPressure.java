@@ -20,7 +20,7 @@ import io.github._5thlayer.voidworks.Voidworks;
  * One dimension's entry in the Void Pressure data map: its base pressure and its harvest kind. The
  * pressure is on the same integer scale as a mote's grade
  * ({@link io.github._5thlayer.voidworks.energy.VoidEnergy}). It reads no game state; the one thing
- * it reads is the data map file the Library ships, from the jar, for the defaults.
+ * it reads is the data map file the Module ships, from the jar, for the defaults.
  *
  * @param base the Void Pressure of the dimension's ordinary positions
  * @param harvestKind how the Void Siphon harvests in the dimension
@@ -36,14 +36,14 @@ public record DimensionPressure(int base, HarvestKind harvestKind) {
     private static Map<String, DimensionPressure> shipped;
 
     /**
-     * The entries the Library ships in {@code data/voidworks/data_maps/dimension/void_pressure.json},
+     * The entries the Module ships in {@code data/voidworks/data_maps/dimension/void_pressure.json},
      * by dimension id: the provisional defaults of docs/spec/void-energy.md, and what a Consumer or a
      * datapack overrides. The file is the only copy of them; the code reads it, and only the
      * Overworld's is used, for a datapack that removes that entry. The first call reads the file and
      * throws {@link IllegalStateException} if it is missing, unreadable or lacks the Overworld;
      * {@code Voidworks} makes that call at mod load, so a broken jar fails there.
      *
-     * <p>Internal: the game tests and the Library's own load use it, and it is not the Library's API.
+     * <p>Internal: the game tests and the Module's own load use it, and it is not the Module's API.
      */
     public static synchronized Map<String, DimensionPressure> shippedEntries() {
         if (shipped == null) {

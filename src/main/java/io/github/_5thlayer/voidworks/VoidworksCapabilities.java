@@ -10,7 +10,7 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import org.jspecify.annotations.Nullable;
 
-/** The Library's capabilities, public so a Consumer's blocks can provide them. */
+/** The Module's capabilities, public so a Consumer's blocks can provide them. */
 public final class VoidworksCapabilities {
 
     /**

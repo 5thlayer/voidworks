@@ -17,7 +17,7 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 
 /**
- * The Library's client entry point: it draws the butterflies a {@link MoteFlight} shows.
+ * The Module's client entry point: it draws the butterflies a {@link MoteFlight} shows.
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
 public final class VoidworksClient {
