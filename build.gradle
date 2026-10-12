@@ -6,7 +6,19 @@ plugins {
     id 'io.github.5thlayer.libworks.module' version '0.2.1'
 }
 
+libworks {
+    // Nested by jar-in-jar, so players install nothing more; FML loads the newest nested copy in range,
+    // which runs to the next minor. Its machine view shows a Displacer in Jade (#37).
+    runtime = '0.1.5'
+}
+
 repositories {
+    // libworks-runtime, from the local maven only, where its releases are published. CI builds its tag
+    // there first.
+    exclusiveContent {
+        forRepository { mavenLocal() }
+        filter { includeModule 'io.github.5thlayer', 'libworks-runtime' }
+    }
     // EMI for 26.1 is an unofficial port, published on CurseForge only.
     maven {
         url = 'https://cursemaven.com'
@@ -22,7 +34,8 @@ repositories {
 // Mods the dev client loads alongside the Module, to look up recipes (EMI) and inspect blocks (Jade)
 // while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
 // which holds only what is listed here; the game tests run elsewhere and never load them, so they
-// still prove the Module plays alone. The Module names neither.
+// still prove the Module plays alone. The Module names no EMI type, and Jade's only from its
+// plugin, which Jade alone loads.
 configurations {
     clientMods { transitive = false }
 }
@@ -37,7 +50,9 @@ tasks.named('runClient') { dependsOn syncClientMods }
 dependencies {
     // EMI for 26.1 is the unofficial port.
     clientMods 'curse.maven:emi-unofficial-port-1544558:8630349'
-    // Jade for 26.1.2 is built on NeoForge 26.1.2.76, so it runs on our .77.
+    // Jade for 26.1.2 is built on NeoForge 26.1.2.76, so it runs on our .77. Jade finds the Module's
+    // plugin by its annotation, so the Module runs without it (#37).
+    compileOnly 'maven.modrinth:jade:26.1.11+neoforge'
     clientMods 'maven.modrinth:jade:26.1.11+neoforge'
 }
 

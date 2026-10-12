@@ -5,11 +5,14 @@ package io.github._5thlayer.voidworks.gametest;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.displacer.DisplacerBlockEntity;
+import io.github._5thlayer.voidworks.displacer.DisplacerReport;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
@@ -63,6 +66,7 @@ final class DisplacerTests {
         tests.test("a_displacers_output_gets_the_terrain_block_for_a_density_the_table_does_not_name", TICKS, DisplacerTests::displacementTableDefault);
         tests.test("a_displacer_where_the_harvest_kind_is_not_overworld_harvests_nothing_and_pops_off", 1, DisplacerTests::refusesOutsideTheOverworldKind);
         tests.test("an_empty_hand_takes_back_a_displacers_fed_blocks", 1, DisplacerTests::givesBackFed);
+        tests.test("a_displacers_report_names_its_fed_block_and_the_harvests_left_in_its_zone", TICKS, DisplacerTests::report);
     }
 
     private static void firstHarvest(GameTestHelper helper) {
@@ -175,7 +179,7 @@ final class DisplacerTests {
             displacer.inventory().set(slot, ItemResource.of(Items.DIRT), 64);
         }
         feed(displacer, Items.COPPER_BLOCK, 1);
-        assertStalled(helper, displacer, Items.COPPER_BLOCK);
+        assertStalled(helper, displacer, Items.COPPER_BLOCK, DisplacerBlockEntity.Stall.OUTPUT_FULL);
     }
 
     /** A fresh network holds one Voidstone's motes; a diamond block yields more than that. */
@@ -185,15 +189,17 @@ final class DisplacerTests {
                 + " motes to be more than a Voidstone holds, " + VoidworksConfig.voidstoneCapacity());
         var displacer = place(helper, DISPLACER, 2);
         feed(displacer, Items.DIAMOND_BLOCK, 1);
-        assertStalled(helper, displacer, Items.DIAMOND_BLOCK);
+        assertStalled(helper, displacer, Items.DIAMOND_BLOCK, DisplacerBlockEntity.Stall.NETWORK_FULL);
     }
 
-    private static void assertStalled(GameTestHelper helper, OverworldDisplacerBlockEntity displacer, Item fed) {
+    private static void assertStalled(GameTestHelper helper, OverworldDisplacerBlockEntity displacer, Item fed, DisplacerBlockEntity.Stall stall) {
         helper.runAfterDelay(3L * VoidworksConfig.harvestInterval() + 5, () -> {
             helper.assertBlockPresent(Blocks.STONE, BELOW);
             helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), DISPLACER);
             helper.assertTrue(displacer.inventory().getResource(OverworldDisplacerBlockEntity.INPUT).is(fed)
                     && displacer.inventory().getAmountAsInt(OverworldDisplacerBlockEntity.INPUT) == 1, "the fed block was taken");
+            var report = DisplacerReport.of(displacer, helper.getLevel());
+            helper.assertTrue(report.stall().equals(Optional.of(stall)), "it reports " + report.stall() + ", not stalled by " + stall);
             helper.succeed();
         });
     }
@@ -293,6 +299,22 @@ final class DisplacerTests {
         helper.assertTrue(player.getInventory().countItem(Items.DIAMOND_BLOCK) == 3,
                 "the player got " + player.getInventory().countItem(Items.DIAMOND_BLOCK) + " diamond blocks back, not 3");
         helper.succeed();
+    }
+
+    /** Zone 5, fed three copper blocks: once it has harvested below it, two are left and four harvests, and nothing stalls it. */
+    private static void report(GameTestHelper helper) {
+        var displacer = place(helper, DISPLACER, 5);
+        feed(displacer, Items.COPPER_BLOCK, 3);
+        var before = DisplacerReport.of(displacer, helper.getLevel());
+        helper.assertTrue(before.harvestsLeft() == 5, "it reports " + before.harvestsLeft() + " harvests left before its first, not 5");
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), BELOW);
+            var report = DisplacerReport.of(displacer, helper.getLevel());
+            helper.assertTrue(report.fed().is(Items.COPPER_BLOCK) && report.fed().getCount() == 2,
+                    "it reports " + report.fed() + " fed, not the 2 copper blocks left");
+            helper.assertTrue(report.harvestsLeft() == 4, "it reports " + report.harvestsLeft() + " harvests left, not 4");
+            helper.assertTrue(report.stall().isEmpty(), "it reports stalled by " + report.stall());
+        });
     }
 
     private static OverworldDisplacerBlockEntity place(GameTestHelper helper, BlockPos pos, int zone) {

@@ -104,6 +104,21 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         setChanged();
     }
 
+    /** @return how many more positions it harvests before its Zone is spent */
+    public int harvestsLeft() {
+        return Math.max(0, zoneOrConfig() - grown.size());
+    }
+
+    /** @return how many positions it harvests in its life: the config's until its first tick sets its own */
+    private int zoneOrConfig() {
+        return zone == 0 ? VoidworksConfig.zone() : zone;
+    }
+
+    /** @return what it holds to feed in, empty for nothing */
+    public ItemStack fed() {
+        return inventory.getResource(INPUT).toStack(inventory.getAmountAsInt(INPUT));
+    }
+
     /** @return the positions it has harvested, in order */
     public List<BlockPos> grown() {
         return List.copyOf(grown);
@@ -196,18 +211,12 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     private boolean harvest(ServerLevel level, BlockPos target) {
         var fed = inventory.getResource(INPUT);
         int density = Density.of(fed);
-        if (density == 0) {
+        if (density == 0 || stallBeforeOutput(level, target, density).isPresent()) {
             return false;
         }
         int grade = VoidPressure.at(level, target) + 1;
-        if (!VoidEnergy.isGrade(grade)) {
-            return false;
-        }
         int motes = VoidworksConfig.motes(density);
         var networks = VoidstoneNetworks.of(level);
-        if (networks.roomIfJoined(target) < motes) {
-            return false;
-        }
         var harvested = level.getBlockState(target);
         var result = displaced(harvested, density);
         try (var transaction = Transaction.openRoot()) {
@@ -233,6 +242,48 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         level.playSound(null, target, SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.BLOCKS, 0.6F, 0.9F + level.getRandom().nextFloat() * 0.2F);
         setChanged();
         return true;
+    }
+
+    /**
+     * @return why it cannot harvest the next position it would, though fed: a Void Pressure there
+     *         too high to grade, a network with no room for the harvest's motes, or a full output;
+     *         empty when it can, or has nothing fed, nothing left in reach or its Zone spent. A
+     *         Dormant one's payment is its {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
+     */
+    public Optional<Stall> stall(ServerLevel level) {
+        int density = Density.of(inventory.getResource(INPUT));
+        if (density == 0 || grown.size() >= zoneOrConfig()) {
+            return Optional.empty();
+        }
+        return next(level).flatMap(target -> stallBeforeOutput(level, target, density).or(() -> {
+            // Tried and rolled back: the output takes the displaced block or it does not.
+            try (var transaction = Transaction.openRoot()) {
+                return toOutput(displaced(level.getBlockState(target), density), transaction)
+                        ? Optional.empty()
+                        : Optional.of(Stall.OUTPUT_FULL);
+            }
+        }));
+    }
+
+    /** What stalls a harvest of {@code target} before its output is tried, which {@link #harvest} tries for real. */
+    private Optional<Stall> stallBeforeOutput(ServerLevel level, BlockPos target, int density) {
+        if (!VoidEnergy.isGrade(VoidPressure.at(level, target) + 1)) {
+            return Optional.of(Stall.PRESSURE_TOO_HIGH);
+        }
+        if (VoidstoneNetworks.of(level).roomIfJoined(target) < VoidworksConfig.motes(density)) {
+            return Optional.of(Stall.NETWORK_FULL);
+        }
+        return Optional.empty();
+    }
+
+    /** What stops a fed Displacer harvesting its next position. */
+    public enum Stall {
+        /** The Void Pressure there is the highest, so a harvest would have no grade. */
+        PRESSURE_TOO_HIGH,
+        /** The network its harvest would join cannot take the harvest's motes. */
+        NETWORK_FULL,
+        /** Its output cannot take what the harvest displaces. */
+        OUTPUT_FULL
     }
 
     private boolean toOutput(ItemStack result, TransactionContext transaction) {

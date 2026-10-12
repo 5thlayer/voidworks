@@ -1,6 +1,6 @@
 # Voidworks
 
-Voidworks harvests void from the world itself, at a permanent cost to the world, moves it between dimensions on dragons, and spends it to power gear and mutate items. It requires nothing but Minecraft and NeoForge. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md).
+Voidworks harvests void from the world itself, at a permanent cost to the world, moves it between dimensions on dragons, and spends it to power gear and mutate items. It requires nothing a player installs but Minecraft and NeoForge; the libworks-runtime it uses is nested in its jar. The design is [docs/spec/void-energy.md](docs/spec/void-energy.md).
 
 ## Language
 
@@ -14,7 +14,7 @@ other Module.
 _Avoid_: Library
 
 **Voidworks**:
-This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing but Minecraft and NeoForge.
+This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing a player installs but Minecraft and NeoForge.
 
 **Consumer**:
 A mod or a pack that builds against or loads this Module.

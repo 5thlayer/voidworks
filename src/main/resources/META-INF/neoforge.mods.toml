@@ -27,3 +27,21 @@ type = "required"
 versionRange = "[${minecraft_version}]"
 ordering = "NONE"
 side = "BOTH"
+
+# libworks-runtime, nested by jar-in-jar: a Displacer in Jade is its MachineReport. The
+# range is the one libworks { runtime } in build.gradle nests, to the next minor.
+[[dependencies.${mod_id}]]
+modId = "libworks"
+type = "required"
+versionRange = "${libworks_runtime_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Shows what a void block holds in Jade's tooltip (#37). Not required: its plugin is only loaded by
+# Jade. The range is the Jade the plugin is compiled against.
+[[dependencies.${mod_id}]]
+modId = "jade"
+type = "optional"
+versionRange = "[26.1.11,)"
+ordering = "NONE"
+side = "BOTH"

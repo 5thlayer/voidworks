@@ -13,7 +13,8 @@ The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
 
 In **Voidworks**, a mod of its own in its own repository, started from libworks' template. Nothing
 the Modules do uses void, so it is not something the base mod holds for them, and a player can
-leave the End-centred endgame out. It requires nothing but Minecraft and NeoForge: its inputs are
+leave the End-centred endgame out. It requires nothing a player installs but Minecraft and NeoForge
+(libworks-runtime, which shows it in Jade, is nested in its jar): its inputs are
 vanilla, Mutation reads the recipe manager, and its outputs go through NeoForge's item and fluid
 faces. If the Displacer or the Void Well become multiblocks, it may require Groundworks, as Beltworks
 and Wireworks do.
