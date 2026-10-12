@@ -61,10 +61,12 @@ public final class VoidworksGameTests {
         var tests = new Registrar(event, environment);
         ButterflyTests.register(tests);
         CommandTests.register(tests);
+        DisplacerTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         PressureTests.register(tests);
         SpendTests.register(tests);
+        VoidstoneTests.register(tests);
     }
 
     private static Identifier id(String path) {

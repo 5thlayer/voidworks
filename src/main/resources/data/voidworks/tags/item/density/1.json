@@ -1,0 +1,19 @@
+{
+  "values": [
+    "minecraft:copper_block",
+    {
+      "id": "#c:storage_blocks/copper",
+      "required": false
+    },
+    "minecraft:raw_copper_block",
+    {
+      "id": "#c:storage_blocks/raw_copper",
+      "required": false
+    },
+    "minecraft:coal_block",
+    {
+      "id": "#c:storage_blocks/coal",
+      "required": false
+    }
+  ]
+}

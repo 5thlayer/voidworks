@@ -1,0 +1,10 @@
+{
+  "values": {
+    "minecraft:tuff": {
+      "1": {
+        "id": "minecraft:flint",
+        "count": 2
+      }
+    }
+  }
+}

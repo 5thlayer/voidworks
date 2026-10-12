@@ -1,0 +1,19 @@
+{
+  "values": [
+    "minecraft:gold_block",
+    {
+      "id": "#c:storage_blocks/gold",
+      "required": false
+    },
+    "minecraft:raw_gold_block",
+    {
+      "id": "#c:storage_blocks/raw_gold",
+      "required": false
+    },
+    "minecraft:emerald_block",
+    {
+      "id": "#c:storage_blocks/emerald",
+      "required": false
+    }
+  ]
+}

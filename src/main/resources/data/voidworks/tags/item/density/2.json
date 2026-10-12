@@ -1,0 +1,24 @@
+{
+  "values": [
+    "minecraft:iron_block",
+    {
+      "id": "#c:storage_blocks/iron",
+      "required": false
+    },
+    "minecraft:raw_iron_block",
+    {
+      "id": "#c:storage_blocks/raw_iron",
+      "required": false
+    },
+    "minecraft:redstone_block",
+    {
+      "id": "#c:storage_blocks/redstone",
+      "required": false
+    },
+    "minecraft:lapis_block",
+    {
+      "id": "#c:storage_blocks/lapis",
+      "required": false
+    }
+  ]
+}

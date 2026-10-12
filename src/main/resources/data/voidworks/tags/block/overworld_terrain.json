@@ -1,0 +1,14 @@
+{
+  "values": [
+    "#minecraft:base_stone_overworld",
+    "#minecraft:dirt",
+    "#minecraft:sand",
+    "minecraft:gravel",
+    "minecraft:clay",
+    "minecraft:calcite",
+    {
+      "id": "#c:ores",
+      "required": false
+    }
+  ]
+}

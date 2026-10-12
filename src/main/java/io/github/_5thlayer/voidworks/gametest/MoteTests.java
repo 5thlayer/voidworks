@@ -16,6 +16,7 @@ import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
 
 /**
  * A mote's grade is what the mote is: motes are a resource, one per grade, so motes of one grade
@@ -35,13 +36,14 @@ final class MoteTests {
         tests.test("a_mote_is_made_only_between_the_lowest_and_the_highest_grade", 1, MoteTests::moteOnlyInRange);
     }
 
-    /** Motes are never items (ADR 0002), so {@code /give} cannot make one. */
+    /** Motes are never items (ADR 0002), so {@code /give} cannot make one: Voidworks' one item is the Overworld Void Displacer. */
     private static void noItemIsAMote(GameTestHelper helper) {
         var items = BuiltInRegistries.ITEM.keySet().stream()
                 .filter(id -> id.getNamespace().equals(Voidworks.MOD_ID))
                 .toList();
-        if (!items.isEmpty()) {
-            helper.fail("Voidworks registers no item yet, but found " + items);
+        var displacer = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "overworld_void_displacer");
+        if (!items.equals(List.of(displacer))) {
+            helper.fail("Voidworks' only item should be " + displacer + ", but found " + items);
             return;
         }
         helper.succeed();

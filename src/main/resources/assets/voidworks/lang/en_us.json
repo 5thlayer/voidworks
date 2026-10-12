@@ -1,4 +1,8 @@
 {
+  "block.voidworks.overworld_void_displacer": "Overworld Void Displacer",
+  "block.voidworks.voidstone": "Voidstone",
   "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",
+  "commands.voidworks.mote": "Put %s motes of grade %s into the network at %s, which holds %s of %s",
+  "commands.voidworks.mote.not_voidstone": "There is no Voidstone at %s",
   "commands.voidworks.pressure": "Void Pressure here is %s, harvest kind %s"
 }
