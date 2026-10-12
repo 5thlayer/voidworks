@@ -77,7 +77,7 @@ final class DormantTestMachine extends BaseEntityBlock {
     }
 
     /** The machine's block entity: Dormant until paid, then it works. */
-    static final class Entity extends BlockEntity {
+    static final class Entity extends BlockEntity implements Dormancy.Holder {
 
         private final Dormancy dormancy = new Dormancy(this);
         private int worked;
@@ -86,7 +86,8 @@ final class DormantTestMachine extends BaseEntityBlock {
             super(ENTITY.get(), pos, state);
         }
 
-        Dormancy dormancy() {
+        @Override
+        public Dormancy dormancy() {
             return dormancy;
         }
 

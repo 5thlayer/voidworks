@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": "minecraft:blaze_rod",
+    "C": "minecraft:crying_obsidian",
+    "T": "minecraft:ghast_tear"
+  },
+  "pattern": [
+    "T",
+    "C",
+    "B"
+  ],
+  "result": {
+    "id": "voidworks:void_siphon"
+  }
+}

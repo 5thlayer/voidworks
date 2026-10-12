@@ -23,6 +23,9 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
     private static final ModConfigSpec.IntValue SOAK_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
+    private static final ModConfigSpec.IntValue SIPHON_CAPACITY;
+    private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
+    private static final ModConfigSpec.IntValue SIPHON_RATE;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -44,6 +47,16 @@ public final class VoidworksConfig {
                 .comment("How many motes a fed block yields, by its Density from 1 to 4: steeply rising, about 4^(Density - 1).")
                 .defineList("densityMotes", List.of(1, 4, 16, 64), () -> 1,
                         value -> value instanceof Integer motes && motes > 0);
+        SIPHON_CAPACITY = builder
+                .comment("How many motes a Void Siphon holds, of every grade together: a small fraction of a Void Well, enough",
+                        "to start a base or pay a Dormant machine, never to supply one.")
+                .defineInRange("siphonCapacity", 256, 1, 1 << 20);
+        SIPHON_INTERVAL = builder
+                .comment("Ticks between a Void Siphon's charges from, or emptyings into, the Voidstone its holder stands on.")
+                .defineInRange("siphonInterval", 10, 1, 24000);
+        SIPHON_RATE = builder
+                .comment("How many motes a Void Siphon charges or empties each time, at most.")
+                .defineInRange("siphonRate", 8, 1, 1 << 20);
         SPEC = builder.build();
     }
 
@@ -68,6 +81,26 @@ public final class VoidworksConfig {
     /** @return ticks between a Dormant machine's soaks */
     public static int soakInterval() {
         return SOAK_INTERVAL.getAsInt();
+    }
+
+    /** @return how many motes a Void Siphon holds, of every grade together */
+    public static int siphonCapacity() {
+        return SIPHON_CAPACITY.getAsInt();
+    }
+
+    /** @return ticks between a Void Siphon's charges or emptyings on Voidstone */
+    public static int siphonInterval() {
+        return SIPHON_INTERVAL.getAsInt();
+    }
+
+    /** @return how many motes a Void Siphon charges or empties each time, at most */
+    public static int siphonRate() {
+        return SIPHON_RATE.getAsInt();
+    }
+
+    /** @return whether the server config is loaded, which the client has only on a server */
+    public static boolean loaded() {
+        return SPEC.isLoaded();
     }
 
     /**

@@ -9,6 +9,7 @@ import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
+import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -22,21 +23,25 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 
 /**
  * Dormant, the one piece every void machine whose recipe costs motes opts into: placed, it does
  * nothing until it has soaked its cost in motes where it stands, from every mote store touching it
  * (a Voidstone network, a Consumer's machine, anything providing {@code voidworks:motes}), by the
- * spend rule at its own block. Paid, it wakes, and stays awake for good. A payment in part is kept,
- * across a save and reload too, until the rest arrives.
+ * spend rule at its own block, and from a Void Siphon its holder empties into it. Paid, it wakes,
+ * and stays awake for good. A payment in part is kept, across a save and reload too, until the rest
+ * arrives.
  *
  * <p>A machine opts in in three places:
  * <ul>
- *   <li>its block entity holds a {@code Dormancy}, calls {@link #soak} on each server tick and works
- *       only once it returns true, and saves and loads it with {@link #save} and {@link #load};</li>
+ *   <li>its block entity is a {@link Holder}, holding a {@code Dormancy}, calls {@link #soak} on
+ *       each server tick and works only once it returns true, and saves and loads it with
+ *       {@link #save} and {@link #load};</li>
  *   <li>its block adds {@link #DORMANT} to its states, true by default, so its look can show it, and
  *       may show a player {@link #status};</li>
  *   <li>its cost, in void energy, is the {@link #DATA_MAP} entry for its block, which a datapack
@@ -60,6 +65,13 @@ public final class Dormancy {
         public static final Codec<Cost> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ExtraCodecs.NON_NEGATIVE_LONG.fieldOf("cost").forGetter(Cost::cost)
         ).apply(instance, Cost::new));
+    }
+
+    /** A void machine's block entity that opts into Dormant, so a Void Siphon finds what it pays. */
+    public interface Holder {
+
+        /** @return its Dormancy, the same one each time */
+        Dormancy dormancy();
     }
 
     /** Each Dormant machine's cost, keyed by its block. */
@@ -114,8 +126,7 @@ public final class Dormancy {
     private void soakFromNeighbours(ServerLevel level) {
         var pos = machine.getBlockPos();
         for (var direction : Direction.values()) {
-            long owed = cost() - paid;
-            if (owed <= 0) {
+            if (paid >= cost()) {
                 return;
             }
             var neighbour = pos.relative(direction);
@@ -123,16 +134,33 @@ public final class Dormancy {
                 continue;
             }
             var motes = level.getCapability(VoidworksCapabilities.MOTES, neighbour, direction.getOpposite());
-            if (motes == null) {
-                continue;
-            }
-            var spend = VoidSpender.spendUpTo(motes, level, pos, owed);
-            if (spend.released() > 0) {
-                paid += spend.released();
-                machine.setChanged();
-                spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, neighbour.getCenter(), pos, grade, count));
+            if (motes != null) {
+                payFrom(level, motes, neighbour.getCenter());
             }
         }
+    }
+
+    /**
+     * Pays what it can of the rest of the cost from {@code motes}, by the spend rule at the machine's
+     * block, as a Void Siphon emptied into it does; it wakes on its next tick once paid. Awake, it
+     * takes nothing.
+     *
+     * @param from where the motes come from, which their butterflies fly from
+     * @return the void energy paid
+     */
+    public long payFrom(ServerLevel level, ResourceHandler<MoteResource> motes, Vec3 from) {
+        long owed = cost() - paid;
+        if (awake || owed <= 0) {
+            return 0;
+        }
+        var pos = machine.getBlockPos();
+        var spend = VoidSpender.spendUpTo(motes, level, pos, owed);
+        if (spend.released() > 0) {
+            paid += spend.released();
+            machine.setChanged();
+            spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+        }
+        return spend.released();
     }
 
     /** Brings the machine's look in line once it is awake, a machine loaded awake included. */

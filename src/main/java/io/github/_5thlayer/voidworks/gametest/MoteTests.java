@@ -6,6 +6,8 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.DataResult;
@@ -36,14 +38,18 @@ final class MoteTests {
         tests.test("a_mote_is_made_only_between_the_lowest_and_the_highest_grade", 1, MoteTests::moteOnlyInRange);
     }
 
-    /** Motes are never items (ADR 0002), so {@code /give} cannot make one: Voidworks' one item is the Overworld Void Displacer. */
+    /**
+     * Motes are never items (ADR 0002), so {@code /give} cannot make one: Voidworks' items are the
+     * Overworld Void Displacer and the Void Siphon, which holds motes but is not one.
+     */
     private static void noItemIsAMote(GameTestHelper helper) {
         var items = BuiltInRegistries.ITEM.keySet().stream()
                 .filter(id -> id.getNamespace().equals(Voidworks.MOD_ID))
-                .toList();
-        var displacer = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "overworld_void_displacer");
-        if (!items.equals(List.of(displacer))) {
-            helper.fail("Voidworks' only item should be " + displacer + ", but found " + items);
+                .collect(Collectors.toSet());
+        var expected = Set.of(Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "overworld_void_displacer"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_siphon"));
+        if (!items.equals(expected)) {
+            helper.fail("Voidworks' only items should be " + expected + ", but found " + items);
             return;
         }
         helper.succeed();
