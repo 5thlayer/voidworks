@@ -43,7 +43,7 @@ EYE = (5, 5, 11, 11)
 
 # The End casing's shades, darkest to lightest, which the abyssium's run through by brightness: end
 # stone's pale yellows, darkened at the bottom so the casing keeps its depth.
-END_CASING = [(0x24, 0x22, 0x14), (0x8C, 0x89, 0x5C), (0xE6, 0xE8, 0xAE)]
+END_CASING = [(0x3A, 0x38, 0x24), (0xAE, 0xAC, 0x76), (0xEC, 0xEE, 0xB6)]
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
