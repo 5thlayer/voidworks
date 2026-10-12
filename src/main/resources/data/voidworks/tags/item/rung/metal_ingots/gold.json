@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:gold_ingot",
+    {
+      "id": "#c:ingots/gold",
+      "required": false
+    }
+  ]
+}

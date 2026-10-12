@@ -130,7 +130,8 @@ _Avoid_: altar, cradle
 **Family**:
 An ordered ladder of Rungs that an upgrade climbs, one item form to a Family: metal ingots climb
 copper → iron → gold, metal blocks have a Family of their own. Families are data, so other mods'
-items can join a Rung, and an item on the top Rung or in no Family has no upgrade.
+items can join a Rung. An item on a top Rung or in no Family has no upgrade, unless another
+Family carries it on.
 _Avoid_: tier, quality, material ladder
 
 **Rung**:

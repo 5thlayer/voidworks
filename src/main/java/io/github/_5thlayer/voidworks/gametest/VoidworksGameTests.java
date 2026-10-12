@@ -73,6 +73,7 @@ public final class VoidworksGameTests {
         DisplacerTests.register(tests);
         DormantTests.register(tests);
         EndDisplacerTests.register(tests);
+        FamilyTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         NetherDisplacerTests.register(tests);

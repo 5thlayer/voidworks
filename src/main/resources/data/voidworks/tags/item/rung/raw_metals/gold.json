@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:raw_gold",
+    {
+      "id": "#c:raw_materials/gold",
+      "required": false
+    }
+  ]
+}

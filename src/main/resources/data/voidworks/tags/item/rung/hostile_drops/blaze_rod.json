@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:blaze_rod",
+    {
+      "id": "#c:rods/blaze",
+      "required": false
+    }
+  ]
+}

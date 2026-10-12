@@ -1,0 +1,56 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/passive_drops/feather"
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/leather",
+      "result": "minecraft:leather",
+      "count": 2,
+      "cost": 100,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/rabbit_hide",
+      "result": "minecraft:rabbit_hide",
+      "count": 2,
+      "cost": 200,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/ink_sac",
+      "result": "minecraft:ink_sac",
+      "count": 2,
+      "cost": 300,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/glow_ink_sac",
+      "result": "minecraft:glow_ink_sac",
+      "count": 2,
+      "cost": 400,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/rabbit_foot",
+      "result": "minecraft:rabbit_foot",
+      "count": 2,
+      "cost": 500,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/armadillo_scute",
+      "result": "minecraft:armadillo_scute",
+      "count": 2,
+      "cost": 600,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/passive_drops/turtle_scute",
+      "result": "minecraft:turtle_scute",
+      "count": 2,
+      "cost": 700,
+      "chance": 0.8
+    }
+  ]
+}

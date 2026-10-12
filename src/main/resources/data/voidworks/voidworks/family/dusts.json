@@ -1,0 +1,20 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/dusts/redstone"
+    },
+    {
+      "items": "#voidworks:rung/dusts/glowstone",
+      "result": "minecraft:glowstone_dust",
+      "cost": 100,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/dusts/blaze_powder",
+      "result": "minecraft:blaze_powder",
+      "count": 8,
+      "cost": 1600,
+      "chance": 0.5
+    }
+  ]
+}

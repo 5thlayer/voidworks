@@ -1,0 +1,38 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/gems/lapis"
+    },
+    {
+      "items": "#voidworks:rung/gems/amethyst",
+      "result": "minecraft:amethyst_shard",
+      "cost": 100,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/gems/quartz",
+      "result": "minecraft:quartz",
+      "cost": 200,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/gems/emerald",
+      "result": "minecraft:emerald",
+      "cost": 300,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/gems/diamond",
+      "result": "minecraft:diamond",
+      "cost": 400,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/gems/netherite_scrap",
+      "result": "minecraft:netherite_scrap",
+      "count": 8,
+      "cost": 4000,
+      "chance": 0.5
+    }
+  ]
+}

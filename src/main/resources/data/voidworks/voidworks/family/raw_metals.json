@@ -1,0 +1,19 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/raw_metals/copper"
+    },
+    {
+      "items": "#voidworks:rung/raw_metals/iron",
+      "result": "minecraft:raw_iron",
+      "cost": 100,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/raw_metals/gold",
+      "result": "minecraft:raw_gold",
+      "cost": 200,
+      "chance": 0.8
+    }
+  ]
+}

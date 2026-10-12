@@ -1,0 +1,19 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/metal_nuggets/copper"
+    },
+    {
+      "items": "#voidworks:rung/metal_nuggets/iron",
+      "result": "minecraft:iron_nugget",
+      "cost": 100,
+      "chance": 0.8
+    },
+    {
+      "items": "#voidworks:rung/metal_nuggets/gold",
+      "result": "minecraft:gold_nugget",
+      "cost": 200,
+      "chance": 0.8
+    }
+  ]
+}

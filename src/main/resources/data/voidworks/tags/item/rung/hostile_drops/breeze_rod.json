@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:breeze_rod",
+    {
+      "id": "#c:rods/breeze",
+      "required": false
+    }
+  ]
+}

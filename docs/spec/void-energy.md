@@ -240,10 +240,11 @@ a result, count, cost or chance fails to load. Every other Rung accepts its own 
 tag, so an upgraded item climbs on. Families are not synced to clients until a client reads them.
 
 A datapack adds a Family with a file of its own and replaces one by overriding its file. An item on
-the top Rung, or in no Family, has no upgrade. An item that several Rungs accept, in one Family or
-several, upgrades only if their next steps are the same in result, count, cost and chance; if they
-differ in any, it has none, and loading warns, naming them. Every upgrade gives one result for its
-count of items.
+a top Rung, or in no Family, has no upgrade from it: a top Rung makes no claim, so another Family
+that accepts the item lower down carries it on, as a pack extends a ladder. An item that several
+Rungs accept, in one Family or several, upgrades only if their next steps are the same in result,
+count, cost and chance; if they differ in any, it has none, and loading warns, naming them. Every
+upgrade gives one result for its count of items.
 
 What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, `dusts`,
 `hostile_drops`, `passive_drops`) but the metals:

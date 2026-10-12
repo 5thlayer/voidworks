@@ -1,0 +1,13 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:test/flint"
+    },
+    {
+      "items": "#voidworks:test/gravel",
+      "result": "minecraft:gravel",
+      "cost": 100,
+      "chance": 0.8
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:test/feather"
+    },
+    {
+      "items": "#voidworks:test/rabbit_foot",
+      "result": "minecraft:rabbit_foot",
+      "count": 3,
+      "cost": 50,
+      "chance": 1.0
+    }
+  ]
+}
