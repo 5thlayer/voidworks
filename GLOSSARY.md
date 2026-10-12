@@ -87,7 +87,7 @@ _Avoid_: glove
 A void machine placed but not yet paid for: it soaks its cost in motes where it stands, from any
 touching mote store (a Voidstone network, another void machine) or an emptying Void Siphon, and
 works once it is paid. A machine that costs no
-motes, such as the Overworld's Void Displacer, is never dormant.
+motes, such as the Overworld's Void Displacer or the Void Crucible, is never dormant.
 _Avoid_: frame, uncharged (charging is the Void Siphon's)
 
 ### Moving motes
@@ -114,17 +114,25 @@ _Avoid_: lesser egg
 
 **Mutation**:
 Turning an item into another: upgrading it to the next tier of its Family, or breaking it down into
-its ingredients. A Mutation Chamber does it quickly for motes; a Void Crucible upgrades items
-slowly and for free. An upgrade is a chance roll that keeps the item on failure, and a breakdown
-never returns more than went in.
+its ingredients. A Mutation Chamber upgrades quickly for motes, a Void Crucible upgrades slowly and
+for free, and an Unmaking Chamber breaks down for motes. An upgrade is a chance roll that keeps the
+item on failure, and a breakdown never returns more than went in.
 _Avoid_: transmutation, recycling
 
 **Mutation Chamber**:
-The machine that performs a Mutation, spending motes.
+The machine that upgrades items up their Family, spending motes. It never breaks items down.
+
+**Unmaking Chamber**:
+The machine that breaks an item down into the ingredients of its crafting recipe, spending motes.
+Each ingredient comes back only by chance, at its yield: a quarter at first, rising with the motes
+it has spent in its life, never to all of them. Broken, it forgets what it has spent.
+_Avoid_: recycler, grinder, Void Sunderer
 
 **Void Crucible**:
 A block that holds items in Void Pressure until they upgrade up their Family. It spends no motes,
-only time, and progresses only while its chunk is loaded.
+only time, and is never Dormant. It works twice as fast for each step of Void Pressure, never
+fails an upgrade, and progresses only while its chunk is loaded. Crucibles near each other share
+one rate, so many together upgrade no faster than one.
 _Avoid_: altar, cradle
 
 **Family**:

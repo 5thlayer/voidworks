@@ -211,21 +211,43 @@ Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Gh
 
 ## Mutation
 
+Three blocks Mutate, none with a screen or a held recipe: the item decides what it becomes
+([ADR 0004](../adr/0004-breakdown-is-a-block-of-its-own-with-no-screen.md)). Each has an item face,
+the same on every side, that takes into its input only items it can work on and gives only from its
+output, so hoppers and belts feed and empty it, and a hand puts items in and takes the result.
+
 - The **Mutation Chamber** is a smithing table, amethyst shards and crying obsidian, placed Dormant.
-  It is the first thing motes buy, before the Nether. It has no screen yet: an item face, the same
-  on every side, takes into its input only items with an upgrade and gives only from its output,
-  and a hand puts items in and takes the result. It spends from every mote store touching it
-  together; a Void Siphon pays only its Dormant cost. It does two things
-  for motes:
-  - **Upgrade**: items to the next Rung of their **Family**, by that Rung's count, void energy cost
-    and chance. A chance roll; on failure the items are kept and the motes are spent.
-  - **Breakdown**: an item into its crafting recipe's ingredients, read from the recipe in reverse,
-    with a datapack override list. Items with no recipe or several are skipped unless overridden.
-    It returns about 25% of the ingredients, more as more motes are spent, never more than went in.
+  It is the first thing motes buy, before the Nether. It spends from every mote store touching it
+  together; a Void Siphon pays only its Dormant cost. It **upgrades** items to the next Rung of their
+  **Family**, by that Rung's count, void energy cost and chance. A chance roll; on failure the items
+  are kept and the motes are spent. It never breaks items down.
+- The **Unmaking Chamber** is a grindstone, amethyst shards and crying obsidian, placed Dormant, and
+  spends as the Mutation Chamber does. It **breaks down** an item into its crafting recipe's
+  ingredients, read from the recipe in reverse:
+  - Only crafting-table recipes count. An item two or more of them make, or none, is skipped, and so
+    is one whose recipe has no fixed ingredients (fireworks, banner copies) or whose result carries
+    data components. A recipe that makes several items takes that many per breakdown.
+  - An ingredient that accepts several items gives back the first in its own order (oak planks for
+    any planks). One that leaves a remainder in the crafting grid, such as a milk bucket, never comes
+    back, since its container went back to the crafter.
+  - A datapack override list, a data map keyed by item, names the count and the ingredients for an
+    item, which fills in for an item with several recipes or none, and an empty list bars an item.
+  - Each ingredient item comes back alone by chance, at the Chamber's yield, so a breakdown never
+    returns more than went in. Worn and enchanted items break down at the same yield, their
+    enchantments, names and trims lost.
+  - The yield starts at about 25% and rises with the motes the Chamber has spent on breakdowns in its
+    life, its Dormant cost aside, each further amount closing half the gap to a cap of about 75%. It
+    forgets what it has spent when broken. A breakdown costs 100 void energy per ingredient item.
+  - It has nine outputs and waits, spending nothing, until everything the recipe could return fits.
 - The **Void Crucible** upgrades items for free, slowly, at a rate set by Void Pressure, so items go
-  to the End while motes leave it. It takes each Rung's count, and a Rung's void energy cost sets
-  how long it takes there, so a steep Rung is slow in the Crucible too. Upgrade only, no breakdown.
-  Progresses only while its chunk is loaded. Hoppers and belts feed and empty it.
+  to the End while motes leave it. It is a cauldron, amethyst shards and crying obsidian, and is never
+  Dormant. It takes each Rung's count, and a Rung's void energy cost sets how long it takes there, so a
+  steep Rung is slow in the Crucible too; each step of Void Pressure halves the time, and it never
+  fails. Working Crucibles within a few blocks of each other share one rate, so a wall of them
+  upgrades no faster than one. Upgrade only, no breakdown. It works on one result at a time, which
+  floats above it while it does, and what it has done belongs to that item: emptied or given another,
+  it starts again, and it waits, done, while its output is full. Progresses only while its chunk is
+  loaded.
 
 ### Families
 
@@ -294,6 +316,7 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
-  the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes, mote speed, Void Well capacity,
+  the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
+  closing half the gap), the Void Crucible's speed and how near Crucibles share it, mote speed, Void Well capacity,
   the Void Siphon's capacity per tier, and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
   cost.
