@@ -5,6 +5,8 @@ package io.github._5thlayer.voidworks;
 
 import io.github._5thlayer.voidworks.displacer.EndDisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.EndDisplacerBlockEntity;
+import io.github._5thlayer.voidworks.displacer.NetherDisplacerBlock;
+import io.github._5thlayer.voidworks.displacer.NetherDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
@@ -73,6 +75,18 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("end_void_displacer",
                     () -> new BlockEntityType<>(EndDisplacerBlockEntity::new, END_DISPLACER.get()));
 
+    /** Like the End's, it gives no light while Dormant and the Overworld Displacer's once awake. */
+    public static final DeferredBlock<NetherDisplacerBlock> NETHER_DISPLACER = BLOCKS.registerBlock("nether_void_displacer",
+            NetherDisplacerBlock::new,
+            properties -> properties.mapColor(MapColor.NETHER).strength(-1.0F, 3_600_000.0F).noLootTable()
+                    .pushReaction(PushReaction.BLOCK).sound(SoundType.NETHER_BRICKS).lightLevel(state -> state.getValue(Dormancy.DORMANT) ? 0 : 7));
+
+    public static final DeferredItem<BlockItem> NETHER_DISPLACER_ITEM = ITEMS.registerSimpleBlockItem(NETHER_DISPLACER);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<NetherDisplacerBlockEntity>> NETHER_DISPLACER_ENTITY =
+            BLOCK_ENTITIES.register("nether_void_displacer",
+                    () -> new BlockEntityType<>(NetherDisplacerBlockEntity::new, NETHER_DISPLACER.get()));
+
     private VoidworksBlocks() {
     }
 
@@ -87,6 +101,8 @@ public final class VoidworksBlocks {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Item.BLOCK, OVERWORLD_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.itemFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, END_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.itemFace());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.itemFace());
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.fluidFace());
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,
                 VOIDSTONE.get());
@@ -95,6 +111,7 @@ public final class VoidworksBlocks {
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(OVERWORLD_DISPLACER_ITEM.get());
+            event.accept(NETHER_DISPLACER_ITEM.get());
             event.accept(END_DISPLACER_ITEM.get());
         }
     }

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "voidworks:block/nether_void_displacer_top",
+    "bottom": "voidworks:block/nether_void_displacer_top",
+    "side": "voidworks:block/nether_void_displacer_side"
+  }
+}

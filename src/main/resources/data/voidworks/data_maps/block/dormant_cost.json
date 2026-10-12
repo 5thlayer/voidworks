@@ -1,5 +1,8 @@
 {
   "values": {
+    "voidworks:nether_void_displacer": {
+      "cost": 6400
+    },
     "voidworks:end_void_displacer": {
       "cost": 6400
     }

@@ -3,26 +3,18 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
-import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksItems;
 import io.github._5thlayer.voidworks.displacer.EndDisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.EndDisplacerBlockEntity;
-import io.github._5thlayer.voidworks.dormant.Dormancy;
-import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
-import io.github._5thlayer.voidworks.energy.VoidSpender;
-import io.github._5thlayer.voidworks.network.VoidstoneBlock;
-import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
-import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.SiphonMotes;
 import net.minecraft.core.BlockPos;
@@ -31,29 +23,22 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 /**
  * The End Void Displacer on a real server. Most tests stand in the End itself, whose harvest kind
  * the game-test pack keeps {@code end} at a base of {@link #PRESSURE}, each at a site of its own in
  * the void between the main island and the outer ones, a chunk apart. The game test server ticks no
- * block entity outside the Overworld, so those tests tick the Displacer themselves, catch what it
- * drops, and clear their site afterwards. What it shares with the Overworld's is in
+ * block entity outside the Overworld, so those tests tick the Displacer themselves
+ * ({@link DimensionSite}). What it shares with the Overworld's is in
  * {@link DisplacerTests}.
  */
 final class EndDisplacerTests {
@@ -94,17 +79,17 @@ final class EndDisplacerTests {
     }
 
     /** Above a floor, so not over the open void; a Zone of one, fed two copper blocks. */
-    private static void placesIntoTheAir(Site site) {
+    private static void placesIntoTheAir(DimensionSite site) {
         site.set(FLOOR, Blocks.END_STONE.defaultBlockState());
-        var displacer = site.place(1);
+        var displacer = place(site, 1);
         site.feed(displacer, 2);
         site.payInFull(displacer);
         site.tick(displacer, 3 * VoidworksConfig.harvestInterval());
         var first = displacer.grown().isEmpty() ? null : displacer.grown().getFirst();
         site.assertTrue(site.abs(BELOW).equals(first), "it harvested " + first + " first, not the air below it");
-        site.assertEndVoidstone(BELOW);
+        site.assertVoidstone(BELOW, HarvestKind.END);
         // Its Zone spent, it became Voidstone, joining the network that keeps the harvest's motes.
-        site.assertEndVoidstone(DISPLACER);
+        site.assertVoidstone(DISPLACER, HarvestKind.END);
         var motes = site.motes(DISPLACER);
         site.assertTrue(motes.equals(Map.of(PRESSURE + 1, VoidworksConfig.motes(1))),
                 "the network holds " + motes + ", not a copper block's " + VoidworksConfig.motes(1) + " motes of grade " + (PRESSURE + 1));
@@ -112,8 +97,8 @@ final class EndDisplacerTests {
                 "it should drop only the copper block it did not harvest, dropped " + site.dropped());
     }
 
-    private static void openVoid(Site site) {
-        var displacer = site.place(2);
+    private static void openVoid(DimensionSite site) {
+        var displacer = place(site, 2);
         site.assertTrue(site.pressure(DISPLACER) == PRESSURE + 1, "the void beneath the Displacer is not open: pressure " + site.pressure(DISPLACER));
         site.feed(displacer, 1);
         site.payInFull(displacer);
@@ -129,9 +114,9 @@ final class EndDisplacerTests {
      * Fed, it waits Dormant with nothing to pay it. Then Voidstone touching it holds motes three
      * steps above the pressure, enough for its cost, and it soaks them, wakes and harvests.
      */
-    private static void dormantUntilPaid(Site site) {
+    private static void dormantUntilPaid(DimensionSite site) {
         site.set(FLOOR, Blocks.END_STONE.defaultBlockState());
-        var displacer = site.place(2);
+        var displacer = place(site, 2);
         site.feed(displacer, 1);
         long cost = displacer.dormancy().cost();
         site.assertTrue(cost > 0, "the End Displacer ships no Dormant cost");
@@ -156,8 +141,8 @@ final class EndDisplacerTests {
     }
 
     /** Boxed in by end stone, with Voidstone holding motes enough to pay it on one side: it pays nothing and pops off. */
-    private static void popsOffBeforeSoaking(Site site) {
-        var displacer = site.place(2);
+    private static void popsOffBeforeSoaking(DimensionSite site) {
+        var displacer = place(site, 2);
         site.feed(displacer, 1);
         for (var side : new BlockPos[] {DISPLACER.above(), DISPLACER.below(), DISPLACER.south(), DISPLACER.east(), DISPLACER.west()}) {
             site.set(side, Blocks.END_STONE.defaultBlockState());
@@ -173,8 +158,8 @@ final class EndDisplacerTests {
     }
 
     /** Facing east in open air, with eight harvests to make: every one lies east of it, and its other five faces stay open. */
-    private static void growsOnlyAhead(Site site) {
-        var displacer = site.place(8, Direction.EAST);
+    private static void growsOnlyAhead(DimensionSite site) {
+        var displacer = place(site, 8, Direction.EAST);
         site.feed(displacer, 8);
         site.payInFull(displacer);
         site.tick(displacer, 10 * VoidworksConfig.harvestInterval());
@@ -255,127 +240,18 @@ final class EndDisplacerTests {
 
     // -- a site in the End ------------------------------------------------------------------------
 
-    /**
-     * Runs {@code body} at site {@code index} in the End, a chunk of its own over the void, and
-     * clears the site afterwards; the test succeeds if the body returns.
-     */
-    private static void inTheEnd(GameTestHelper helper, int index, Consumer<Site> body) {
-        var end = helper.getLevel().getServer().getLevel(Level.END);
+    /** Runs {@code body} at site {@code index} in the End, a chunk of its own over the void. */
+    private static void inTheEnd(GameTestHelper helper, int index, Consumer<DimensionSite> body) {
         // Out past the main island, short of the outer ones: nothing below but the void.
-        var corner = new BlockPos(16 * index, 0, 512);
-        var site = new Site(helper, end, corner, new ArrayList<>());
-        int chunkX = corner.getX() >> 4;
-        int chunkZ = corner.getZ() >> 4;
-        // The End loads no entities here, so its drops are caught as they are added.
-        Consumer<EntityJoinLevelEvent> drops = event -> {
-            if (event.getLevel() == end && event.getEntity() instanceof ItemEntity item) {
-                site.dropped().add(item.getItem().getItem());
-                event.setCanceled(true);
-            }
-        };
-        end.setChunkForced(chunkX, chunkZ, true);
-        NeoForge.EVENT_BUS.addListener(drops);
-        try {
-            body.accept(site);
-        } finally {
-            NeoForge.EVENT_BUS.unregister(drops);
-            site.clear();
-            end.setChunkForced(chunkX, chunkZ, false);
-        }
-        helper.succeed();
+        DimensionSite.run(helper, Level.END, new BlockPos(16 * index, 0, 512), DISPLACER, REACH, body);
     }
 
-    /** A site in the End: positions relative to {@code corner}, as a test's are to its structure. */
-    private record Site(GameTestHelper helper, ServerLevel end, BlockPos corner, List<Item> dropped) {
+    private static EndDisplacerBlockEntity place(DimensionSite site, int zone) {
+        return place(site, zone, Direction.DOWN);
+    }
 
-        BlockPos abs(BlockPos pos) {
-            return corner.offset(pos);
-        }
-
-        BlockState state(BlockPos pos) {
-            return end.getBlockState(abs(pos));
-        }
-
-        void set(BlockPos pos, BlockState state) {
-            end.setBlockAndUpdate(abs(pos), state);
-        }
-
-        EndDisplacerBlockEntity place(int zone) {
-            return place(zone, Direction.DOWN);
-        }
-
-        EndDisplacerBlockEntity place(int zone, Direction facing) {
-            set(DISPLACER, VoidworksBlocks.END_DISPLACER.get().defaultBlockState().setValue(EndDisplacerBlock.FACING, facing));
-            var displacer = (EndDisplacerBlockEntity) end.getBlockEntity(abs(DISPLACER));
-            displacer.setZone(zone);
-            return displacer;
-        }
-
-        void feed(EndDisplacerBlockEntity displacer, int count) {
-            displacer.inventory().set(EndDisplacerBlockEntity.INPUT, ItemResource.of(Items.COPPER_BLOCK), count);
-        }
-
-        /** Pays its whole cost, as a Siphon emptied into it does, so it wakes on its next tick. */
-        void payInFull(EndDisplacerBlockEntity displacer) {
-            int local = pressure(DISPLACER);
-            int grade = local + 3;
-            var store = new MoteStore().add(grade, (int) (displacer.dormancy().cost() / VoidEnergy.release(grade, local).orElseThrow()) + 1);
-            displacer.dormancy().payFrom(end, store, abs(DISPLACER).getCenter());
-            assertTrue(displacer.dormancy().paid() == displacer.dormancy().cost(), "the Displacer was paid " + displacer.dormancy().paid());
-        }
-
-        /** Ticks the Displacer as the server would, {@code ticks} times or until it is gone. */
-        void tick(EndDisplacerBlockEntity displacer, int ticks) {
-            for (int i = 0; i < ticks && !displacer.isRemoved(); i++) {
-                displacer.serverTick(end);
-            }
-        }
-
-        boolean dormantLook() {
-            var state = state(DISPLACER);
-            return state.hasProperty(Dormancy.DORMANT) && state.getValue(Dormancy.DORMANT);
-        }
-
-        int pressure(BlockPos pos) {
-            return VoidPressure.at(end, abs(pos));
-        }
-
-        void insert(BlockPos pos, int grade, int count) {
-            try (var transaction = Transaction.openRoot()) {
-                int inserted = VoidstoneNetworks.of(end).at(abs(pos)).orElseThrow().insert(MoteResource.of(grade), count, transaction);
-                assertTrue(inserted == count, "the network at " + pos + " took " + inserted + " of " + count + " motes");
-                transaction.commit();
-            }
-        }
-
-        Map<Integer, Integer> motes(BlockPos pos) {
-            var network = end.getCapability(VoidworksCapabilities.MOTES, abs(pos), null);
-            return network == null ? Map.of() : VoidSpender.countByGrade(network);
-        }
-
-        void assertVoidstone(BlockPos pos) {
-            assertTrue(state(pos).is(VoidworksBlocks.VOIDSTONE.get()), "there is " + state(pos) + " at " + pos + ", not Voidstone");
-        }
-
-        /** Voidstone with the End's look, as everything placed in the End has. */
-        void assertEndVoidstone(BlockPos pos) {
-            assertVoidstone(pos);
-            var kind = state(pos).getValue(VoidstoneBlock.KIND);
-            assertTrue(kind == HarvestKind.END, "the Voidstone at " + pos + " looks like " + kind + ", not the End");
-        }
-
-        void assertTrue(boolean condition, String message) {
-            helper.assertTrue(condition, message);
-        }
-
-        /** Clears every block a test may have set, its floor too, leaving the void it found. */
-        void clear() {
-            for (var pos : BlockPos.betweenClosed(abs(DISPLACER).offset(-REACH, -REACH, -REACH), abs(DISPLACER).offset(REACH, REACH, REACH))) {
-                if (!end.getBlockState(pos).isAir()) {
-                    end.setBlockAndUpdate(pos.immutable(), Blocks.AIR.defaultBlockState());
-                }
-            }
-            end.setBlockAndUpdate(abs(FLOOR), Blocks.AIR.defaultBlockState());
-        }
+    private static EndDisplacerBlockEntity place(DimensionSite site, int zone, Direction facing) {
+        return site.place(VoidworksBlocks.END_DISPLACER.get().defaultBlockState().setValue(EndDisplacerBlock.FACING, facing), zone,
+                EndDisplacerBlockEntity.class);
     }
 }

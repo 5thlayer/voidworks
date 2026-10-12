@@ -16,6 +16,10 @@ pale yellows, so the family reads as one in the End's own colours: lit while it 
 unlit brooding forge's flame, a single frame, while it is Dormant. The flame is only on its front,
 the face it grows through, so the way it faces shows; its other five faces are the bare casing.
 
+The Nether Void Displacer's faces are the Overworld's, flame on each side and eye on the top, on
+the abyssium recoloured into nether bricks' dark reds: lit while it works, and the unlit brooding
+forge's flame and eye, a single frame each, while it is Dormant.
+
 Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
 reads as its family while the brighter, framed Displacer stands out from it. In the End it is the
 same sand in the End casing's yellows, so the End Displacer's body reads as its family there.
@@ -46,6 +50,10 @@ EYE = (5, 5, 11, 11)
 # The End casing's shades, darkest to lightest, which the abyssium's run through by brightness: end
 # stone's pale yellows, darkened at the bottom so the casing keeps its depth.
 END_CASING = [(0x3A, 0x38, 0x24), (0xAE, 0xAC, 0x76), (0xEC, 0xEE, 0xB6)]
+
+# The Nether casing's shades, darkest to lightest: nether bricks' dark reds, lifted at the top so
+# the casing's rivets still catch the light.
+NETHER_CASING = [(0x16, 0x06, 0x08), (0x5A, 0x1A, 0x1E), (0x9C, 0x4A, 0x44)]
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
@@ -130,6 +138,11 @@ def main():
     displacer_face(end_casing, "device_brooding_forge_side_on", FLAME, "end_void_displacer_front")
     displacer_face(end_casing, "device_brooding_forge_side_off", FLAME, "end_void_displacer_front_dormant")
     save(end_casing, TEXTURES / "block" / "end_void_displacer_casing.png")
+    nether_casing = recolour(abyssium, NETHER_CASING)
+    displacer_face(nether_casing, "device_brooding_forge_side_on", FLAME, "nether_void_displacer_side")
+    displacer_face(nether_casing, "device_brooding_forge_up_on", EYE, "nether_void_displacer_top")
+    displacer_face(nether_casing, "device_brooding_forge_side_off", FLAME, "nether_void_displacer_side_dormant")
+    displacer_face(nether_casing, "device_brooding_forge_up_off", EYE, "nether_void_displacer_top_dormant")
     voidstone()
 
 

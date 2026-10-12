@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dormant=false": {
+      "model": "voidworks:block/nether_void_displacer"
+    },
+    "dormant=true": {
+      "model": "voidworks:block/nether_void_displacer_dormant"
+    }
+  }
+}

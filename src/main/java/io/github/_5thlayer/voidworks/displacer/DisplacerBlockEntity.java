@@ -47,12 +47,13 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * left, nearest first, each harvest taking one fed block, turning the position into Voidstone and
  * putting the fed block's motes, at one grade above the Void Pressure there, into the network its
  * Voidstone forms, with a sound, and anything solid it displaced crumbling. It holds no motes
- * itself. What it harvests, and what its output gets for it, is its dimension's
- * ({@link OverworldDisplacerBlockEntity}, {@link EndDisplacerBlockEntity}).
+ * itself. What it harvests, and what its output and tank get for it, is its dimension's
+ * ({@link OverworldDisplacerBlockEntity}, {@link EndDisplacerBlockEntity},
+ * {@link NetherDisplacerBlockEntity}).
  *
  * <p>It works only where the harvest kind is its own: anywhere else it refuses on its first tick,
- * popping off as its item with what it holds, so it never stands there unbreakable. A full output,
- * or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
+ * popping off as its item with what it holds, so it never stands there unbreakable. A full output
+ * or tank, or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
  * with an empty hand, as nothing else can extract them. When its Zone is spent, or it can reach
  * nothing more, it becomes Voidstone itself and its network keeps the motes; one that could reach
  * nothing before its first harvest pops off instead, as outside its dimension, even before it is
@@ -144,6 +145,15 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     protected abstract ItemStack displaced(BlockState harvested, int density);
 
     /**
+     * Puts what displacing {@code harvested} gives its tank there, as part of {@code transaction}.
+     *
+     * @return whether the tank took it all: always, for a Displacer with no tank
+     */
+    protected boolean toTank(BlockState harvested, TransactionContext transaction) {
+        return true;
+    }
+
+    /**
      * Called each server tick where it may work and can reach something; it harvests only while
      * this is true.
      *
@@ -218,16 +228,15 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         int motes = VoidworksConfig.motes(density);
         var networks = VoidstoneNetworks.of(level);
         var harvested = level.getBlockState(target);
-        var result = displaced(harvested, density);
         try (var transaction = Transaction.openRoot()) {
-            if (inventory.extract(INPUT, fed, 1, transaction) != 1 || !toOutput(result, transaction)) {
+            if (inventory.extract(INPUT, fed, 1, transaction) != 1 || deliver(harvested, density, transaction).isPresent()) {
                 return false;
             }
             transaction.commit();
         }
         level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
-        if (!harvested.isAir()) {
-            // What was displaced crumbles as if broken, without its breaking sound.
+        if (!harvested.isAir() && harvested.getFluidState().isEmpty()) {
+            // What solid was displaced crumbles as if broken, without its breaking sound.
             level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, harvested),
                     target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 30, 0.3, 0.3, 0.3, 0.05);
         }
@@ -246,7 +255,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /**
      * @return why it cannot harvest the next position it would, though fed: a Void Pressure there
-     *         too high to grade, a network with no room for the harvest's motes, or a full output;
+     *         too high to grade, a network with no room for the harvest's motes, or a full output or tank;
      *         empty when it can, or has nothing fed, nothing left in reach or its Zone spent. A
      *         Dormant one's payment is its {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
@@ -256,11 +265,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
             return Optional.empty();
         }
         return next(level).flatMap(target -> stallBeforeOutput(level, target, density).or(() -> {
-            // Tried and rolled back: the output takes the displaced block or it does not.
+            // Tried and rolled back: the output and tank take what is displaced or they do not.
             try (var transaction = Transaction.openRoot()) {
-                return toOutput(displaced(level.getBlockState(target), density), transaction)
-                        ? Optional.empty()
-                        : Optional.of(Stall.OUTPUT_FULL);
+                return deliver(level.getBlockState(target), density, transaction);
             }
         }));
     }
@@ -283,7 +290,22 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         /** The network its harvest would join cannot take the harvest's motes. */
         NETWORK_FULL,
         /** Its output cannot take what the harvest displaces. */
-        OUTPUT_FULL
+        OUTPUT_FULL,
+        /** Its tank cannot take what the harvest displaces. */
+        TANK_FULL
+    }
+
+    /**
+     * Puts what displacing {@code harvested} with a fed block of {@code density} gives into its
+     * output, then its tank, as part of {@code transaction}.
+     *
+     * @return which of them was full, or empty when both took it all
+     */
+    private Optional<Stall> deliver(BlockState harvested, int density, TransactionContext transaction) {
+        if (!toOutput(displaced(harvested, density), transaction)) {
+            return Optional.of(Stall.OUTPUT_FULL);
+        }
+        return toTank(harvested, transaction) ? Optional.empty() : Optional.of(Stall.TANK_FULL);
     }
 
     private boolean toOutput(ItemStack result, TransactionContext transaction) {

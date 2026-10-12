@@ -56,6 +56,7 @@ public record DisplacerReport(ItemStack fed, int harvestsLeft, Optional<Displace
             case PRESSURE_TOO_HIGH -> "voidworks.jade.displacer.stall.pressure_too_high";
             case NETWORK_FULL -> "voidworks.jade.displacer.stall.network_full";
             case OUTPUT_FULL -> "voidworks.jade.displacer.stall.output_full";
+            case TANK_FULL -> "voidworks.jade.displacer.stall.tank_full";
         };
     }
 }

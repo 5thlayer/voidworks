@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "minecraft:polished_blackstone_bricks",
+    "M": "minecraft:magma_cream",
+    "R": "minecraft:blaze_rod",
+    "P": "minecraft:sticky_piston"
+  },
+  "pattern": [
+    "BMB",
+    "RPR",
+    "BMB"
+  ],
+  "result": {
+    "id": "voidworks:nether_void_displacer"
+  }
+}

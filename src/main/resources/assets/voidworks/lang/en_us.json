@@ -1,5 +1,6 @@
 {
   "block.voidworks.end_void_displacer": "End Void Displacer",
+  "block.voidworks.nether_void_displacer": "Nether Void Displacer",
   "block.voidworks.overworld_void_displacer": "Overworld Void Displacer",
   "block.voidworks.voidstone": "Voidstone",
   "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",
@@ -18,6 +19,7 @@
   "voidworks.jade.displacer.stall.network_full": "Stalled: its network has no room",
   "voidworks.jade.displacer.stall.output_full": "Stalled: its output is full",
   "voidworks.jade.displacer.stall.pressure_too_high": "Stalled: the Void Pressure there is too high",
+  "voidworks.jade.displacer.stall.tank_full": "Stalled: its tank is full",
   "voidworks.jade.network.grade": "Grade %s: %s motes",
   "voidworks.jade.network.held": "%s / %s motes",
   "voidworks.siphon.harvest.full": "The Void Siphon is full",

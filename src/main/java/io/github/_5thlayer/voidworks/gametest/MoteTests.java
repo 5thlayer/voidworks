@@ -47,6 +47,7 @@ final class MoteTests {
                 .filter(id -> id.getNamespace().equals(Voidworks.MOD_ID))
                 .collect(Collectors.toSet());
         var expected = Set.of(Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "overworld_void_displacer"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "nether_void_displacer"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "end_void_displacer"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_siphon"));
         if (!items.equals(expected)) {
