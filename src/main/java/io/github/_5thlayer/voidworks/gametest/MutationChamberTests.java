@@ -5,7 +5,6 @@ package io.github._5thlayer.voidworks.gametest;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
@@ -72,6 +71,7 @@ final class MutationChamberTests {
                 MutationChamberTests::outputCannotTakeTheResult);
         tests.test("mutation_chamber_awake_with_no_mote_store_touching_it_says_so_and_upgrades_once_one_does", TICKS,
                 MutationChamberTests::noMoteStore);
+        tests.test("touching_mote_stores_add_up_and_a_network_on_two_faces_counts_once", 1, MutationChamberTests::touchingStoresWorth);
         tests.test("mutation_chamber_item_face_takes_only_upgradable_items_and_gives_only_the_output", 1, MutationChamberTests::itemFace);
         tests.test("mutation_chamber_takes_items_from_a_hand_and_gives_the_result_to_an_empty_one", 1, MutationChamberTests::byHand);
         tests.test("mutation_chamber_broken_drops_itself_and_what_it_holds", 20, MutationChamberTests::breakingDrops);
@@ -89,7 +89,7 @@ final class MutationChamberTests {
                 "a store is worth something beside a Chamber no store touches");
         var store = new MoteStore().add(grade(helper), 10);
         SpendTests.placeStore(helper, BESIDE, store);
-        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).equals(OptionalLong.of(10 * VoidEnergy.BASE)),
+        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).equals(Optional.of(10 * VoidEnergy.BASE)),
                 "the store beside it is not worth its ten motes' " + 10 * VoidEnergy.BASE);
         helper.startSequence()
                 .thenIdle(4 * VoidworksConfig.soakInterval())
@@ -192,6 +192,28 @@ final class MutationChamberTests {
                 })
                 .thenWaitUntil(() -> assertHolds(helper, chamber, Items.CLAY_BALL, 0, new ItemStack(Items.BRICK)))
                 .thenSucceed();
+    }
+
+    /**
+     * A plain store to the east worth five motes, and a Voidstone network worth three that touches the
+     * Chamber on its north and west faces, joined round the back: the best is the store, and together
+     * they are worth eight, the network once.
+     */
+    private static void touchingStoresWorth(GameTestHelper helper) {
+        place(helper);
+        int grade = grade(helper);
+        SpendTests.placeStore(helper, BESIDE, new MoteStore().add(grade, 5));
+        for (var voidstone : new BlockPos[] {CHAMBER.north(), CHAMBER.north().west(), CHAMBER.west()}) {
+            helper.setBlock(voidstone, VoidworksBlocks.VOIDSTONE.get());
+        }
+        VoidstoneTests.insert(helper, CHAMBER.north(), grade, 3);
+        var level = helper.getLevel();
+        var pos = helper.absolutePos(CHAMBER);
+        helper.assertTrue(TouchingMotes.bestWorth(level, pos).equals(Optional.of(5 * VoidEnergy.BASE)),
+                "the best store touching it is worth " + TouchingMotes.bestWorth(level, pos) + ", not the plain store's five motes");
+        helper.assertTrue(TouchingMotes.totalWorth(level, pos).equals(Optional.of(8 * VoidEnergy.BASE)),
+                "the stores touching it are worth " + TouchingMotes.totalWorth(level, pos) + " together, not eight motes'");
+        helper.succeed();
     }
 
     private static void itemFace(GameTestHelper helper) {

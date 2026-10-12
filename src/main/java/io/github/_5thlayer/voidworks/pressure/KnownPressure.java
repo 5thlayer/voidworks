@@ -28,6 +28,11 @@ public final class KnownPressure {
         known = payload;
     }
 
+    /** Forgets the entry, as the client leaves a server, so another server's is never shown. Client-only. */
+    public static void forget() {
+        known = null;
+    }
+
     /** Sets who the client's player is, which {@link #here} reads. Client-only, at load. */
     public static void setViewer(Supplier<@Nullable Player> player) {
         viewer = player;

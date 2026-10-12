@@ -143,22 +143,22 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
     /**
      * @return why it cannot upgrade what its input holds: an item with no upgrade, fewer than the
      *         Rung's count, an output that cannot take the result, no mote store touching it, or none
-     *         that can afford the cost alone; empty when it can, or its input is empty. A Dormant
-     *         one's payment is its {@link Dormancy}'s.
+     *         that can afford the cost alone; empty when it can, or its input is empty. While it
+     *         is Dormant, only what stalls its items: its stores pay its {@link Dormancy} first.
      */
     public Optional<Stall> stall(ServerLevel level) {
         if (inventory.getResource(INPUT).isEmpty()) {
             return Optional.empty();
         }
         var next = next();
-        return stallBeforePaying(next).or(() -> {
-            long cost = next.orElseThrow().cost();
-            var best = TouchingMotes.bestWorth(level, worldPosition);
-            if (cost > 0 && best.isEmpty()) {
-                return Optional.of(Stall.NO_MOTE_STORE);
-            }
-            return cost > 0 && best.getAsLong() < cost ? Optional.of(Stall.CANNOT_AFFORD) : Optional.empty();
-        });
+        var stall = stallBeforePaying(next);
+        long cost = next.map(Upgrade::cost).orElse(0L);
+        if (stall.isPresent() || !dormancy.awake() || cost == 0) {
+            return stall;
+        }
+        return TouchingMotes.bestWorth(level, worldPosition)
+                .map(best -> best < cost ? Optional.of(Stall.CANNOT_AFFORD) : Optional.<Stall>empty())
+                .orElse(Optional.of(Stall.NO_MOTE_STORE));
     }
 
     /** What stalls an upgrade before any mote store is asked, which {@link #upgrade} asks for real. */

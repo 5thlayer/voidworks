@@ -19,7 +19,8 @@ public record VoidstoneMotes(ServerLevel level, BlockPos pos) implements Resourc
     private static final ResourceHandler<MoteResource> EMPTY = new MoteNetwork(() -> 0, () -> {
     });
 
-    private ResourceHandler<MoteResource> network() {
+    /** @return the network it reaches now, the same one for every Voidstone in it, or an empty store for none */
+    public ResourceHandler<MoteResource> network() {
         return VoidstoneNetworks.of(level).at(pos).<ResourceHandler<MoteResource>>map(network -> network)
                 .orElse(EMPTY);
     }

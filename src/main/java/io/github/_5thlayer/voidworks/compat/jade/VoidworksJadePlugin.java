@@ -56,7 +56,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, path);
     }
 
-    /** Its payment, and while Dormant, what the best mote store touching it is worth there, so a player sees whether it will wake. */
+    /** Its payment, and while Dormant, what the mote stores touching it are worth there together, so a player sees whether it will wake. */
     private static @Nullable List<Component> dormancy(BlockEntity machine) {
         if (!(machine instanceof Dormancy.Holder holder) || !(machine.getLevel() instanceof ServerLevel level)) {
             return null;
@@ -64,7 +64,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         var dormancy = holder.dormancy();
         return dormancy.awake()
                 ? List.of(dormancy.status())
-                : List.of(dormancy.status(), TouchingMotes.describe(TouchingMotes.bestWorth(level, machine.getBlockPos())));
+                : List.of(dormancy.status(), TouchingMotes.describe(TouchingMotes.totalWorth(level, machine.getBlockPos())));
     }
 
     private static @Nullable DisplacerReport displacer(DisplacerBlockEntity displacer) {

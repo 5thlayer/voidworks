@@ -15,18 +15,11 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
 
@@ -41,7 +34,7 @@ import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
  * ships the entries, such as
  * {@code {"values": {"minecraft:the_end": {"base": 3, "harvest_kind": "end"}}}}. It is read on the
  * server; the dimension registry never reaches a client, so each player is sent their own
- * dimension's entry ({@link PressurePayload}), for showing what motes are worth where they stand.
+ * dimension's entry ({@link PressureSync}), for showing what motes are worth where they stand.
  */
 public final class VoidPressure {
 
@@ -65,23 +58,7 @@ public final class VoidPressure {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(VoidPressure::registerDataMap);
-        modBus.addListener(VoidPressure::registerPayload);
-        NeoForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> event.getRelevantPlayers().forEach(VoidPressure::sendTo));
-        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerChangedDimensionEvent event) -> sendTo(event.getEntity()));
-        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerRespawnEvent event) -> sendTo(event.getEntity()));
-    }
-
-    private static void registerPayload(RegisterPayloadHandlersEvent event) {
-        // Optional, so a client without Voidworks can still join; it shows nothing it was not sent.
-        event.registrar("1").optional().playToClient(PressurePayload.TYPE, PressurePayload.STREAM_CODEC);
-    }
-
-    /** Tells {@code player}'s client the Void Pressure entry of the dimension it is in. */
-    private static void sendTo(Player player) {
-        if (player instanceof ServerPlayer server) {
-            var level = server.level();
-            PacketDistributor.sendToPlayer(server, new PressurePayload(level.dimension(), dimension(level)));
-        }
+        PressureSync.register(modBus);
     }
 
     private static void registerDataMap(RegisterDataMapTypesEvent event) {

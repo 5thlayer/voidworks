@@ -6,7 +6,6 @@ package io.github._5thlayer.voidworks.mutation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.netty.buffer.ByteBuf;
@@ -60,14 +59,9 @@ public record ChamberReport(ItemStack input, Optional<Next> next, boolean awake,
     public static ChamberReport of(MutationChamberBlockEntity chamber, ServerLevel level) {
         var next = chamber.next().map(upgrade -> new Next(new ItemStack(upgrade.result()), upgrade.count(), upgrade.cost(), upgrade.chance()));
         boolean awake = chamber.dormancy().awake();
-        OptionalLong best = awake ? TouchingMotes.bestWorth(level, chamber.getBlockPos()) : OptionalLong.empty();
-        var stall = chamber.stall(level);
-        if (!awake) {
-            // Its stores are the Dormant payment's lines while it soaks its cost.
-            stall = stall.filter(reason -> reason != MutationChamberBlockEntity.Stall.NO_MOTE_STORE
-                    && reason != MutationChamberBlockEntity.Stall.CANNOT_AFFORD);
-        }
-        return new ChamberReport(chamber.input(), next, awake, best.isPresent() ? Optional.of(best.getAsLong()) : Optional.empty(), stall);
+        // While it soaks its cost, its stores are the Dormant payment's lines.
+        var best = awake ? TouchingMotes.bestWorth(level, chamber.getBlockPos()) : Optional.<Long>empty();
+        return new ChamberReport(chamber.input(), next, awake, best, chamber.stall(level));
     }
 
     /**
@@ -85,7 +79,7 @@ public record ChamberReport(ItemStack input, Optional<Next> next, boolean awake,
                 upgrade.result().getHoverName(), upgrade.cost(), Math.round(upgrade.chance() * 100))));
         boolean noStore = stall.equals(Optional.of(MutationChamberBlockEntity.Stall.NO_MOTE_STORE));
         if (awake && !noStore) {
-            lines.add(TouchingMotes.describe(bestWorth.map(OptionalLong::of).orElseGet(OptionalLong::empty)));
+            lines.add(TouchingMotes.describe(bestWorth));
         }
         stall.ifPresentOrElse(reason -> lines.add(stallLine(reason).withStyle(ChatFormatting.RED)), () -> {
             if (awake && !input.isEmpty()) {

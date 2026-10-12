@@ -15,8 +15,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} shows, and keeps
@@ -32,6 +34,7 @@ public final class VoidworksClient {
         modBus.addListener(VoidworksClient::registerParticles);
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> KnownPressure.forget());
     }
 
     private static void registerParticles(RegisterParticleProvidersEvent event) {
