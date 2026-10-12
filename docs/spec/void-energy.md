@@ -46,8 +46,9 @@ after it, piglins barter it, so relocating Displacers pulls a player into the Ne
 
 Every void machine whose recipe costs motes is crafted from items alone and placed **Dormant**: it
 soaks its cost where it stands, from any touching mote store (a Voidstone network, another void
-machine) or a Siphon emptying into it, by the spend rule at its own block, and works once it is paid. The Overworld's Displacer costs no motes and is
-never Dormant.
+machine) or a Siphon emptying into it, by the spend rule at its own block, and works once it is paid. A mote is spent whole, so the last one can pay
+more than is owed, and the rest is lost. The Overworld's Displacer costs no motes and is never
+Dormant.
 
 ## Motes and void energy
 
