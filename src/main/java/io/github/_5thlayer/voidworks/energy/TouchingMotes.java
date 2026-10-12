@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import com.google.common.math.LongMath;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
+import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.network.VoidstoneMotes;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
@@ -54,25 +55,36 @@ public final class TouchingMotes {
     }
 
     /**
-     * @return the most any one store touching {@code pos} is worth spent there, in void energy, which
-     *         is what a spend from one store can release; empty when none touches it
-     */
-    public static Optional<Long> bestWorth(ServerLevel level, BlockPos pos) {
-        int pressure = VoidPressure.at(level, pos);
-        return distinct(at(level, pos)).stream().map(motes -> worth(motes, pressure)).max(Long::compare);
-    }
-
-    /**
      * @return what the stores touching {@code pos} are worth spent there together, in void energy,
-     *         which is what a Dormant machine soaks from them; a network touching it on several faces
-     *         counts once; empty when none touches it
+     *         which is what a Dormant machine soaks from them and an upgrade can spend; a network
+     *         touching it on several faces counts once; empty when none touches it
      */
     public static Optional<Long> totalWorth(ServerLevel level, BlockPos pos) {
         int pressure = VoidPressure.at(level, pos);
         var stores = distinct(at(level, pos));
         return stores.isEmpty()
                 ? Optional.empty()
-                : Optional.of(stores.stream().mapToLong(motes -> worth(motes, pressure)).reduce(0, LongMath::saturatedAdd));
+                : Optional.of(stores.stream().mapToLong(store -> worth(store.motes(), pressure)).reduce(0, LongMath::saturatedAdd));
+    }
+
+    /**
+     * Spends at least {@code required} void energy from the stores touching {@code pos} together, by
+     * the spend rule there ({@link VoidSpender#spendFromAll}), each store's motes flying in from it
+     * as butterflies. All or nothing.
+     *
+     * @return whether it was paid
+     */
+    public static boolean spend(ServerLevel level, BlockPos pos, long required) {
+        var stores = distinct(at(level, pos));
+        var taken = VoidSpender.spendFromAll(stores.stream().map(Store::motes).toList(), level, pos, required);
+        if (taken.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < stores.size(); i++) {
+            var from = stores.get(i).pos().getCenter();
+            taken.get().get(i).forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+        }
+        return true;
     }
 
     /** @return for a player: what the stores touching it are worth there, or that none touches it */
@@ -85,12 +97,18 @@ public final class TouchingMotes {
         return VoidEnergy.worth(VoidSpender.countByGrade(motes), pressure);
     }
 
-    /** @return each store once: a Voidstone's is its network's, which the Voidstone on every face it touches shares */
-    private static List<ResourceHandler<MoteResource>> distinct(List<Store> stores) {
+    /**
+     * @return each store once, on the first face it touches: a Voidstone's is its network's, which
+     *         the Voidstone on every face it touches shares
+     */
+    private static List<Store> distinct(List<Store> stores) {
         var seen = Collections.<ResourceHandler<MoteResource>>newSetFromMap(new IdentityHashMap<>());
+        var distinct = new ArrayList<Store>();
         for (var store : stores) {
-            seen.add(store.motes() instanceof VoidstoneMotes voidstone ? voidstone.network() : store.motes());
+            if (seen.add(store.motes() instanceof VoidstoneMotes voidstone ? voidstone.network() : store.motes())) {
+                distinct.add(store);
+            }
         }
-        return List.copyOf(seen);
+        return distinct;
     }
 }

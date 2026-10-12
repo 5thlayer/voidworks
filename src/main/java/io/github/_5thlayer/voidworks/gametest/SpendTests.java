@@ -3,7 +3,9 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
@@ -46,6 +48,9 @@ final class SpendTests {
         tests.test("spend_takes_the_lowest_grade_in_the_nether", 1, SpendTests::takesTheLowestGradeInTheNether);
         tests.test("spend_takes_motes_of_a_grade_from_several_slots", 1, SpendTests::takesMotesFromSeveralSlots);
         tests.test("spend_takes_from_a_block_through_the_motes_capability", 1, SpendTests::takesFromABlockThroughTheCapability);
+        tests.test("spend_from_several_stores_takes_the_lowest_grade_from_any_of_them", 1, SpendTests::severalStoresTakeTheLowestGradeFirst);
+        tests.test("spend_from_several_stores_that_cannot_afford_it_together_leaves_every_one_untouched", 1,
+                SpendTests::severalStoresThatCannotAffordAreUntouched);
     }
 
     /** Gives {@link #MACHINE} the {@code voidworks:motes} capability, for the game test run only. */
@@ -186,6 +191,34 @@ final class SpendTests {
             helper.fail("a refused spend changed the store: " + store.snapshot());
             return;
         }
+        helper.succeed();
+    }
+
+    /**
+     * The first store holds only a grade 4 mote, the second two grade 3: the spend of {@code 2 × BASE}
+     * takes the second's grade 3 motes, the lowest worthwhile grade of either, and leaves the first's.
+     */
+    private static void severalStoresTakeTheLowestGradeFirst(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
+        var first = new MoteStore().add(pressure + 2, 1);
+        var second = new MoteStore().add(pressure + 1, 2);
+        var taken = VoidSpender.spendFromAll(List.of(first, second), helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
+        var expected = List.of(Map.<Integer, Integer>of(), Map.of(pressure + 1, 2));
+        helper.assertTrue(taken.equals(Optional.of(expected)), "the spend took " + taken + ", not " + expected);
+        helper.assertTrue(VoidSpender.countByGrade(first).equals(Map.of(pressure + 2, 1)), "the first store holds " + VoidSpender.countByGrade(first));
+        helper.assertTrue(VoidSpender.countByGrade(second).isEmpty(), "the second store holds " + VoidSpender.countByGrade(second));
+        helper.succeed();
+    }
+
+    /** Two stores worth {@code 2 × BASE} each, asked for one more than both together: neither gives anything. */
+    private static void severalStoresThatCannotAffordAreUntouched(GameTestHelper helper) {
+        int pressure = VoidPressure.at(helper.getLevel(), here(helper));
+        var first = new MoteStore().add(pressure + 1, 2);
+        var second = new MoteStore().add(pressure + 2, 1);
+        var before = List.of(first.snapshot(), second.snapshot());
+        var taken = VoidSpender.spendFromAll(List.of(first, second), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE + 1);
+        helper.assertTrue(taken.isEmpty(), "the stores cannot release " + (4 * VoidEnergy.BASE + 1) + ", but the spend took " + taken);
+        helper.assertTrue(List.of(first.snapshot(), second.snapshot()).equals(before), "a refused spend changed the stores");
         helper.succeed();
     }
 

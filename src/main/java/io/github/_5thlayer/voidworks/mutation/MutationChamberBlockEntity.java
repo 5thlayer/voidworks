@@ -33,11 +33,11 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * The Mutation Chamber: placed Dormant, it soaks its cost, and then, once every
  * {@link VoidworksConfig#mutationInterval()} ticks, upgrades what its input holds to the next Rung of
  * its Family ({@link Families#next}). Each upgrade takes the Rung's count of items for one result and
- * spends the Rung's cost from one touching mote store, a Voidstone network or any block providing
- * {@code voidworks:motes}, by the spend rule at the Chamber's block, then rolls the Rung's chance: on
- * a success the items become the result in its output, and on a failure they stay and the motes are
- * spent. It waits, spending nothing, while its input holds fewer than the count, its output cannot
- * take the result, or no touching store can afford the cost alone.
+ * spends the Rung's cost from the mote stores touching it together ({@link TouchingMotes}), Voidstone
+ * networks or any block providing {@code voidworks:motes}, by the spend rule at the Chamber's block,
+ * then rolls the Rung's chance: on a success the items become the result in its output, and on a
+ * failure they stay and the motes are spent. It waits, spending nothing, while its input holds fewer
+ * than the count, its output cannot take the result, or the stores touching it cannot afford the cost.
  *
  * <p>Its item face, the same on every side, takes into the input only items with an upgrade, and
  * gives only from the output, so hoppers and belts feed and empty it.
@@ -120,7 +120,7 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
             return;
         }
         var upgrade = next.get();
-        if (!pay(level, upgrade.cost())) {
+        if (upgrade.cost() > 0 && !TouchingMotes.spend(level, worldPosition, upgrade.cost())) {
             return;
         }
         if (level.getRandom().nextDouble() >= upgrade.chance()) {
@@ -143,7 +143,7 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
     /**
      * @return why it cannot upgrade what its input holds: an item with no upgrade, fewer than the
      *         Rung's count, an output that cannot take the result, no mote store touching it, or none
-     *         that can afford the cost alone; empty when it can, or its input is empty. While it
+     *         that can afford the cost together; empty when it can, or its input is empty. While it
      *         is Dormant, only what stalls its items: its stores pay its {@link Dormancy} first.
      */
     public Optional<Stall> stall(ServerLevel level) {
@@ -156,8 +156,8 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         if (stall.isPresent() || !dormancy.awake() || cost == 0) {
             return stall;
         }
-        return TouchingMotes.bestWorth(level, worldPosition)
-                .map(best -> best < cost ? Optional.of(Stall.CANNOT_AFFORD) : Optional.<Stall>empty())
+        return TouchingMotes.totalWorth(level, worldPosition)
+                .map(worth -> worth < cost ? Optional.of(Stall.CANNOT_AFFORD) : Optional.<Stall>empty())
                 .orElse(Optional.of(Stall.NO_MOTE_STORE));
     }
 
@@ -188,28 +188,8 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         OUTPUT_FULL,
         /** No mote store touches it to pay the cost. */
         NO_MOTE_STORE,
-        /** No mote store touching it is worth the cost alone, where it stands. */
+        /** The mote stores touching it are not worth the cost together, where it stands. */
         CANNOT_AFFORD
-    }
-
-    /**
-     * Spends {@code cost} void energy from the first touching mote store that can afford it alone,
-     * by the spend rule at the Chamber's block, its motes flying in as butterflies.
-     *
-     * @return whether it was paid
-     */
-    private boolean pay(ServerLevel level, long cost) {
-        if (cost == 0) {
-            return true;
-        }
-        for (var store : TouchingMotes.at(level, worldPosition)) {
-            var spend = VoidSpender.spend(store.motes(), level, worldPosition, cost);
-            if (spend.isPresent()) {
-                spend.get().motes().forEach((grade, count) -> MoteFlight.toBlock(level, store.pos().getCenter(), worldPosition, grade, count));
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

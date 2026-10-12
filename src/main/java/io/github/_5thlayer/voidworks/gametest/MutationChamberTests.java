@@ -67,6 +67,7 @@ final class MutationChamberTests {
         tests.test("mutation_chamber_upgrades_by_the_rungs_count_and_cost", TICKS, MutationChamberTests::upgradesByCountAndCost);
         tests.test("mutation_chamber_keeps_the_items_and_spends_the_motes_on_a_failed_roll", TICKS, MutationChamberTests::failedRoll);
         tests.test("mutation_chamber_without_motes_enough_for_the_rung_spends_nothing", TICKS, MutationChamberTests::cannotAfford);
+        tests.test("mutation_chamber_pays_an_upgrade_from_the_stores_touching_it_together", TICKS, MutationChamberTests::paysFromStoresTogether);
         tests.test("mutation_chamber_with_an_output_that_cannot_take_the_result_spends_nothing", TICKS,
                 MutationChamberTests::outputCannotTakeTheResult);
         tests.test("mutation_chamber_awake_with_no_mote_store_touching_it_says_so_and_upgrades_once_one_does", TICKS,
@@ -85,11 +86,11 @@ final class MutationChamberTests {
                 "the Chamber's cost is " + chamber.dormancy().cost() + ", not the shipped " + DORMANT_MOTES * VoidEnergy.BASE);
         helper.assertTrue(dormantLook(helper), "a newly placed Chamber does not look Dormant");
         insert(chamber, Items.CLAY_BALL, 4);
-        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).isEmpty(),
+        helper.assertTrue(TouchingMotes.totalWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).isEmpty(),
                 "a store is worth something beside a Chamber no store touches");
         var store = new MoteStore().add(grade(helper), 10);
         SpendTests.placeStore(helper, BESIDE, store);
-        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).equals(Optional.of(10 * VoidEnergy.BASE)),
+        helper.assertTrue(TouchingMotes.totalWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).equals(Optional.of(10 * VoidEnergy.BASE)),
                 "the store beside it is not worth its ten motes' " + 10 * VoidEnergy.BASE);
         helper.startSequence()
                 .thenIdle(4 * VoidworksConfig.soakInterval())
@@ -153,6 +154,28 @@ final class MutationChamberTests {
         });
     }
 
+    /**
+     * Two motes left to the north and two to the east once it has woken: neither pays a brick's three
+     * alone, together they do. Its soak takes its cost from the north store, the first face it asks.
+     */
+    private static void paysFromStoresTogether(GameTestHelper helper) {
+        var chamber = place(helper);
+        insert(chamber, Items.CLAY_BALL, 4);
+        int grade = grade(helper);
+        var north = new MoteStore().add(grade, DORMANT_MOTES + 2);
+        var east = new MoteStore().add(grade, 2);
+        SpendTests.placeStore(helper, BESIDE, east);
+        SpendTests.placeStore(helper, CHAMBER.north(), north);
+        helper.startSequence()
+                .thenWaitUntil(() -> assertHolds(helper, chamber, Items.CLAY_BALL, 0, new ItemStack(Items.BRICK)))
+                .thenExecute(() -> {
+                    long left = VoidSpender.countByGrade(east).values().stream().mapToLong(Integer::longValue).sum()
+                            + VoidSpender.countByGrade(north).values().stream().mapToLong(Integer::longValue).sum();
+                    helper.assertTrue(left == 1, "the stores hold " + left + " motes, not the one left after a brick's three");
+                })
+                .thenSucceed();
+    }
+
     /** An output holding something else stalls it before any mote is spent. */
     private static void outputCannotTakeTheResult(GameTestHelper helper) {
         var chamber = place(helper);
@@ -196,8 +219,8 @@ final class MutationChamberTests {
 
     /**
      * A plain store to the east worth five motes, and a Voidstone network worth three that touches the
-     * Chamber on its north and west faces, joined round the back: the best is the store, and together
-     * they are worth eight, the network once.
+     * Chamber on its north and west faces, joined round the back: together they are worth eight, the
+     * network once.
      */
     private static void touchingStoresWorth(GameTestHelper helper) {
         place(helper);
@@ -209,8 +232,6 @@ final class MutationChamberTests {
         VoidstoneTests.insert(helper, CHAMBER.north(), grade, 3);
         var level = helper.getLevel();
         var pos = helper.absolutePos(CHAMBER);
-        helper.assertTrue(TouchingMotes.bestWorth(level, pos).equals(Optional.of(5 * VoidEnergy.BASE)),
-                "the best store touching it is worth " + TouchingMotes.bestWorth(level, pos) + ", not the plain store's five motes");
         helper.assertTrue(TouchingMotes.totalWorth(level, pos).equals(Optional.of(8 * VoidEnergy.BASE)),
                 "the stores touching it are worth " + TouchingMotes.totalWorth(level, pos) + " together, not eight motes'");
         helper.succeed();

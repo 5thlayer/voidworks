@@ -16,7 +16,7 @@
   "voidworks.dormant.awake": "Awake",
   "voidworks.dormant.status": "Dormant: %s of %s void energy paid",
   "voidworks.jade.chamber.empty": "Nothing to upgrade",
-  "voidworks.jade.chamber.stall.cannot_afford": "Stalled: no mote store touching it is worth the cost here",
+  "voidworks.jade.chamber.stall.cannot_afford": "Stalled: the mote stores touching it are not worth the cost here",
   "voidworks.jade.chamber.stall.no_upgrade": "Stalled: what it holds has no upgrade",
   "voidworks.jade.chamber.stall.output_full": "Stalled: its output cannot take the result",
   "voidworks.jade.chamber.stall.too_few": "Waiting: needs %s more",

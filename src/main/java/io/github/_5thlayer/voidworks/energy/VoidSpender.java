@@ -3,7 +3,9 @@
 
 package io.github._5thlayer.voidworks.energy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
@@ -49,7 +51,7 @@ public final class VoidSpender {
      */
     static Optional<Spend> spend(ResourceHandler<MoteResource> motes, int pressure, long required) {
         var plan = VoidEnergy.plan(countByGrade(motes), pressure, required);
-        if (plan.isEmpty() || !take(motes, plan.get())) {
+        if (plan.isEmpty() || take(List.of(motes), plan.get()).isEmpty()) {
             return Optional.empty();
         }
         return plan;
@@ -64,31 +66,61 @@ public final class VoidSpender {
      */
     public static Spend spendUpTo(ResourceHandler<MoteResource> motes, ServerLevel level, BlockPos pos, long most) {
         var plan = VoidEnergy.planUpTo(countByGrade(motes), VoidPressure.at(level, pos), most);
-        return take(motes, plan) ? plan : new Spend(Map.of(), 0);
+        return take(List.of(motes), plan).isPresent() ? plan : new Spend(Map.of(), 0);
     }
 
-    /** Takes what {@code plan} names from {@code motes}, all or nothing; the plan was made from what they held. */
-    private static boolean take(ResourceHandler<MoteResource> motes, Spend plan) {
-        // Taken slot by slot: a store may keep the motes of one grade in several slots.
+    /**
+     * Spends motes from several stores together to release at least {@code required} void energy at
+     * {@code pos}, by the same rule as {@link #spend}, planned from all their motes as if they were
+     * one store and taken from them in order. It is all or nothing: when they cannot afford it
+     * together, nothing is taken from any. A store given twice, such as one network reached through
+     * two of its Voidstone, counts its motes twice, so the stores are distinct.
+     *
+     * @return the motes taken from each store, in their order, grade to count and empty for one that
+     *         gave none, or empty when the spend is refused
+     */
+    public static Optional<List<Map<Integer, Integer>>> spendFromAll(List<? extends ResourceHandler<MoteResource>> stores, ServerLevel level,
+            BlockPos pos, long required) {
+        var motes = new TreeMap<Integer, Integer>();
+        for (var store : stores) {
+            countByGrade(store).forEach((grade, count) -> motes.merge(grade, count, (a, b) -> Ints.saturatedCast((long) a + b)));
+        }
+        return VoidEnergy.plan(motes, VoidPressure.at(level, pos), required).flatMap(plan -> take(stores, plan));
+    }
+
+    /**
+     * Takes what {@code plan} names from {@code stores}, in order, all or nothing; the plan was made
+     * from what they held.
+     *
+     * @return what each store gave, grade to count, or empty when they could not give it all
+     */
+    private static Optional<List<Map<Integer, Integer>>> take(List<? extends ResourceHandler<MoteResource>> stores, Spend plan) {
         var left = new HashMap<>(plan.motes());
+        var taken = new ArrayList<Map<Integer, Integer>>();
         // Closed without a commit, the transaction puts back whatever was taken.
         try (var transaction = Transaction.openRoot()) {
-            for (int slot = 0; slot < motes.size(); slot++) {
-                var resource = motes.getResource(slot);
-                if (resource.isEmpty()) {
-                    continue;
+            for (var motes : stores) {
+                var given = new TreeMap<Integer, Integer>();
+                // Taken slot by slot: a store may keep the motes of one grade in several slots.
+                for (int slot = 0; slot < motes.size(); slot++) {
+                    var resource = motes.getResource(slot);
+                    int wanted = resource.isEmpty() ? 0 : left.getOrDefault(resource.grade(), 0);
+                    if (wanted > 0) {
+                        int got = motes.extract(slot, resource, wanted, transaction);
+                        left.put(resource.grade(), wanted - got);
+                        if (got > 0) {
+                            given.merge(resource.grade(), got, Integer::sum);
+                        }
+                    }
                 }
-                int wanted = left.getOrDefault(resource.grade(), 0);
-                if (wanted > 0) {
-                    left.put(resource.grade(), wanted - motes.extract(slot, resource, wanted, transaction));
-                }
+                taken.add(given);
             }
             if (left.values().stream().anyMatch(count -> count > 0)) {
-                return false;
+                return Optional.empty();
             }
             transaction.commit();
         }
-        return true;
+        return Optional.of(taken);
     }
 
     /**
