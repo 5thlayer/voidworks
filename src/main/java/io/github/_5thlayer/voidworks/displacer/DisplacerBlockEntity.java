@@ -117,6 +117,14 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     /** @return whether it harvests a position holding {@code state} */
     protected abstract boolean harvestable(BlockState state);
 
+    /**
+     * @return whether it may reach {@code pos} at all, whatever is there; anywhere touching it or its
+     *         Voidstone unless a Displacer says otherwise
+     */
+    protected boolean reaches(BlockPos pos) {
+        return true;
+    }
+
     /** @return what its output gets for displacing {@code harvested} with a fed block of {@code density}; empty for nothing */
     protected abstract ItemStack displaced(BlockState harvested, int density);
 
@@ -164,7 +172,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     }
 
     private Optional<BlockPos> next(ServerLevel level) {
-        return Frontier.next(worldPosition, grown, pos -> harvestable(level.getBlockState(pos)));
+        return Frontier.next(worldPosition, grown, pos -> reaches(pos) && harvestable(level.getBlockState(pos)));
     }
 
     private boolean frontierLoaded(ServerLevel level) {

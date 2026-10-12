@@ -13,6 +13,7 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksItems;
+import io.github._5thlayer.voidworks.displacer.EndDisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.EndDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.MoteResource;
@@ -25,6 +26,7 @@ import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.SiphonMotes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -35,10 +37,12 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -80,6 +84,9 @@ final class EndDisplacerTests {
                 helper -> inTheEnd(helper, 2, EndDisplacerTests::dormantUntilPaid));
         tests.test("a_dormant_end_displacer_that_can_reach_no_air_pops_off_before_soaking_its_cost", 1,
                 helper -> inTheEnd(helper, 3, EndDisplacerTests::popsOffBeforeSoaking));
+        tests.test("an_end_displacer_grows_only_ahead_of_its_front_face_leaving_its_other_faces_open", 1,
+                helper -> inTheEnd(helper, 4, EndDisplacerTests::growsOnlyAhead));
+        tests.test("an_end_displacer_placed_faces_where_its_player_looks", 1, EndDisplacerTests::facesWhereThePlayerLooks);
         tests.test("an_end_displacer_where_the_harvest_kind_is_not_end_harvests_nothing_and_pops_off", 40, EndDisplacerTests::refusesOutsideTheEnd);
         tests.test("an_emptying_siphon_used_on_a_dormant_end_displacer_pays_it_and_an_empty_hand_takes_back_its_fed_blocks", 1,
                 EndDisplacerTests::siphonPaysAndEmptyHandTakesBack);
@@ -163,6 +170,43 @@ final class EndDisplacerTests {
                 "it should drop itself and its fed block, dropped " + site.dropped());
         site.assertTrue(site.motes(DISPLACER.north()).equals(Map.of(PRESSURE + 3, VoidworksConfig.voidstoneCapacity())),
                 "it soaked motes before it popped off: the Voidstone holds " + site.motes(DISPLACER.north()));
+    }
+
+    /** Facing east in open air, with eight harvests to make: every one lies east of it, and its other five faces stay open. */
+    private static void growsOnlyAhead(Site site) {
+        var displacer = site.place(8, Direction.EAST);
+        site.feed(displacer, 8);
+        site.payInFull(displacer);
+        site.tick(displacer, 10 * VoidworksConfig.harvestInterval());
+        site.assertTrue(displacer.grown().size() == 8, "it harvested " + displacer.grown().size() + " of its 8 fed blocks");
+        site.assertTrue(site.abs(DISPLACER.east()).equals(displacer.grown().getFirst()),
+                "it harvested " + displacer.grown().getFirst() + " first, not the air ahead of its front face");
+        for (var pos : displacer.grown()) {
+            site.assertTrue(pos.getX() > site.abs(DISPLACER).getX(), "it harvested " + pos + ", not ahead of its east face");
+        }
+        for (var side : new BlockPos[] {DISPLACER.above(), DISPLACER.below(), DISPLACER.north(), DISPLACER.south(), DISPLACER.west()}) {
+            site.assertTrue(site.state(side).isAir(), "it walled in its face at " + side + " with " + site.state(side));
+        }
+    }
+
+    /** Looking east, then straight down: its front face looks the same way. */
+    private static void facesWhereThePlayerLooks(GameTestHelper helper) {
+        assertPlacedFacing(helper, -90F, 0F, Direction.EAST);
+        assertPlacedFacing(helper, 0F, 90F, Direction.DOWN);
+        helper.succeed();
+    }
+
+    /** Places it, on the platform, as a player looking by {@code yaw} and {@code pitch} would. */
+    private static void assertPlacedFacing(GameTestHelper helper, float yaw, float pitch, Direction expected) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setYRot(yaw);
+        player.setYHeadRot(yaw);
+        player.setXRot(pitch);
+        var pos = helper.absolutePos(ON_PLATFORM);
+        var hit = new BlockHitResult(pos.getCenter(), Direction.UP, pos.below(), false);
+        var context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, new ItemStack(VoidworksBlocks.END_DISPLACER_ITEM.get()), hit);
+        var facing = VoidworksBlocks.END_DISPLACER.get().getStateForPlacement(context).getValue(EndDisplacerBlock.FACING);
+        helper.assertTrue(facing == expected, "placed looking " + expected + ", it faces " + facing);
     }
 
     /** On the Overworld's platform, where the harvest kind is {@code overworld}. */
@@ -257,7 +301,11 @@ final class EndDisplacerTests {
         }
 
         EndDisplacerBlockEntity place(int zone) {
-            set(DISPLACER, VoidworksBlocks.END_DISPLACER.get().defaultBlockState());
+            return place(zone, Direction.DOWN);
+        }
+
+        EndDisplacerBlockEntity place(int zone, Direction facing) {
+            set(DISPLACER, VoidworksBlocks.END_DISPLACER.get().defaultBlockState().setValue(EndDisplacerBlock.FACING, facing));
             var displacer = (EndDisplacerBlockEntity) end.getBlockEntity(abs(DISPLACER));
             displacer.setZone(zone);
             return displacer;

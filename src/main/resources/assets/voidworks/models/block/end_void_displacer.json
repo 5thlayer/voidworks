@@ -1,8 +1,12 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
+  "parent": "minecraft:block/cube",
   "textures": {
-    "top": "voidworks:block/end_void_displacer_top",
-    "bottom": "voidworks:block/end_void_displacer_top",
-    "side": "voidworks:block/end_void_displacer_side"
+    "particle": "voidworks:block/end_void_displacer_casing",
+    "north": "voidworks:block/end_void_displacer_front",
+    "south": "voidworks:block/end_void_displacer_casing",
+    "east": "voidworks:block/end_void_displacer_casing",
+    "west": "voidworks:block/end_void_displacer_casing",
+    "up": "voidworks:block/end_void_displacer_casing",
+    "down": "voidworks:block/end_void_displacer_casing"
   }
 }

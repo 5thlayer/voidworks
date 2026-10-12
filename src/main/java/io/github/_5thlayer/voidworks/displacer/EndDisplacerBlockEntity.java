@@ -14,8 +14,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 /**
- * The End Void Displacer: it places fed blocks into the air touching it or the Voidstone it has
- * left, so its body grows outward, and nothing comes back to its output. Over the open void its
+ * The End Void Displacer: it places fed blocks into the air ahead of its front face, touching it or
+ * the Voidstone it has left, so its body grows outward that way and never walls in its other faces,
+ * and nothing comes back to its output. Over the open void its
  * harvests grade one step higher, as the Void Pressure there is, and each Voidstone it leaves closes
  * the column above it. It is placed Dormant, and harvests only once it has soaked its cost.
  */
@@ -35,6 +36,11 @@ public final class EndDisplacerBlockEntity extends DisplacerBlockEntity implemen
     @Override
     protected HarvestKind kind() {
         return HarvestKind.END;
+    }
+
+    @Override
+    protected boolean reaches(BlockPos pos) {
+        return Frontier.ahead(worldPosition, getBlockState().getValue(EndDisplacerBlock.FACING)).test(pos);
     }
 
     @Override

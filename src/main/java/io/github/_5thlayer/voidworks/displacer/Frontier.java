@@ -23,6 +23,20 @@ public final class Frontier {
     }
 
     /**
+     * The space a Displacer that grows through one face reaches: everything past that face, so its
+     * other faces, and all that is level with it or behind it, stay as they were.
+     *
+     * @param facing the way its front face looks
+     * @return whether a position lies ahead of the Displacer at {@code displacer}
+     */
+    public static Predicate<BlockPos> ahead(BlockPos displacer, Direction facing) {
+        var step = facing.getUnitVec3i();
+        return pos -> (pos.getX() - displacer.getX()) * step.getX()
+                + (pos.getY() - displacer.getY()) * step.getY()
+                + (pos.getZ() - displacer.getZ()) * step.getZ() >= 1;
+    }
+
+    /**
      * @param displacer the Displacer's position
      * @param grown the positions it has harvested, each Voidstone now
      * @param harvestable whether a position can be harvested, natural terrain for the Overworld's

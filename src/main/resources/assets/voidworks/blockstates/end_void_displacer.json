@@ -1,10 +1,50 @@
 {
   "variants": {
-    "dormant=false": {
+    "dormant=false,facing=down": {
+      "model": "voidworks:block/end_void_displacer",
+      "x": 90
+    },
+    "dormant=true,facing=down": {
+      "model": "voidworks:block/end_void_displacer_dormant",
+      "x": 90
+    },
+    "dormant=false,facing=east": {
+      "model": "voidworks:block/end_void_displacer",
+      "y": 90
+    },
+    "dormant=true,facing=east": {
+      "model": "voidworks:block/end_void_displacer_dormant",
+      "y": 90
+    },
+    "dormant=false,facing=north": {
       "model": "voidworks:block/end_void_displacer"
     },
-    "dormant=true": {
+    "dormant=true,facing=north": {
       "model": "voidworks:block/end_void_displacer_dormant"
+    },
+    "dormant=false,facing=south": {
+      "model": "voidworks:block/end_void_displacer",
+      "y": 180
+    },
+    "dormant=true,facing=south": {
+      "model": "voidworks:block/end_void_displacer_dormant",
+      "y": 180
+    },
+    "dormant=false,facing=up": {
+      "model": "voidworks:block/end_void_displacer",
+      "x": 270
+    },
+    "dormant=true,facing=up": {
+      "model": "voidworks:block/end_void_displacer_dormant",
+      "x": 270
+    },
+    "dormant=false,facing=west": {
+      "model": "voidworks:block/end_void_displacer",
+      "y": 270
+    },
+    "dormant=true,facing=west": {
+      "model": "voidworks:block/end_void_displacer_dormant",
+      "y": 270
     }
   }
 }

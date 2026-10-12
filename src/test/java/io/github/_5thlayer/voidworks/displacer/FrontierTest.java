@@ -4,11 +4,15 @@
 package io.github._5thlayer.voidworks.displacer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -56,5 +60,42 @@ class FrontierTest {
         var grown = Set.of(DISPLACER.below(), DISPLACER.below(2));
         var deeper = DISPLACER.below(3);
         assertEquals(Optional.of(deeper), Frontier.next(DISPLACER, grown, deeper::equals));
+    }
+
+    /** Facing east: what lies past its east face, at any height and depth, and nothing level with it or behind. */
+    @Test
+    void aheadIsOnlyTheSpaceBeyondItsFrontFace() {
+        var ahead = Frontier.ahead(DISPLACER, Direction.EAST);
+        assertTrue(ahead.test(DISPLACER.east()));
+        assertTrue(ahead.test(DISPLACER.east(3).above(5).north(7)));
+        for (var level : new BlockPos[] {DISPLACER, DISPLACER.north(), DISPLACER.south(), DISPLACER.above(), DISPLACER.below(), DISPLACER.west()}) {
+            assertFalse(ahead.test(level), level + " is not ahead of a Displacer facing east");
+        }
+    }
+
+    @Test
+    void facingDownAheadIsBelowIt() {
+        var ahead = Frontier.ahead(DISPLACER, Direction.DOWN);
+        assertTrue(ahead.test(DISPLACER.below()));
+        assertFalse(ahead.test(DISPLACER.east()));
+        assertFalse(ahead.test(DISPLACER.above()));
+    }
+
+    /** In open air, growing only ahead of its east face: its first harvest is that face's, and it never walls in another. */
+    @Test
+    void growingOnlyAheadLeavesItsOtherFacesOpen() {
+        var ahead = Frontier.ahead(DISPLACER, Direction.EAST);
+        var grown = new HashSet<BlockPos>();
+        for (int i = 0; i < 60; i++) {
+            var next = Frontier.next(DISPLACER, grown, ahead);
+            assertTrue(next.isPresent());
+            if (i == 0) {
+                assertEquals(DISPLACER.east(), next.get());
+            }
+            grown.add(next.get());
+        }
+        for (var side : new BlockPos[] {DISPLACER.north(), DISPLACER.south(), DISPLACER.above(), DISPLACER.below(), DISPLACER.west()}) {
+            assertFalse(grown.contains(side), "it walled in its face at " + side);
+        }
     }
 }

@@ -101,7 +101,8 @@ Displacer or the player's Void Siphon, as a small butterfly with flapping wings,
 our own sprite, after Boulder Dash's butterflies. They are cosmetic and credited at once, but the
 count is exact: like XP orbs, a butterfly stands for 1, 8 or 64 motes by its size.
 
-- **End**: places fed blocks into the empty air of its zone.
+- **End**: places fed blocks into the empty air of its zone. It faces the way its placer looked and
+  grows only into the space ahead of that face, so it never walls in its other faces.
 - **Overworld**: swaps fed blocks with natural terrain in its zone — the blocks in a natural-block
   tag (stone, deepslate, dirt, ores…), which placed stone also matches. The terrain block goes to
   the Displacer's output, through a data table keyed by the terrain block and the fed block's

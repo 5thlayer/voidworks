@@ -13,7 +13,8 @@ frame of the forge's animation is built, and its animation copied beside the spr
 
 The End Void Displacer's faces are built the same way on the abyssium recoloured into end stone's
 pale yellows, so the family reads as one in the End's own colours: lit while it works, and the
-unlit brooding forge's faces, a single frame, while it is Dormant.
+unlit brooding forge's flame, a single frame, while it is Dormant. The flame is only on its front,
+the face it grows through, so the way it faces shows; its other five faces are the bare casing.
 
 Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
 reads as its family while the brighter, framed Displacer stands out from it. In the End it is the
@@ -126,10 +127,9 @@ def main():
     displacer_face(abyssium, "device_brooding_forge_side_on", FLAME, "overworld_void_displacer_side")
     displacer_face(abyssium, "device_brooding_forge_up_on", EYE, "overworld_void_displacer_top")
     end_casing = recolour(abyssium, END_CASING)
-    displacer_face(end_casing, "device_brooding_forge_side_on", FLAME, "end_void_displacer_side")
-    displacer_face(end_casing, "device_brooding_forge_up_on", EYE, "end_void_displacer_top")
-    displacer_face(end_casing, "device_brooding_forge_side_off", FLAME, "end_void_displacer_side_dormant")
-    displacer_face(end_casing, "device_brooding_forge_up_off", EYE, "end_void_displacer_top_dormant")
+    displacer_face(end_casing, "device_brooding_forge_side_on", FLAME, "end_void_displacer_front")
+    displacer_face(end_casing, "device_brooding_forge_side_off", FLAME, "end_void_displacer_front_dormant")
+    save(end_casing, TEXTURES / "block" / "end_void_displacer_casing.png")
     voidstone()
 
 
