@@ -42,6 +42,31 @@ Source:  https://github.com/malcolmriley/unused-textures
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
 
+End Void Displacer sprites
+--------------------------
+
+Files:   data/art/block_metal_abyssium.png
+         data/art/device_brooding_forge_side_on.png and its .mcmeta
+         data/art/device_brooding_forge_up_on.png and its .mcmeta
+         data/art/device_brooding_forge_side_off.png
+         data/art/device_brooding_forge_up_off.png
+         src/main/resources/assets/voidworks/textures/block/end_void_displacer_side.png and its .mcmeta
+         src/main/resources/assets/voidworks/textures/block/end_void_displacer_top.png and its .mcmeta
+         src/main/resources/assets/voidworks/textures/block/end_void_displacer_side_dormant.png
+         src/main/resources/assets/voidworks/textures/block/end_void_displacer_top_dormant.png
+Author:  Malcolm Riley
+Source:  https://github.com/malcolmriley/unused-textures
+         blocks/block_metal_abyssium.png, device_brooding_forge_side_on.png,
+         device_brooding_forge_up_on.png, with their .mcmeta files, device_brooding_forge_side_off.png
+         and device_brooding_forge_up_off.png at commit 9218cb8997bf1dc83617bd7748acf44a16c19c42.
+         The files under data/art/ are the unmodified copies. The Displacer's sprites are built from
+         them by scripts/build-textures.py, which recolours the abyssium block into end stone's
+         yellows and lets the lit brooding forge's flame and eye into it, frame by frame, for the
+         working Displacer, and the unlit forge's for the Dormant one, copying the lit forge's
+         animations beside its sprites.
+Licence: Creative Commons Attribution 4.0 International
+         https://creativecommons.org/licenses/by/4.0/
+
 Voidstone sprite
 ----------------
 

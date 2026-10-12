@@ -1,4 +1,5 @@
 {
+  "block.voidworks.end_void_displacer": "End Void Displacer",
   "block.voidworks.overworld_void_displacer": "Overworld Void Displacer",
   "block.voidworks.voidstone": "Voidstone",
   "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",

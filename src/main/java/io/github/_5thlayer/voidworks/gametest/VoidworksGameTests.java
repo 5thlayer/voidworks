@@ -72,6 +72,7 @@ public final class VoidworksGameTests {
         CommandTests.register(tests);
         DisplacerTests.register(tests);
         DormantTests.register(tests);
+        EndDisplacerTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         PressureTests.register(tests);

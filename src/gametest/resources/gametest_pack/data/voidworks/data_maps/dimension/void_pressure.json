@@ -2,7 +2,7 @@
   "values": {
     "minecraft:the_end": {
       "base": 9,
-      "harvest_kind": "nether"
+      "harvest_kind": "end"
     }
   }
 }

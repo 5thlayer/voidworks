@@ -40,13 +40,14 @@ final class MoteTests {
 
     /**
      * Motes are never items (ADR 0002), so {@code /give} cannot make one: Voidworks' items are the
-     * Overworld Void Displacer and the Void Siphon, which holds motes but is not one.
+     * Void Displacers and the Void Siphon, which holds motes but is not one.
      */
     private static void noItemIsAMote(GameTestHelper helper) {
         var items = BuiltInRegistries.ITEM.keySet().stream()
                 .filter(id -> id.getNamespace().equals(Voidworks.MOD_ID))
                 .collect(Collectors.toSet());
         var expected = Set.of(Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "overworld_void_displacer"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "end_void_displacer"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_siphon"));
         if (!items.equals(expected)) {
             helper.fail("Voidworks' only items should be " + expected + ", but found " + items);

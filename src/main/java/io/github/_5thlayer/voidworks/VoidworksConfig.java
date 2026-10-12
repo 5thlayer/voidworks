@@ -30,7 +30,7 @@ public final class VoidworksConfig {
     static {
         var builder = new ModConfigSpec.Builder();
         ZONE = builder
-                .comment("How many positions a new Overworld Void Displacer harvests before it becomes Voidstone.")
+                .comment("How many positions a new Void Displacer harvests before it becomes Voidstone.")
                 .defineInRange("zone", 64, 1, 1 << 20);
         VOIDSTONE_CAPACITY = builder
                 .comment("How many motes each Voidstone adds to its network's capacity: about one harvest at a middling",
@@ -38,7 +38,7 @@ public final class VoidworksConfig {
                         "a network with room to spare, and stalls the Displacer until it has.")
                 .defineInRange("voidstoneCapacity", 16, 1, 1 << 20);
         HARVEST_INTERVAL = builder
-                .comment("Ticks between an Overworld Void Displacer's harvests.")
+                .comment("Ticks between a Void Displacer's harvests.")
                 .defineInRange("harvestInterval", 20, 1, 24000);
         SOAK_INTERVAL = builder
                 .comment("Ticks between a Dormant machine's soaks of its cost from the mote stores touching it.")

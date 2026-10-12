@@ -11,6 +11,10 @@ The Overworld Void Displacer's faces are the abyssium block, a casing in crying 
 with the lit brooding forge's void flame let into each side and its glowing eye into the top. Every
 frame of the forge's animation is built, and its animation copied beside the sprite.
 
+The End Void Displacer's faces are built the same way on the abyssium recoloured into end stone's
+pale yellows, so the family reads as one in the End's own colours: lit while it works, and the
+unlit brooding forge's faces, a single frame, while it is Dormant.
+
 Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
 reads as its family while the brighter, framed Displacer stands out from it.
 
@@ -36,6 +40,10 @@ TIP_AT = (9, 0)
 # top, let into the abyssium casing.
 FLAME = (4, 3, 12, 13)
 EYE = (5, 5, 11, 11)
+
+# The End casing's shades, darkest to lightest, which the abyssium's run through by brightness: end
+# stone's pale yellows, darkened at the bottom so the casing keeps its depth.
+END_CASING = [(0x24, 0x22, 0x14), (0x8C, 0x89, 0x5C), (0xE6, 0xE8, 0xAE)]
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
@@ -76,16 +84,33 @@ def void_siphon():
     save(siphon, TEXTURES / "item" / "void_siphon.png")
 
 
-def displacer_face(forge, box, face):
-    casing = sprite("block_metal_abyssium")
+def recolour(image, shades):
+    """Runs each pixel's brightness, from the image's darkest to its lightest, through shades."""
+    image = image.copy()
+    pixels = image.load()
+    brightness = [sum(pixels[x, y][:3]) for y in range(image.height) for x in range(image.width)]
+    darkest, lightest = min(brightness), max(brightness)
+    for y in range(image.height):
+        for x in range(image.width):
+            *_, alpha = pixels[x, y]
+            t = (sum(pixels[x, y][:3]) - darkest) / (lightest - darkest) * (len(shades) - 1)
+            low = min(int(t), len(shades) - 2)
+            d, l = shades[low], shades[low + 1]
+            pixels[x, y] = (*(round(a + (b - a) * (t - low)) for a, b in zip(d, l)), alpha)
+    return image
+
+
+def displacer_face(casing, forge, box, name):
     built = []
     for frame in frames(forge):
         image = casing.copy()
         image.paste(frame.crop(box), box[:2])
         built.append(image)
-    path = TEXTURES / "block" / f"overworld_void_displacer_{face}.png"
+    path = TEXTURES / "block" / f"{name}.png"
     save(stack(built), path)
-    shutil.copyfile(ART / f"{forge}.png.mcmeta", f"{path}.mcmeta")
+    mcmeta = ART / f"{forge}.png.mcmeta"
+    if mcmeta.exists():
+        shutil.copyfile(mcmeta, f"{path}.mcmeta")
 
 
 def voidstone():
@@ -104,8 +129,14 @@ def voidstone():
 
 def main():
     void_siphon()
-    displacer_face("device_brooding_forge_side_on", FLAME, "side")
-    displacer_face("device_brooding_forge_up_on", EYE, "top")
+    abyssium = sprite("block_metal_abyssium")
+    displacer_face(abyssium, "device_brooding_forge_side_on", FLAME, "overworld_void_displacer_side")
+    displacer_face(abyssium, "device_brooding_forge_up_on", EYE, "overworld_void_displacer_top")
+    end_casing = recolour(abyssium, END_CASING)
+    displacer_face(end_casing, "device_brooding_forge_side_on", FLAME, "end_void_displacer_side")
+    displacer_face(end_casing, "device_brooding_forge_up_on", EYE, "end_void_displacer_top")
+    displacer_face(end_casing, "device_brooding_forge_side_off", FLAME, "end_void_displacer_side_dormant")
+    displacer_face(end_casing, "device_brooding_forge_up_off", EYE, "end_void_displacer_top_dormant")
     voidstone()
 
 

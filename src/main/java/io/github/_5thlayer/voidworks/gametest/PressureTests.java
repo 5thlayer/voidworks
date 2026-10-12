@@ -63,7 +63,7 @@ final class PressureTests {
     }
 
     /** The override pack's entry for the End, which is not the shipped one. */
-    private static final DimensionPressure OVERRIDDEN_END = new DimensionPressure(9, HarvestKind.NETHER);
+    private static final DimensionPressure OVERRIDDEN_END = new DimensionPressure(9, HarvestKind.END);
 
     private static void datapackEntryOverridesADefault(GameTestHelper helper) {
         var entry = VoidPressure.dimension(helper.getLevel().registryAccess(), Level.END);

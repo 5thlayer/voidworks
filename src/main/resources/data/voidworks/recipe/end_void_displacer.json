@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "minecraft:end_stone_bricks",
+    "C": "minecraft:popped_chorus_fruit",
+    "R": "minecraft:end_rod",
+    "P": "minecraft:sticky_piston"
+  },
+  "pattern": [
+    "BCB",
+    "RPR",
+    "BCB"
+  ],
+  "result": {
+    "id": "voidworks:end_void_displacer"
+  }
+}
