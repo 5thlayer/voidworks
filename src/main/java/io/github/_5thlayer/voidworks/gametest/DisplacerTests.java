@@ -3,7 +3,9 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
@@ -14,6 +16,7 @@ import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -21,6 +24,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
@@ -52,7 +57,8 @@ final class DisplacerTests {
         tests.test("a_displacer_and_voidstone_cannot_be_broken_or_moved", 40, DisplacerTests::cannotBeBrokenOrMoved);
         tests.test("a_displacers_output_gets_what_the_displacement_table_gives_for_the_terrain_and_density", TICKS, DisplacerTests::displacementTable);
         tests.test("a_displacers_output_gets_the_terrain_block_for_a_density_the_table_does_not_name", TICKS, DisplacerTests::displacementTableDefault);
-        tests.test("a_displacer_does_nothing_where_the_harvest_kind_is_not_overworld", 1, DisplacerTests::refusesOutsideTheOverworldKind);
+        tests.test("a_displacer_where_the_harvest_kind_is_not_overworld_harvests_nothing_and_pops_off", 1, DisplacerTests::refusesOutsideTheOverworldKind);
+        tests.test("an_empty_hand_takes_back_a_displacers_fed_blocks", 1, DisplacerTests::givesBackFed);
     }
 
     private static void firstHarvest(GameTestHelper helper) {
@@ -210,31 +216,52 @@ final class DisplacerTests {
     }
 
     /**
-     * In the Nether, whose harvest kind is {@code nether}, on a stone floor of its own: it takes
-     * nothing, harvests nothing and stays a Displacer. The game test server ticks no block entity
-     * in the Nether, even in a force-loaded chunk, so the test ticks it itself, for three harvests'
-     * worth of ticks.
+     * In the Nether, whose harvest kind is {@code nether}, on a stone floor of its own: it harvests
+     * nothing and pops off as its item with its fed block, so it never stands there unbreakable. The
+     * game test server ticks no block entity in the Nether, even in a force-loaded chunk, so the test
+     * ticks it itself.
      */
     private static void refusesOutsideTheOverworldKind(GameTestHelper helper) {
         var nether = helper.getLevel().getServer().getLevel(Level.NETHER);
         var pos = new BlockPos(8, 100, 8);
         var stone = pos.below();
+        // The Nether loads no entities here, so its drops are caught as they are added.
+        var dropped = new ArrayList<Item>();
+        Consumer<EntityJoinLevelEvent> drops = event -> {
+            if (event.getLevel() == nether && event.getEntity() instanceof ItemEntity item) {
+                dropped.add(item.getItem().getItem());
+                event.setCanceled(true);
+            }
+        };
+        NeoForge.EVENT_BUS.addListener(drops);
         nether.setBlockAndUpdate(stone, Blocks.STONE.defaultBlockState());
         nether.setBlockAndUpdate(pos, VoidworksBlocks.OVERWORLD_DISPLACER.get().defaultBlockState());
         try {
             var displacer = (OverworldDisplacerBlockEntity) nether.getBlockEntity(pos);
             displacer.setZone(2);
             displacer.inventory().set(OverworldDisplacerBlockEntity.INPUT, ItemResource.of(Items.COPPER_BLOCK), 1);
-            for (int tick = 0; tick < 3 * VoidworksConfig.harvestInterval(); tick++) {
-                displacer.serverTick(nether);
-            }
-            helper.assertTrue(nether.getBlockState(pos).is(VoidworksBlocks.OVERWORLD_DISPLACER.get()), "it is no longer a Displacer: " + nether.getBlockState(pos));
+            displacer.serverTick(nether);
+            helper.assertTrue(nether.getBlockState(pos).isAir(), "it still stands in the Nether: " + nether.getBlockState(pos));
             helper.assertTrue(nether.getBlockState(stone).is(Blocks.STONE), "it harvested the stone below it: " + nether.getBlockState(stone));
-            helper.assertTrue(displacer.inventory().getAmountAsInt(OverworldDisplacerBlockEntity.INPUT) == 1, "it took the fed block");
+            helper.assertTrue(dropped.contains(VoidworksBlocks.OVERWORLD_DISPLACER_ITEM.get()) && dropped.contains(Items.COPPER_BLOCK),
+                    "it should drop itself and its fed block, dropped " + dropped);
         } finally {
+            NeoForge.EVENT_BUS.unregister(drops);
             nether.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             nether.setBlockAndUpdate(stone, Blocks.AIR.defaultBlockState());
         }
+        helper.succeed();
+    }
+
+    /** Fed a diamond block its fresh network cannot hold the motes of, it stalls; an empty hand takes the block back. */
+    private static void givesBackFed(GameTestHelper helper) {
+        var displacer = place(helper, DISPLACER, 2);
+        feed(displacer, Items.DIAMOND_BLOCK, 3);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.useBlock(DISPLACER, player);
+        helper.assertTrue(displacer.inventory().getAmountAsInt(OverworldDisplacerBlockEntity.INPUT) == 0, "the input still holds its fed blocks");
+        helper.assertTrue(player.getInventory().countItem(Items.DIAMOND_BLOCK) == 3,
+                "the player got " + player.getInventory().countItem(Items.DIAMOND_BLOCK) + " diamond blocks back, not 3");
         helper.succeed();
     }
 

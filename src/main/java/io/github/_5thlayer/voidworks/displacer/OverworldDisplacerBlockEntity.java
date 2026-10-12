@@ -21,8 +21,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -42,9 +44,11 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * fed block's motes, at one grade above the Void Pressure there, into the network its Voidstone
  * forms. It holds no motes itself.
  *
- * <p>It works only where the harvest kind is {@code overworld}. A full output, or a network that
- * cannot take the harvest's motes, stalls it. When its Zone is spent, or it can reach no terrain, it
- * becomes Voidstone itself and its network keeps the motes.
+ * <p>It works only where the harvest kind is {@code overworld}: anywhere else it refuses on its
+ * first tick, popping off as its item with what it holds, so it never stands there unbreakable. A
+ * full output, or a network that cannot take the harvest's motes, stalls it; a player takes back
+ * the fed blocks with an empty hand, as nothing else can extract them. When its Zone is spent, or
+ * it can reach no terrain, it becomes Voidstone itself and its network keeps the motes.
  */
 public final class OverworldDisplacerBlockEntity extends BlockEntity {
 
@@ -101,6 +105,7 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
 
     public void serverTick(ServerLevel level) {
         if (VoidPressure.harvestKind(level) != HarvestKind.OVERWORLD) {
+            popOff(level);
             return;
         }
         if (zone == 0) {
@@ -187,9 +192,32 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
         return ResourceHandlerUtil.insertStacking(output, ItemResource.of(result), count, transaction) == count;
     }
 
-    /** Its Zone spent or nothing left in reach: it becomes Voidstone, joining its network, and drops what it holds. */
+    /** Its Zone spent or nothing left in reach: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops what it held. */
     private void becomeVoidstone(ServerLevel level) {
         level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /** Where it cannot work: it goes back to its item, and {@link #preRemoveSideEffects} drops what it held. */
+    private void popOff(ServerLevel level) {
+        Block.popResource(level, worldPosition, new ItemStack(VoidworksBlocks.OVERWORLD_DISPLACER_ITEM.get()));
+        level.setBlock(worldPosition, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /**
+     * Gives {@code player} the fed blocks back, the one way out of its input: a Displacer fed blocks
+     * whose harvest its network cannot hold would otherwise stall for good.
+     *
+     * @return whether there was anything to give
+     */
+    public boolean giveBackFed(Player player) {
+        var fed = inventory.getResource(INPUT);
+        int count = inventory.getAmountAsInt(INPUT);
+        if (fed.isEmpty() || count == 0) {
+            return false;
+        }
+        inventory.set(INPUT, ItemResource.EMPTY, 0);
+        player.getInventory().placeItemBackInInventory(fed.toStack(count));
+        return true;
     }
 
     // -- persistence ----------------------------------------------------------------------------

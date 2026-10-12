@@ -48,7 +48,7 @@ What a dimension harvests, named by its Void Pressure entry: `end`, `overworld`,
 for a dimension that harvests nothing. The Void Siphon behaves by it.
 
 **Density**:
-How many motes a block yields when fed to a Void Displacer. It is set per block, by tag, and
+How many motes a block yields when fed to a Void Displacer. It is set per block, by item tag, and
 steepens sharply with each step: storage blocks are how harvesting scales. Only listed blocks have a
 Density; every other block, easily renewed and abundant ones above all (cobblestone, stone, dirt,
 sand, netherrack, end stone), has Density 0 and nothing harvests it, so every harvest, and every
