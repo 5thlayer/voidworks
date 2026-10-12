@@ -1,0 +1,24 @@
+Third-party material committed to this repository
+==================================================
+
+Each entry names the files, their author, where they came from and the licence they are under. A
+file listed here is NOT covered by the licence this repository states for its own work; its own
+licence governs it. Which licence covers which file is REUSE.toml's to say; this list is the
+credits for what was copied in.
+
+Void Siphon sprite
+------------------
+
+Files:   data/art/part_rod_infernal.png
+         data/art/part_rod_obsidian.png
+         data/art/artifact_bound_crystal.png
+         src/main/resources/assets/voidworks/textures/item/void_siphon.png
+Author:  Malcolm Riley
+Source:  https://github.com/malcolmriley/unused-textures
+         items/part_rod_infernal.png, part_rod_obsidian.png and artifact_bound_crystal.png at commit
+         9218cb8997bf1dc83617bd7748acf44a16c19c42. The files under data/art/ are the unmodified
+         copies. void_siphon.png is built from them by scripts/build-textures.py, which joins the
+         infernal rod's lower end to the obsidian rod's upper end and shrinks the bound crystal onto
+         the tip.
+Licence: Creative Commons Attribution 4.0 International
+         https://creativecommons.org/licenses/by/4.0/

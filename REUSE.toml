@@ -18,10 +18,22 @@ path = [
     "src/main/resources/**/*.nbt",
     "src/main/resources/**/*.png",
     "LICENSE",
+    "NOTICE",
     ".github/**",
 ]
 SPDX-FileCopyrightText = "2026 5thlayer"
 SPDX-License-Identifier = "MIT"
+
+# Malcolm Riley's unused textures: the Void Siphon's sprite, with the unmodified copies it is
+# built from (NOTICE).
+[[annotations]]
+path = [
+    "data/art/*.png",
+    "src/main/resources/assets/voidworks/textures/item/void_siphon.png",
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["Malcolm Riley", "2026 5thlayer"]
+SPDX-License-Identifier = "CC-BY-4.0"
 
 # The Gradle wrapper is Gradle's.
 [[annotations]]
