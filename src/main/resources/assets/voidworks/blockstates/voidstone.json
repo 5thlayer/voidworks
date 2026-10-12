@@ -1,6 +1,15 @@
 {
   "variants": {
-    "": {
+    "kind=end": {
+      "model": "voidworks:block/end_voidstone"
+    },
+    "kind=nether": {
+      "model": "voidworks:block/voidstone"
+    },
+    "kind=none": {
+      "model": "voidworks:block/voidstone"
+    },
+    "kind=overworld": {
       "model": "voidworks:block/voidstone"
     }
   }

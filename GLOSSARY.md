@@ -45,7 +45,8 @@ _Avoid_: network pressure (the motes' own, which only steers flow)
 
 **Harvest kind**:
 What a dimension harvests, named by its Void Pressure entry: `end`, `overworld`, `nether`, or `none`
-for a dimension that harvests nothing. The Void Siphon behaves by it.
+for a dimension that harvests nothing. The Void Siphon behaves by it, and Voidstone placed there looks
+by it.
 
 **Density**:
 How many motes a block yields when fed to a Void Displacer. It is set per block, by item tag, and
@@ -59,7 +60,8 @@ Voidstone, costs something mined.
 **Voidstone**:
 The indestructible block a harvested position becomes. Every harvest leaves one, so harvesting
 permanently consumes the world, which is what bounds void. Touching Voidstone forms a network that
-carries motes.
+carries motes. It looks like the dimension it was placed in, by its harvest kind, but it is one block, and its networks
+join whatever it looks like.
 _Avoid_: bedrock, residue
 
 **Void Displacer**:

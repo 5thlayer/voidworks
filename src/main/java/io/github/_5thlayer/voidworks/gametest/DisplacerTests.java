@@ -12,6 +12,8 @@ import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import io.github._5thlayer.voidworks.network.VoidstoneBlock;
+import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -75,6 +77,7 @@ final class DisplacerTests {
             helper.assertTrue(motes.equals(Map.of(grade, VoidworksConfig.motes(1))),
                     "the network holds " + motes + ", not a copper block's " + VoidworksConfig.motes(1) + " motes of grade " + grade);
             helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), DISPLACER);
+            helper.assertBlockProperty(BELOW, VoidstoneBlock.KIND, HarvestKind.OVERWORLD);
         });
     }
 

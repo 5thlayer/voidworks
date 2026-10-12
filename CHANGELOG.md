@@ -23,6 +23,7 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 - `zone` and `harvestInterval` in `voidworks-server.toml` now count for every Void Displacer. (#30)
 - A Displacer takes back its fed blocks only for an empty main hand, so a Void Siphon used on a Dormant one pays it. One that can reach nothing before its first harvest now pops off on its first tick, before a Dormant one soaks any of its cost. (#30)
 - The End Void Displacer is drawn from Malcolm Riley's unused textures too (CC BY 4.0, credited in `NOTICE`): the Overworld Displacer's casing in end stone's yellows, its void flame and eye lit while it works and dark while it is Dormant. (#30)
+- Voidstone looks like the dimension it was placed in: its blockstate has `kind`, the harvest kind of that dimension, which every harvest sets. In the End it is drawn in the End Void Displacer's casing yellows; everywhere else it keeps the void's purples. It is still one block, `voidworks:voidstone`, and its networks join whatever it looks like. (#30)
 
 ## 0.1.0
 

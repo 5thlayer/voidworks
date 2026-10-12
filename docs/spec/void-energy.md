@@ -163,6 +163,10 @@ supplies one.
 - **Voidstone stores.** Each Voidstone adds to its network's capacity, about what its own harvest
   yielded at a middling Density, so a Displacer's body holds its harvest and spent bodies are a
   base's storage until the Void Well.
+- **Voidstone looks like where it was placed**, by the harvest kind there. Where it is `end` it takes
+  the End Displacer's yellows, so a Displacer reads as part of its body there; elsewhere the void's
+  purples. Only the look
+  differs: it is one block, and networks join across looks.
 - **Voidstone conducts.** Motes crawl through face-touching Voidstone, seen as the harvest's
   butterflies, smaller, walking its faces, at a
   finite speed and without loss, from high network pressure to low. Each grade flows on its own.

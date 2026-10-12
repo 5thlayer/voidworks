@@ -124,7 +124,7 @@ public final class SiphonHarvest {
             }
             transaction.commit();
         }
-        level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
         if (kind == HarvestKind.OVERWORLD) {
             var natural = new ItemStack(harvested.getBlock().asItem());
             if (!natural.isEmpty()) {

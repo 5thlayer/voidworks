@@ -16,7 +16,8 @@ pale yellows, so the family reads as one in the End's own colours: lit while it 
 unlit brooding forge's faces, a single frame, while it is Dormant.
 
 Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
-reads as its family while the brighter, framed Displacer stands out from it.
+reads as its family while the brighter, framed Displacer stands out from it. In the End it is the
+same sand in the End casing's yellows, so the End Displacer's body reads as its family there.
 
 Run from the repository root; it needs Pillow.
 """
@@ -115,16 +116,8 @@ def displacer_face(casing, forge, box, name):
 
 def voidstone():
     sand = sprite("sand_obsidian")
-    pixels = sand.load()
-    shades = [sum(pixels[x, y][:3]) for y in range(16) for x in range(16)]
-    darkest, lightest = min(shades), max(shades)
-    for y in range(16):
-        for x in range(16):
-            *_, alpha = pixels[x, y]
-            t = (sum(pixels[x, y][:3]) - darkest) / (lightest - darkest)
-            tint = tuple(round(d + (l - d) * t) for d, l in zip(VOIDSTONE_DARK, VOIDSTONE_LIGHT))
-            pixels[x, y] = (*tint, alpha)
-    save(sand, TEXTURES / "block" / "voidstone.png")
+    save(recolour(sand, [VOIDSTONE_DARK, VOIDSTONE_LIGHT]), TEXTURES / "block" / "voidstone.png")
+    save(recolour(sand, END_CASING), TEXTURES / "block" / "end_voidstone.png")
 
 
 def main():

@@ -18,7 +18,9 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
+import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.SiphonMotes;
@@ -93,9 +95,9 @@ final class EndDisplacerTests {
         site.tick(displacer, 3 * VoidworksConfig.harvestInterval());
         var first = displacer.grown().isEmpty() ? null : displacer.grown().getFirst();
         site.assertTrue(site.abs(BELOW).equals(first), "it harvested " + first + " first, not the air below it");
-        site.assertVoidstone(BELOW);
+        site.assertEndVoidstone(BELOW);
         // Its Zone spent, it became Voidstone, joining the network that keeps the harvest's motes.
-        site.assertVoidstone(DISPLACER);
+        site.assertEndVoidstone(DISPLACER);
         var motes = site.motes(DISPLACER);
         site.assertTrue(motes.equals(Map.of(PRESSURE + 1, VoidworksConfig.motes(1))),
                 "the network holds " + motes + ", not a copper block's " + VoidworksConfig.motes(1) + " motes of grade " + (PRESSURE + 1));
@@ -305,6 +307,13 @@ final class EndDisplacerTests {
 
         void assertVoidstone(BlockPos pos) {
             assertTrue(state(pos).is(VoidworksBlocks.VOIDSTONE.get()), "there is " + state(pos) + " at " + pos + ", not Voidstone");
+        }
+
+        /** Voidstone with the End's look, as everything placed in the End has. */
+        void assertEndVoidstone(BlockPos pos) {
+            assertVoidstone(pos);
+            var kind = state(pos).getValue(VoidstoneBlock.KIND);
+            assertTrue(kind == HarvestKind.END, "the Voidstone at " + pos + " looks like " + kind + ", not the End");
         }
 
         void assertTrue(boolean condition, String message) {

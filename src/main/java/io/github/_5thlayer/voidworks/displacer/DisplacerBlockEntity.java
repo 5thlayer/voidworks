@@ -208,7 +208,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
             }
             transaction.commit();
         }
-        level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
         if (!harvested.isAir()) {
             // What was displaced crumbles as if broken, without its breaking sound.
             level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, harvested),
@@ -237,7 +237,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /** Its Zone spent or nothing left in reach: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops what it held. */
     private void becomeVoidstone(ServerLevel level) {
-        level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
     }
 
     /** Where it cannot work, or never could harvest: it goes back to its item, and {@link #preRemoveSideEffects} drops what it held. */

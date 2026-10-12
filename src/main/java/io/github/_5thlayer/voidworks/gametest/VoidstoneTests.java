@@ -11,6 +11,8 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import io.github._5thlayer.voidworks.network.VoidstoneBlock;
+import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -32,6 +34,7 @@ final class VoidstoneTests {
     static void register(VoidworksGameTests.Registrar tests) {
         tests.test("touching_voidstone_is_one_network_holding_a_fixed_amount_per_voidstone", 1, VoidstoneTests::oneNetwork);
         tests.test("voidstone_placed_between_two_networks_merges_them", 1, VoidstoneTests::merges);
+        tests.test("voidstone_of_different_looks_joins_one_network", 1, VoidstoneTests::joinsAcrossLooks);
         tests.test("a_spend_takes_from_a_voidstone_network", 1, VoidstoneTests::spends);
         tests.test("voidstone_is_never_an_item", 1, VoidstoneTests::neverAnItem);
     }
@@ -48,6 +51,19 @@ final class VoidstoneTests {
         helper.assertTrue(DisplacerTests.motes(helper, east).equals(Map.of(3, capacity)),
                 "the motes put in at one end are not all at the other: " + DisplacerTests.motes(helper, east));
         helper.assertTrue(DisplacerTests.motes(helper, west.north()).isEmpty(), "a stone beside the network has motes");
+        helper.succeed();
+    }
+
+    /** An End-looking Voidstone between two Overworld-looking ones: one network, as the look is all that differs. */
+    private static void joinsAcrossLooks(GameTestHelper helper) {
+        var west = new BlockPos(2, 1, 2);
+        var east = west.east(2);
+        helper.setBlock(west, VoidworksBlocks.VOIDSTONE.get());
+        helper.setBlock(west.east(), VoidworksBlocks.VOIDSTONE.get().defaultBlockState().setValue(VoidstoneBlock.KIND, HarvestKind.END));
+        helper.setBlock(east, VoidworksBlocks.VOIDSTONE.get());
+        insert(helper, west, 3, 4);
+        helper.assertTrue(DisplacerTests.motes(helper, east).equals(Map.of(3, 4)),
+                "the motes put in at the west end are not at the east, past the End-looking Voidstone: " + DisplacerTests.motes(helper, east));
         helper.succeed();
     }
 

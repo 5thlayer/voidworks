@@ -72,10 +72,12 @@ Voidstone sprite
 
 Files:   data/art/sand_obsidian.png
          src/main/resources/assets/voidworks/textures/block/voidstone.png
+         src/main/resources/assets/voidworks/textures/block/end_voidstone.png
 Author:  Malcolm Riley
 Source:  https://github.com/malcolmriley/unused-textures
          blocks/sand_obsidian.png at commit 9218cb8997bf1dc83617bd7748acf44a16c19c42. The file
          under data/art/ is the unmodified copy. voidstone.png is built from it by
-         scripts/build-textures.py, which recolours it into the abyssium block's dark purples.
+         scripts/build-textures.py, which recolours it into the abyssium block's dark purples, and
+         end_voidstone.png into the End Void Displacer's casing yellows.
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
