@@ -50,6 +50,8 @@ final class DisplacerTests {
     static void register(VoidworksGameTests.Registrar tests) {
         tests.test("a_displacer_swaps_a_fed_block_for_the_terrain_beside_it_leaving_voidstone_and_motes", TICKS, DisplacerTests::firstHarvest);
         tests.test("a_displacer_harvests_nearest_first_and_its_spent_zone_becomes_voidstone_keeping_its_motes", TICKS, DisplacerTests::nearestFirstUntilSpent);
+        tests.test("a_displacer_on_grass_harvests_the_grass", TICKS, DisplacerTests::harvestsGrass);
+        tests.test("a_displacer_that_can_reach_no_terrain_before_its_first_harvest_pops_off", TICKS, DisplacerTests::popsOffNeverHarvested);
         tests.test("a_displacer_that_can_reach_no_more_terrain_becomes_voidstone_keeping_its_motes", TICKS, DisplacerTests::exhausted);
         tests.test("a_displacers_item_face_takes_only_a_density_above_0_and_gives_only_its_output", 1, DisplacerTests::itemFace);
         tests.test("a_displacer_whose_output_is_full_stalls", TICKS, DisplacerTests::fullOutputStalls);
@@ -97,6 +99,31 @@ final class DisplacerTests {
             // What it held when it went: the sixth copper block and the five stone.
             helper.assertItemEntityPresent(Items.COPPER_BLOCK, DISPLACER, 2);
             helper.assertItemEntityPresent(Items.STONE, DISPLACER, 2);
+        });
+    }
+
+    /** Grass is natural terrain: 26.1's {@code #minecraft:dirt} no longer names it, its substrate tag does. */
+    private static void harvestsGrass(GameTestHelper helper) {
+        var grass = new BlockPos(4, 2, 4);
+        var above = grass.above();
+        helper.setBlock(grass, Blocks.GRASS_BLOCK);
+        var displacer = place(helper, above, 2);
+        feed(displacer, Items.COPPER_BLOCK, 1);
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), grass);
+            helper.assertItemEntityPresent(Items.GRASS_BLOCK, above, 2);
+        });
+    }
+
+    /** Floating in the air above the floor, touching nothing: it pops off as its item with its fed block, leaving no Voidstone. */
+    private static void popsOffNeverHarvested(GameTestHelper helper) {
+        var floating = new BlockPos(4, 3, 4);
+        var displacer = place(helper, floating, 64);
+        feed(displacer, Items.COPPER_BLOCK, 1);
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(Blocks.AIR, floating);
+            helper.assertItemEntityPresent(VoidworksBlocks.OVERWORLD_DISPLACER_ITEM.get(), floating, 2);
+            helper.assertItemEntityPresent(Items.COPPER_BLOCK, floating, 2);
         });
     }
 

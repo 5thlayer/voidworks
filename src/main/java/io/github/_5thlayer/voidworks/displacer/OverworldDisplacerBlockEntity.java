@@ -19,7 +19,11 @@ import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -42,13 +46,14 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * Voidstone it has left, nearest first. Each harvest takes one fed block, turns the position into
  * Voidstone, sends the terrain block, through the displacement table, to its output, and puts the
  * fed block's motes, at one grade above the Void Pressure there, into the network its Voidstone
- * forms. It holds no motes itself.
+ * forms, with a sound and the terrain crumbling. It holds no motes itself.
  *
  * <p>It works only where the harvest kind is {@code overworld}: anywhere else it refuses on its
  * first tick, popping off as its item with what it holds, so it never stands there unbreakable. A
  * full output, or a network that cannot take the harvest's motes, stalls it; a player takes back
  * the fed blocks with an empty hand, as nothing else can extract them. When its Zone is spent, or
- * it can reach no terrain, it becomes Voidstone itself and its network keeps the motes.
+ * it can reach no more terrain, it becomes Voidstone itself and its network keeps the motes; one
+ * that could reach no terrain before its first harvest pops off instead, as outside the Overworld.
  */
 public final class OverworldDisplacerBlockEntity extends BlockEntity {
 
@@ -123,7 +128,10 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
         if (target.isPresent() && grown.size() < zone && harvest(level, target.get())) {
             target = next(level);
         }
-        if (target.isEmpty() || grown.size() >= zone) {
+        if (target.isEmpty() && grown.isEmpty()) {
+            // Placed where it could never harvest: given back rather than lost to Voidstone.
+            popOff(level);
+        } else if (target.isEmpty() || grown.size() >= zone) {
             becomeVoidstone(level);
         }
     }
@@ -165,7 +173,8 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
         if (networks.roomIfJoined(target) < motes) {
             return false;
         }
-        var result = Displacement.result(level.getBlockState(target), density);
+        var terrain = level.getBlockState(target);
+        var result = Displacement.result(terrain, density);
         try (var transaction = Transaction.openRoot()) {
             if (inventory.extract(INPUT, fed, 1, transaction) != 1 || !toOutput(result, transaction)) {
                 return false;
@@ -173,6 +182,9 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
             transaction.commit();
         }
         level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
+        // The swapped-out terrain crumbles as if broken, without its breaking sound.
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, terrain),
+                target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 30, 0.3, 0.3, 0.3, 0.05);
         grown.add(target.immutable());
         try (var transaction = Transaction.openRoot()) {
             // The room was asked for above, so the network takes them all.
@@ -180,6 +192,8 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
             transaction.commit();
         }
         MoteFlight.toBlock(level, target.getCenter(), worldPosition, grade, motes);
+        // Vanilla's sound of something displaced through the void, until Voidworks has its own.
+        level.playSound(null, target, SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.BLOCKS, 0.6F, 0.9F + level.getRandom().nextFloat() * 0.2F);
         setChanged();
         return true;
     }
@@ -197,7 +211,7 @@ public final class OverworldDisplacerBlockEntity extends BlockEntity {
         level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().defaultBlockState(), Block.UPDATE_ALL);
     }
 
-    /** Where it cannot work: it goes back to its item, and {@link #preRemoveSideEffects} drops what it held. */
+    /** Where it cannot work, or never could harvest: it goes back to its item, and {@link #preRemoveSideEffects} drops what it held. */
     private void popOff(ServerLevel level) {
         Block.popResource(level, worldPosition, new ItemStack(VoidworksBlocks.OVERWORLD_DISPLACER_ITEM.get()));
         level.setBlock(worldPosition, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);

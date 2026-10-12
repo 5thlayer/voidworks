@@ -113,7 +113,8 @@ count is exact: like XP orbs, a butterfly stands for 1, 8 or 64 motes by its siz
 Each Displacer has one item output inventory with an item face. A full output inventory, tank or
 network stalls it. While its Zone is unspent and it can still reach something to convert — air,
 natural terrain, lava — it cannot be broken or moved; then it becomes Voidstone itself, its motes
-stay in the network, and relocating means building a new one. Upgrades raise a Zone; relocation
+stay in the network, and relocating means building a new one. One that can reach nothing before
+its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Upgrades raise a Zone; relocation
 stays the main loop.
 
 Only blocks a Density tag names can be harvested. Every other block is Density 0, nothing harvests
