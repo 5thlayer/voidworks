@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:crying_obsidian",
+    "S": "minecraft:smithing_table"
+  },
+  "pattern": [
+    "ACA",
+    "ASA",
+    "ACA"
+  ],
+  "result": {
+    "id": "voidworks:mutation_chamber"
+  }
+}

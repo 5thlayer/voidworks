@@ -76,6 +76,7 @@ public final class VoidworksGameTests {
         FamilyTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
+        MutationChamberTests.register(tests);
         NetherDisplacerTests.register(tests);
         PressureTests.register(tests);
         SiphonTests.register(tests);

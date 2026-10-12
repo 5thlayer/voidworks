@@ -1,0 +1,13 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:test/wheat_seeds"
+    },
+    {
+      "items": "#voidworks:test/melon_seeds",
+      "result": "minecraft:melon_seeds",
+      "cost": 100,
+      "chance": 1e-300
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dormant=false": {
+      "model": "voidworks:block/mutation_chamber"
+    },
+    "dormant=true": {
+      "model": "voidworks:block/mutation_chamber_dormant"
+    }
+  }
+}

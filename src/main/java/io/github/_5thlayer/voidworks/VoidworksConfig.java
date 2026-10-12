@@ -22,6 +22,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue VOIDSTONE_CAPACITY;
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
     private static final ModConfigSpec.IntValue SOAK_INTERVAL;
+    private static final ModConfigSpec.IntValue MUTATION_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
     private static final ModConfigSpec.IntValue SIPHON_CAPACITY;
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
@@ -43,6 +44,9 @@ public final class VoidworksConfig {
         SOAK_INTERVAL = builder
                 .comment("Ticks between a Dormant machine's soaks of its cost from the mote stores touching it.")
                 .defineInRange("soakInterval", 20, 1, 24000);
+        MUTATION_INTERVAL = builder
+                .comment("Ticks between a Mutation Chamber's upgrades, each one result for its Rung's count of items.")
+                .defineInRange("mutationInterval", 20, 1, 24000);
         DENSITY_MOTES = builder
                 .comment("How many motes a fed block yields, by its Density from 1 to 4: steeply rising, about 4^(Density - 1).")
                 .defineList("densityMotes", List.of(1, 4, 16, 64), () -> 1,
@@ -81,6 +85,11 @@ public final class VoidworksConfig {
     /** @return ticks between a Dormant machine's soaks */
     public static int soakInterval() {
         return SOAK_INTERVAL.getAsInt();
+    }
+
+    /** @return ticks between a Mutation Chamber's upgrades */
+    public static int mutationInterval() {
+        return MUTATION_INTERVAL.getAsInt();
     }
 
     /** @return how many motes a Void Siphon holds, of every grade together */

@@ -21,7 +21,8 @@ import net.minecraft.world.item.Items;
  * registry with their Rung tags bound, and a datapack adding an item to a Rung by tag, adding a
  * Family and replacing a shipped one. The datapack is the game-test pack ({@code gametest_pack/}),
  * which adds coal to copper's ingot Rung, adds clay ball → brick, replaces the passive drops with
- * feather → rabbit's foot, and has two Families disagree on flint.
+ * feather → rabbit's foot, and has two Families disagree on flint. Its wheat seeds → melon seeds,
+ * at a chance that never comes up, is the Mutation Chamber's ({@link MutationChamberTests}).
  */
 final class FamilyTests {
 
