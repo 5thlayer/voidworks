@@ -93,7 +93,8 @@ final class MutationChamberTests {
         var chamber = place(helper);
         insert(chamber, Items.CLAY_BALL, 9);
         int grade = grade(helper);
-        var store = new MoteStore().add(grade, DORMANT_MOTES + 2 * BRICK_MOTES + 2);
+        // Motes enough for a third brick, so only the count holds back the ninth clay ball.
+        var store = new MoteStore().add(grade, DORMANT_MOTES + 3 * BRICK_MOTES);
         SpendTests.placeStore(helper, BESIDE, store);
         helper.startSequence()
                 .thenWaitUntil(() -> assertHolds(helper, chamber, Items.CLAY_BALL, 1, new ItemStack(Items.BRICK, 2)))
@@ -101,8 +102,8 @@ final class MutationChamberTests {
                 .thenExecute(() -> {
                     helper.assertTrue(!dormantLook(helper), "the working Chamber still looks Dormant");
                     assertHolds(helper, chamber, Items.CLAY_BALL, 1, new ItemStack(Items.BRICK, 2));
-                    helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, 2)),
-                            "the store holds " + VoidSpender.countByGrade(store) + ", not the 2 left after its cost and two bricks'");
+                    helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, BRICK_MOTES)),
+                            "the store holds " + VoidSpender.countByGrade(store) + ", not the " + BRICK_MOTES + " left after its cost and two bricks'");
                 })
                 .thenSucceed();
     }
@@ -152,6 +153,10 @@ final class MutationChamberTests {
         var chamber = place(helper);
         var face = helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(CHAMBER), Direction.UP);
         helper.assertTrue(face != null, "the Chamber has no item capability");
+        for (var side : Direction.values()) {
+            helper.assertTrue(helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(CHAMBER), side) == face,
+                    "the Chamber's item face differs on its " + side + " side");
+        }
         chamber.inventory().set(MutationChamberBlockEntity.OUTPUT, ItemResource.of(Items.BRICK), 2);
         try (var transaction = Transaction.openRoot()) {
             for (int slot = 0; slot < face.size(); slot++) {
@@ -162,6 +167,8 @@ final class MutationChamberTests {
             transaction.commit();
         }
         try (var transaction = Transaction.openRoot()) {
+            helper.assertTrue(face.insert(MutationChamberBlockEntity.OUTPUT, ItemResource.of(Items.CLAY_BALL), 4, transaction) == 0,
+                    "the face put clay balls into its output");
             helper.assertTrue(face.insert(MutationChamberBlockEntity.INPUT, ItemResource.of(Items.CLAY_BALL), 4, transaction) == 4,
                     "the face did not take four clay balls");
             helper.assertTrue(face.extract(MutationChamberBlockEntity.INPUT, ItemResource.of(Items.CLAY_BALL), 4, transaction) == 0,

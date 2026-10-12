@@ -29,7 +29,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * The Mutation Chamber's block: placed Dormant until it has soaked its cost, the
  * {@code voidworks:dormant_cost} entry for its block, and its look shows whether it is. It has no
- * screen. A hand holding an item puts it into the input, if it has an upgrade, and is told so if not;
+ * screen. A hand holding an item puts it into the input, if it has an upgrade and the input has room,
+ * and is told why if not;
  * a Void Siphon passes to its item, to pay a Dormant one. An empty hand takes what upgraded, or with
  * none takes back what waits to, or with nothing held is told how much of a Dormant one's cost is
  * paid ({@link MutationChamberBlockEntity}).
@@ -63,11 +64,11 @@ public final class MutationChamberBlock extends BaseEntityBlock {
         if (level.isClientSide() || !(level.getBlockEntity(pos) instanceof MutationChamberBlockEntity chamber)) {
             return InteractionResult.SUCCESS;
         }
-        if (!MutationChamberBlockEntity.upgrades(ItemResource.of(stack))) {
+        if (!MutationChamberBlockEntity.hasUpgrade(ItemResource.of(stack))) {
             player.sendOverlayMessage(Component.translatable("voidworks.mutation.no_upgrade", stack.getHoverName()));
-            return InteractionResult.SUCCESS;
+        } else if (chamber.insertFromHand(stack) == 0) {
+            player.sendOverlayMessage(Component.translatable("voidworks.mutation.input_full", chamber.input().getHoverName()));
         }
-        chamber.insertFromHand(stack);
         return InteractionResult.SUCCESS;
     }
 

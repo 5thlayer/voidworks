@@ -96,8 +96,13 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
     }
 
     /** @return whether an item of {@code resource} climbs a Family, so the input takes it */
-    static boolean upgrades(ItemResource resource) {
-        return !resource.isEmpty() && Families.next(resource.toStack(1)).isPresent();
+    static boolean hasUpgrade(ItemResource resource) {
+        return next(resource).isPresent();
+    }
+
+    /** @return the upgrade an item of {@code resource} climbs to, or empty for nothing or an item with none */
+    private static Optional<Upgrade<Item>> next(ItemResource resource) {
+        return resource.isEmpty() ? Optional.empty() : Families.next(resource.toStack(1));
     }
 
     public void serverTick(ServerLevel level) {
@@ -111,7 +116,7 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
     /** Upgrades what the input holds once, or does nothing when it cannot. */
     private void upgrade(ServerLevel level) {
         var held = inventory.getResource(INPUT);
-        Optional<Upgrade<Item>> next = held.isEmpty() ? Optional.empty() : Families.next(held.toStack(1));
+        var next = next(held);
         if (next.isEmpty() || inventory.getAmountAsInt(INPUT) < next.get().count()) {
             return;
         }
@@ -253,7 +258,7 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
 
         @Override
         public boolean isValid(int index, ItemResource resource) {
-            return index == INPUT && upgrades(resource);
+            return index == INPUT && hasUpgrade(resource);
         }
 
         @Override

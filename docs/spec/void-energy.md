@@ -214,8 +214,7 @@ Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Gh
 - The **Mutation Chamber** is a smithing table, amethyst shards and crying obsidian, placed Dormant.
   It is the first thing motes buy, before the Nether. It has no screen yet: an item face, the same
   on every side, takes into its input only items with an upgrade and gives only from its output,
-  and a hand puts items in and takes the result. It spends from one touching mote store per
-  upgrade. It does two things for motes:
+  and a hand puts items in and takes the result. It does two things for motes:
   - **Upgrade**: items to the next Rung of their **Family**, by that Rung's count, void energy cost
     and chance. A chance roll; on failure the items are kept and the motes are spent.
   - **Breakdown**: an item into its crafting recipe's ingredients, read from the recipe in reverse,
