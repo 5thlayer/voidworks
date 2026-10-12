@@ -11,6 +11,9 @@ The Overworld Void Displacer's faces are the abyssium block, a casing in crying 
 with the lit brooding forge's void flame let into each side and its glowing eye into the top. Every
 frame of the forge's animation is built, and its animation copied beside the sprite.
 
+Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
+reads as its family while the brighter, framed Displacer stands out from it.
+
 Run from the repository root; it needs Pillow.
 """
 
@@ -33,6 +36,10 @@ TIP_AT = (9, 0)
 # top, let into the abyssium casing.
 FLAME = (4, 3, 12, 13)
 EYE = (5, 5, 11, 11)
+
+# The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
+VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
+VOIDSTONE_LIGHT = (0x62, 0x12, 0x50)
 
 
 def frames(name):
@@ -81,10 +88,25 @@ def displacer_face(forge, box, face):
     shutil.copyfile(ART / f"{forge}.png.mcmeta", f"{path}.mcmeta")
 
 
+def voidstone():
+    sand = sprite("sand_obsidian")
+    pixels = sand.load()
+    shades = [sum(pixels[x, y][:3]) for y in range(16) for x in range(16)]
+    darkest, lightest = min(shades), max(shades)
+    for y in range(16):
+        for x in range(16):
+            *_, alpha = pixels[x, y]
+            t = (sum(pixels[x, y][:3]) - darkest) / (lightest - darkest)
+            tint = tuple(round(d + (l - d) * t) for d, l in zip(VOIDSTONE_DARK, VOIDSTONE_LIGHT))
+            pixels[x, y] = (*tint, alpha)
+    save(sand, TEXTURES / "block" / "voidstone.png")
+
+
 def main():
     void_siphon()
     displacer_face("device_brooding_forge_side_on", FLAME, "side")
     displacer_face("device_brooding_forge_up_on", EYE, "top")
+    voidstone()
 
 
 if __name__ == "__main__":

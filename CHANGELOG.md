@@ -18,6 +18,7 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 - Dormant machines take payment from a Siphon: a machine's block entity now implements `Dormancy.Holder`, and `Dormancy.payFrom(level, motes, from)` pays what a mote store can of the rest of the cost, which the neighbours' soak uses too. (#28)
 - `siphonCapacity` (256 motes), `siphonInterval` (10 ticks) and `siphonRate` (8 motes) in `voidworks-server.toml`: what a Void Siphon holds, and how often and how much it charges or empties on Voidstone. (#28)
 - The Void Siphon and the Overworld Void Displacer are drawn from Malcolm Riley's unused textures (CC BY 4.0, credited in `NOTICE`): the Siphon as a wand of its recipe, the Displacer as a purple casing with an animated void flame on each side and a glowing eye on the top and bottom. (#39)
+- Voidstone is drawn from Malcolm Riley's unused textures too: obsidian sand in the Displacer casing's dark purples, tiling without seams. (#40)
 
 ## 0.1.0
 
