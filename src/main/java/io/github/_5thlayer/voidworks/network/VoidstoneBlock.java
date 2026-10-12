@@ -21,7 +21,8 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
  * motes, reached through {@code voidworks:motes}.
  *
  * <p>It looks like the dimension it was placed in, by that dimension's harvest kind ({@link #KIND}):
- * the End Void Displacer's casing yellows where it is {@code end}, the void's purples elsewhere. The look is all that differs; it is one block, and its networks
+ * the End Void Displacer's casing yellows where it is {@code end}, the Nether Void Displacer's casing
+ * reds where it is {@code nether}, the void's purples elsewhere. The look is all that differs; it is one block, and its networks
  * are the same whatever it looks like.
  */
 public final class VoidstoneBlock extends Block {

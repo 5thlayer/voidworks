@@ -4,7 +4,7 @@
       "model": "voidworks:block/end_voidstone"
     },
     "kind=nether": {
-      "model": "voidworks:block/voidstone"
+      "model": "voidworks:block/nether_voidstone"
     },
     "kind=none": {
       "model": "voidworks:block/voidstone"

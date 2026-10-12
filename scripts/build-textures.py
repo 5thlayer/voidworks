@@ -22,7 +22,8 @@ forge's flame and eye, a single frame each, while it is Dormant.
 
 Voidstone is the obsidian sand recoloured into the abyssium's dark purples, so the Displacer's body
 reads as its family while the brighter, framed Displacer stands out from it. In the End it is the
-same sand in the End casing's yellows, so the End Displacer's body reads as its family there.
+same sand in the End casing's yellows, and in the Nether in the Nether casing's reds, so each
+dimension's Displacer reads as part of its body there.
 
 Run from the repository root; it needs Pillow.
 """
@@ -127,6 +128,7 @@ def voidstone():
     sand = sprite("sand_obsidian")
     save(recolour(sand, [VOIDSTONE_DARK, VOIDSTONE_LIGHT]), TEXTURES / "block" / "voidstone.png")
     save(recolour(sand, END_CASING), TEXTURES / "block" / "end_voidstone.png")
+    save(recolour(sand, NETHER_CASING), TEXTURES / "block" / "nether_voidstone.png")
 
 
 def main():

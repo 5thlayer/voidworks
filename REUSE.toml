@@ -39,6 +39,7 @@ path = [
     "src/main/resources/assets/voidworks/textures/block/nether_void_displacer_*.png.mcmeta",
     "src/main/resources/assets/voidworks/textures/block/voidstone.png",
     "src/main/resources/assets/voidworks/textures/block/end_voidstone.png",
+    "src/main/resources/assets/voidworks/textures/block/nether_voidstone.png",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = ["Malcolm Riley", "2026 5thlayer"]
