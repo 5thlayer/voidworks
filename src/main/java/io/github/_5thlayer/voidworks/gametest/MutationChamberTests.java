@@ -4,18 +4,24 @@
 package io.github._5thlayer.voidworks.gametest;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import io.github._5thlayer.voidworks.mutation.ChamberReport;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
@@ -24,6 +30,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -63,6 +70,8 @@ final class MutationChamberTests {
         tests.test("mutation_chamber_without_motes_enough_for_the_rung_spends_nothing", TICKS, MutationChamberTests::cannotAfford);
         tests.test("mutation_chamber_with_an_output_that_cannot_take_the_result_spends_nothing", TICKS,
                 MutationChamberTests::outputCannotTakeTheResult);
+        tests.test("mutation_chamber_awake_with_no_mote_store_touching_it_says_so_and_upgrades_once_one_does", TICKS,
+                MutationChamberTests::noMoteStore);
         tests.test("mutation_chamber_item_face_takes_only_upgradable_items_and_gives_only_the_output", 1, MutationChamberTests::itemFace);
         tests.test("mutation_chamber_takes_items_from_a_hand_and_gives_the_result_to_an_empty_one", 1, MutationChamberTests::byHand);
         tests.test("mutation_chamber_broken_drops_itself_and_what_it_holds", 20, MutationChamberTests::breakingDrops);
@@ -76,14 +85,21 @@ final class MutationChamberTests {
                 "the Chamber's cost is " + chamber.dormancy().cost() + ", not the shipped " + DORMANT_MOTES * VoidEnergy.BASE);
         helper.assertTrue(dormantLook(helper), "a newly placed Chamber does not look Dormant");
         insert(chamber, Items.CLAY_BALL, 4);
+        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).isEmpty(),
+                "a store is worth something beside a Chamber no store touches");
         var store = new MoteStore().add(grade(helper), 10);
         SpendTests.placeStore(helper, BESIDE, store);
+        helper.assertTrue(TouchingMotes.bestWorth(helper.getLevel(), helper.absolutePos(CHAMBER)).equals(OptionalLong.of(10 * VoidEnergy.BASE)),
+                "the store beside it is not worth its ten motes' " + 10 * VoidEnergy.BASE);
         helper.startSequence()
                 .thenIdle(4 * VoidworksConfig.soakInterval())
                 .thenExecute(() -> {
                     helper.assertTrue(!chamber.dormancy().awake() && dormantLook(helper), "the Chamber woke paid " + chamber.dormancy().paid());
                     helper.assertTrue(chamber.dormancy().paid() == 10 * VoidEnergy.BASE, "the Chamber was paid " + chamber.dormancy().paid());
                     assertHolds(helper, chamber, Items.CLAY_BALL, 4, ItemStack.EMPTY);
+                    var report = report(helper, chamber);
+                    helper.assertTrue(!report.awake() && report.stall().isEmpty(),
+                            "a Dormant Chamber reports " + report + ", not that its stores are its payment's to show");
                 })
                 .thenSucceed();
     }
@@ -102,6 +118,7 @@ final class MutationChamberTests {
                 .thenExecute(() -> {
                     helper.assertTrue(!dormantLook(helper), "the working Chamber still looks Dormant");
                     assertHolds(helper, chamber, Items.CLAY_BALL, 1, new ItemStack(Items.BRICK, 2));
+                    assertStall(helper, chamber, MutationChamberBlockEntity.Stall.TOO_FEW);
                     helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, BRICK_MOTES)),
                             "the store holds " + VoidSpender.countByGrade(store) + ", not the " + BRICK_MOTES + " left after its cost and two bricks'");
                 })
@@ -130,6 +147,7 @@ final class MutationChamberTests {
         SpendTests.placeStore(helper, BESIDE, store);
         awakeThenIdle(helper, chamber, () -> {
             assertHolds(helper, chamber, Items.CLAY_BALL, 4, ItemStack.EMPTY);
+            assertStall(helper, chamber, MutationChamberBlockEntity.Stall.CANNOT_AFFORD);
             helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade - 1, 50, grade, BRICK_MOTES - 1)),
                     "the store holds " + VoidSpender.countByGrade(store));
         });
@@ -145,8 +163,35 @@ final class MutationChamberTests {
         SpendTests.placeStore(helper, BESIDE, store);
         awakeThenIdle(helper, chamber, () -> {
             assertHolds(helper, chamber, Items.CLAY_BALL, 4, new ItemStack(Items.STICK));
+            assertStall(helper, chamber, MutationChamberBlockEntity.Stall.OUTPUT_FULL);
             helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, BRICK_MOTES)), "the store holds " + VoidSpender.countByGrade(store));
         });
+    }
+
+    /** Woken by a store that is then taken away: it says no store touches it, and upgrades once one does. */
+    private static void noMoteStore(GameTestHelper helper) {
+        var chamber = place(helper);
+        int grade = grade(helper);
+        SpendTests.placeStore(helper, BESIDE, new MoteStore().add(grade, DORMANT_MOTES));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(chamber.dormancy().awake(), "the Chamber has not woken"))
+                .thenExecute(() -> {
+                    helper.setBlock(BESIDE, Blocks.AIR);
+                    helper.assertTrue(report(helper, chamber).stall().isEmpty(), "an empty Chamber reports a stall");
+                    insert(chamber, Items.CLAY_BALL, 4);
+                    assertStall(helper, chamber, MutationChamberBlockEntity.Stall.NO_MOTE_STORE);
+                    var lines = report(helper, chamber).lines();
+                    helper.assertTrue(lines.getLast().equals(Component.translatable("voidworks.motes.none_touching").withStyle(ChatFormatting.RED)),
+                            "the Chamber's last line is " + lines.getLast() + ", not that no store touches it, in red");
+                    // A new store, on another face.
+                    SpendTests.placeStore(helper, CHAMBER.north(), new MoteStore().add(grade, BRICK_MOTES));
+                    helper.assertTrue(report(helper, chamber).stall().isEmpty(), "the Chamber still reports " + report(helper, chamber).stall());
+                    var ready = report(helper, chamber).lines().getLast();
+                    helper.assertTrue(ready.equals(Component.translatable("voidworks.jade.chamber.upgrading").withStyle(ChatFormatting.GREEN)),
+                            "the ready Chamber's last line is " + ready + ", not that it is upgrading, in green");
+                })
+                .thenWaitUntil(() -> assertHolds(helper, chamber, Items.CLAY_BALL, 0, new ItemStack(Items.BRICK)))
+                .thenSucceed();
     }
 
     private static void itemFace(GameTestHelper helper) {
@@ -245,6 +290,15 @@ final class MutationChamberTests {
         return helper.getBlockEntity(CHAMBER, MutationChamberBlockEntity.class);
     }
 
+    private static ChamberReport report(GameTestHelper helper, MutationChamberBlockEntity chamber) {
+        return ChamberReport.of(chamber, helper.getLevel());
+    }
+
+    private static void assertStall(GameTestHelper helper, MutationChamberBlockEntity chamber, MutationChamberBlockEntity.Stall expected) {
+        var report = report(helper, chamber);
+        helper.assertTrue(report.stall().equals(Optional.of(expected)), "the Chamber reports " + report.stall() + ", not stalled by " + expected);
+    }
+
     private static void insert(MutationChamberBlockEntity chamber, Item item, int count) {
         chamber.inventory().set(MutationChamberBlockEntity.INPUT, ItemResource.of(item), count);
     }
@@ -260,7 +314,8 @@ final class MutationChamberTests {
 
     private static void assertHolds(GameTestHelper helper, MutationChamberBlockEntity chamber, Item input, int count, ItemStack output) {
         var held = chamber.input();
-        helper.assertTrue(held.is(input) && held.getCount() == count, "the input holds " + held + ", not " + count + " " + input);
+        helper.assertTrue(count == 0 ? held.isEmpty() : held.is(input) && held.getCount() == count,
+                "the input holds " + held + ", not " + count + " " + input);
         helper.assertTrue(ItemStack.matches(chamber.output(), output), "the output holds " + chamber.output() + ", not " + output);
     }
 

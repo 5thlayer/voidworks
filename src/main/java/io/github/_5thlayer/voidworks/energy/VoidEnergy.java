@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
+import com.google.common.math.LongMath;
+
 /**
  * The spend rule every spend in Voidworks follows, as plain logic with no Minecraft types. A mote's
  * grade and the Void Pressure where it is spent are small integers on one scale; the further the
@@ -133,14 +135,23 @@ public final class VoidEnergy {
         return plan(stacks, pressure, Math.min(most, worth(stacks, pressure))).orElseThrow();
     }
 
-    /** The void energy every worthwhile mote on hand releases together at {@code pressure}. */
-    private static long worth(Map<Integer, Integer> stacks, int pressure) {
+    /**
+     * What motes are worth where they would be spent: the void energy every one of them above
+     * {@code pressure} releases together, which a player compares with a cost. A grade not above the
+     * pressure, or one no mote has, adds nothing.
+     *
+     * @param stacks the motes, grade to count; any count type, as a store, a network or a Void Siphon keeps it
+     * @param pressure the Void Pressure where they would be spent, not negative
+     * @return their worth, at most {@link Long#MAX_VALUE}
+     */
+    public static long worth(Map<Integer, ? extends Number> stacks, int pressure) {
         requireNonNegative(pressure);
         long worth = 0;
         for (var stack : stacks.entrySet()) {
             int grade = stack.getKey();
-            if (stack.getValue() > 0 && isGrade(grade) && grade > pressure) {
-                worth += stack.getValue() * release(grade, pressure).orElseThrow();
+            long count = stack.getValue().longValue();
+            if (count > 0 && isGrade(grade) && grade > pressure) {
+                worth = LongMath.saturatedAdd(worth, LongMath.saturatedMultiply(count, release(grade, pressure).orElseThrow()));
             }
         }
         return worth;

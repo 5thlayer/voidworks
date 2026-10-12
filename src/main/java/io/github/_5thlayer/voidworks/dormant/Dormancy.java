@@ -6,12 +6,11 @@ package io.github._5thlayer.voidworks.dormant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.Voidworks;
-import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
+import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
-import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -124,19 +123,11 @@ public final class Dormancy {
     }
 
     private void soakFromNeighbours(ServerLevel level) {
-        var pos = machine.getBlockPos();
-        for (var direction : Direction.values()) {
+        for (var store : TouchingMotes.at(level, machine.getBlockPos())) {
             if (paid >= cost()) {
                 return;
             }
-            var neighbour = pos.relative(direction);
-            if (!level.isLoaded(neighbour)) {
-                continue;
-            }
-            var motes = level.getCapability(VoidworksCapabilities.MOTES, neighbour, direction.getOpposite());
-            if (motes != null) {
-                payFrom(level, motes, neighbour.getCenter());
-            }
+            payFrom(level, store.motes(), store.pos().getCenter());
         }
     }
 

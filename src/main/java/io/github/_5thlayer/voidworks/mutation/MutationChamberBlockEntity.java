@@ -6,13 +6,12 @@ package io.github._5thlayer.voidworks.mutation;
 import java.util.Optional;
 
 import io.github._5thlayer.voidworks.VoidworksBlocks;
-import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -113,21 +112,14 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         upgrade(level);
     }
 
-    /** Upgrades what the input holds once, or does nothing when it cannot. */
+    /** Upgrades what the input holds once, or does nothing when it is stalled or holds nothing. */
     private void upgrade(ServerLevel level) {
         var held = inventory.getResource(INPUT);
         var next = next(held);
-        if (next.isEmpty() || inventory.getAmountAsInt(INPUT) < next.get().count()) {
+        if (next.isEmpty() || stallBeforePaying(next).isPresent()) {
             return;
         }
         var upgrade = next.get();
-        var result = ItemResource.of(upgrade.result());
-        try (var transaction = Transaction.openRoot()) {
-            // Tried and rolled back: the output takes the result or the upgrade waits.
-            if (inventory.insert(OUTPUT, result, 1, transaction) != 1) {
-                return;
-            }
-        }
         if (!pay(level, upgrade.cost())) {
             return;
         }
@@ -137,10 +129,67 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         }
         try (var transaction = Transaction.openRoot()) {
             inventory.extract(INPUT, held, upgrade.count(), transaction);
-            inventory.insert(OUTPUT, result, 1, transaction);
+            inventory.insert(OUTPUT, ItemResource.of(upgrade.result()), 1, transaction);
             transaction.commit();
         }
         level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 1.0F, 1.0F);
+    }
+
+    /** @return the upgrade what its input holds climbs to, or empty for an empty input or an item with none */
+    public Optional<Upgrade<Item>> next() {
+        return next(inventory.getResource(INPUT));
+    }
+
+    /**
+     * @return why it cannot upgrade what its input holds: an item with no upgrade, fewer than the
+     *         Rung's count, an output that cannot take the result, no mote store touching it, or none
+     *         that can afford the cost alone; empty when it can, or its input is empty. A Dormant
+     *         one's payment is its {@link Dormancy}'s.
+     */
+    public Optional<Stall> stall(ServerLevel level) {
+        if (inventory.getResource(INPUT).isEmpty()) {
+            return Optional.empty();
+        }
+        var next = next();
+        return stallBeforePaying(next).or(() -> {
+            long cost = next.orElseThrow().cost();
+            var best = TouchingMotes.bestWorth(level, worldPosition);
+            if (cost > 0 && best.isEmpty()) {
+                return Optional.of(Stall.NO_MOTE_STORE);
+            }
+            return cost > 0 && best.getAsLong() < cost ? Optional.of(Stall.CANNOT_AFFORD) : Optional.empty();
+        });
+    }
+
+    /** What stalls an upgrade before any mote store is asked, which {@link #upgrade} asks for real. */
+    private Optional<Stall> stallBeforePaying(Optional<Upgrade<Item>> next) {
+        if (next.isEmpty()) {
+            return Optional.of(Stall.NO_UPGRADE);
+        }
+        if (inventory.getAmountAsInt(INPUT) < next.get().count()) {
+            return Optional.of(Stall.TOO_FEW);
+        }
+        try (var transaction = Transaction.openRoot()) {
+            // Tried and rolled back: the output takes the result or the upgrade waits.
+            if (inventory.insert(OUTPUT, ItemResource.of(next.get().result()), 1, transaction) != 1) {
+                return Optional.of(Stall.OUTPUT_FULL);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** What stops the Chamber upgrading what its input holds. */
+    public enum Stall {
+        /** What it holds climbs no Family, as after a datapack changed them. */
+        NO_UPGRADE,
+        /** It holds fewer than the Rung's count. */
+        TOO_FEW,
+        /** Its output cannot take the result. */
+        OUTPUT_FULL,
+        /** No mote store touches it to pay the cost. */
+        NO_MOTE_STORE,
+        /** No mote store touching it is worth the cost alone, where it stands. */
+        CANNOT_AFFORD
     }
 
     /**
@@ -153,18 +202,10 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         if (cost == 0) {
             return true;
         }
-        for (var direction : Direction.values()) {
-            var neighbour = worldPosition.relative(direction);
-            if (!level.isLoaded(neighbour)) {
-                continue;
-            }
-            var motes = level.getCapability(VoidworksCapabilities.MOTES, neighbour, direction.getOpposite());
-            if (motes == null) {
-                continue;
-            }
-            var spend = VoidSpender.spend(motes, level, worldPosition, cost);
+        for (var store : TouchingMotes.at(level, worldPosition)) {
+            var spend = VoidSpender.spend(store.motes(), level, worldPosition, cost);
             if (spend.isPresent()) {
-                spend.get().motes().forEach((grade, count) -> MoteFlight.toBlock(level, neighbour.getCenter(), worldPosition, grade, count));
+                spend.get().motes().forEach((grade, count) -> MoteFlight.toBlock(level, store.pos().getCenter(), worldPosition, grade, count));
                 return true;
             }
         }

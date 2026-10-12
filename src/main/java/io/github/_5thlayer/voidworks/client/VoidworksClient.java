@@ -7,6 +7,8 @@ import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import io.github._5thlayer.voidworks.pressure.KnownPressure;
+import io.github._5thlayer.voidworks.pressure.PressurePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.world.phys.Vec3;
@@ -17,7 +19,8 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 
 /**
- * The Module's client entry point: it draws the butterflies a {@link MoteFlight} shows.
+ * The Module's client entry point: it draws the butterflies a {@link MoteFlight} shows, and keeps
+ * the Void Pressure entry the server sends ({@link KnownPressure}).
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
 public final class VoidworksClient {
@@ -28,6 +31,7 @@ public final class VoidworksClient {
     public VoidworksClient(IEventBus modBus) {
         modBus.addListener(VoidworksClient::registerParticles);
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
+        KnownPressure.setViewer(() -> Minecraft.getInstance().player);
     }
 
     private static void registerParticles(RegisterParticleProvidersEvent event) {
@@ -46,5 +50,6 @@ public final class VoidworksClient {
                 ButterflyParticle.show(minecraft.level, flight, sprites, minecraft.particleEngine::add);
             }
         });
+        event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));
     }
 }

@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.pressure;
 
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,11 +15,18 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
 
@@ -32,7 +40,8 @@ import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
  * file is {@code data/<namespace>/data_maps/dimension/void_pressure.json} in the datapack that
  * ships the entries, such as
  * {@code {"values": {"minecraft:the_end": {"base": 3, "harvest_kind": "end"}}}}. It is read on the
- * server only: nothing about pressure is shown on the client.
+ * server; the dimension registry never reaches a client, so each player is sent their own
+ * dimension's entry ({@link PressurePayload}), for showing what motes are worth where they stand.
  */
 public final class VoidPressure {
 
@@ -56,6 +65,23 @@ public final class VoidPressure {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(VoidPressure::registerDataMap);
+        modBus.addListener(VoidPressure::registerPayload);
+        NeoForge.EVENT_BUS.addListener((OnDatapackSyncEvent event) -> event.getRelevantPlayers().forEach(VoidPressure::sendTo));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerChangedDimensionEvent event) -> sendTo(event.getEntity()));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerRespawnEvent event) -> sendTo(event.getEntity()));
+    }
+
+    private static void registerPayload(RegisterPayloadHandlersEvent event) {
+        // Optional, so a client without Voidworks can still join; it shows nothing it was not sent.
+        event.registrar("1").optional().playToClient(PressurePayload.TYPE, PressurePayload.STREAM_CODEC);
+    }
+
+    /** Tells {@code player}'s client the Void Pressure entry of the dimension it is in. */
+    private static void sendTo(Player player) {
+        if (player instanceof ServerPlayer server) {
+            var level = server.level();
+            PacketDistributor.sendToPlayer(server, new PressurePayload(level.dimension(), dimension(level)));
+        }
     }
 
     private static void registerDataMap(RegisterDataMapTypesEvent event) {
@@ -67,8 +93,12 @@ public final class VoidPressure {
      * harvest kind is End and nothing lies beneath the position down to the bottom of the world.
      */
     public static int at(ServerLevel level, BlockPos pos) {
-        return dimension(level).pressure(() -> OpenVoid.isOpen(
-                level.getMinY(), pos.getY(), y -> !level.getBlockState(pos.atY(y)).isAir()));
+        return dimension(level).pressure(openToVoid(level, pos));
+    }
+
+    /** @return whether nothing lies beneath {@code pos} in {@code level} down to the bottom of the world, asked only when called */
+    static BooleanSupplier openToVoid(Level level, BlockPos pos) {
+        return () -> OpenVoid.isOpen(level.getMinY(), pos.getY(), y -> !level.getBlockState(pos.atY(y)).isAir());
     }
 
     /** How the Void Siphon harvests in {@code level}'s dimension: none where the map does not name it. */

@@ -10,7 +10,9 @@ import io.github._5thlayer.voidworks.VoidworksItems;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
+import io.github._5thlayer.voidworks.pressure.KnownPressure;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -149,6 +151,11 @@ public final class VoidSiphonItem extends Item {
         }
         motes.byGrade().forEach((grade, count) -> builder.accept(
                 Component.translatable("voidworks.siphon.tooltip.grade", grade, count).withColor(GradeColor.of(grade) & 0xFFFFFF)));
+        if (motes.total() > 0) {
+            // Known only on a client the server has told its dimension's pressure.
+            KnownPressure.here().ifPresent(pressure -> builder.accept(
+                    Component.translatable("voidworks.siphon.tooltip.worth", VoidEnergy.worth(motes.byGrade(), pressure)).withStyle(ChatFormatting.GRAY)));
+        }
         builder.accept(Component.translatable("voidworks.siphon.tooltip." + mode(stack).getSerializedName()).withStyle(ChatFormatting.DARK_PURPLE));
     }
 }

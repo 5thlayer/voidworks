@@ -218,4 +218,22 @@ class VoidEnergyTest {
         assertEquals(BigInteger.valueOf(VoidEnergy.BASE).shiftLeft(VoidEnergy.MAX_GRADE - 1)
                 .multiply(BigInteger.valueOf(Integer.MAX_VALUE)).longValueExact(), spend.released());
     }
+
+    @Test
+    void worthAddsUpWhatEveryWorthwhileMoteReleases() {
+        // At pressure 2: grade 3 is worth BASE a mote, grade 4 twice that.
+        assertEquals(5 * VoidEnergy.BASE + 2 * 2 * VoidEnergy.BASE, VoidEnergy.worth(Map.of(3, 5, 4, 2), 2));
+    }
+
+    @Test
+    void motesAtOrBelowThePressureAreWorthNothing() {
+        assertEquals(0, VoidEnergy.worth(Map.of(2, 50), 2));
+        assertEquals(VoidEnergy.BASE, VoidEnergy.worth(Map.of(2, 50, 3, 1), 2));
+        assertEquals(0, VoidEnergy.worth(Map.of(), 2));
+    }
+
+    @Test
+    void worthCountsAsManyMotesAsALongHoldsWithoutWrapping() {
+        assertEquals(Long.MAX_VALUE, VoidEnergy.worth(Map.of(VoidEnergy.MAX_GRADE, Long.MAX_VALUE / 2), 0));
+    }
 }
