@@ -13,8 +13,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.Containers;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -25,7 +23,6 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 /**
  * The Mutation Chamber: placed Dormant, it soaks its cost, and then, once every
@@ -37,26 +34,19 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * failure they stay and the motes are spent. It waits, spending nothing, while its input holds fewer
  * than the count, its output cannot take the result, or the stores touching it cannot afford the cost.
  *
- * <p>Its item face, the same on every side, takes into the input only items with an upgrade, and
- * gives only from the output, so hoppers and belts feed and empty it.
+ * <p>It holds what every Mutation block does ({@link MutationItems}), with one output: its item face
+ * takes into the input only items with an upgrade.
  */
-public final class MutationChamberBlockEntity extends BlockEntity implements Dormancy.Holder {
+public final class MutationChamberBlockEntity extends BlockEntity implements Dormancy.Holder, MutationItems.Holder {
 
     /** The slot of what waits to upgrade. */
-    public static final int INPUT = 0;
+    public static final int INPUT = MutationItems.INPUT;
     /** The slot of what upgraded. */
-    public static final int OUTPUT = 1;
-
-    private static final String ITEMS_KEY = "items";
+    public static final int OUTPUT = MutationItems.FIRST_OUTPUT;
 
     private final Dormancy dormancy = new Dormancy(this);
-    private final ItemStacksResourceHandler inventory = new ItemStacksResourceHandler(2) {
-        @Override
-        protected void onContentsChanged(int index, ItemStack previousContents) {
-            setChanged();
-        }
-    };
-    private final ResourceHandler<ItemResource> face = new Face();
+    private final MutationItems items = new MutationItems(1, MutationChamberBlockEntity::hasUpgrade, this::setChanged);
+    private final ItemStacksResourceHandler inventory = items.inventory();
     private int sinceUpgrade;
 
     public MutationChamberBlockEntity(BlockPos pos, BlockState state) {
@@ -68,6 +58,11 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         return dormancy;
     }
 
+    @Override
+    public MutationItems items() {
+        return items;
+    }
+
     /** Its input, then its output, for the game tests. */
     public ItemStacksResourceHandler inventory() {
         return inventory;
@@ -75,25 +70,21 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
 
     /** The item capability, the same on every side: the input takes only items with an upgrade, and only the output gives. */
     public ResourceHandler<ItemResource> itemFace() {
-        return face;
+        return items.itemFace();
     }
 
     /** @return what waits to upgrade, empty for nothing */
     public ItemStack input() {
-        return held(INPUT);
+        return items.held(INPUT);
     }
 
     /** @return what upgraded, empty for nothing */
     public ItemStack output() {
-        return held(OUTPUT);
-    }
-
-    private ItemStack held(int slot) {
-        return inventory.getResource(slot).toStack(inventory.getAmountAsInt(slot));
+        return items.held(OUTPUT);
     }
 
     /** @return whether an item of {@code resource} climbs a Family, so the input takes it */
-    static boolean hasUpgrade(ItemResource resource) {
+    private static boolean hasUpgrade(ItemResource resource) {
         return next(resource).isPresent();
     }
 
@@ -190,104 +181,27 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
         CANNOT_AFFORD
     }
 
-    /**
-     * Puts what {@code stack} holds into the input, as much as fits, as a player's hand does.
-     *
-     * @return how many it took: none for an item with no upgrade, or an input holding another
-     */
-    public int insertFromHand(ItemStack stack) {
-        var resource = ItemResource.of(stack);
-        try (var transaction = Transaction.openRoot()) {
-            int taken = face.insert(INPUT, resource, stack.getCount(), transaction);
-            transaction.commit();
-            stack.shrink(taken);
-            return taken;
-        }
-    }
-
-    /**
-     * Gives {@code player} what upgraded, or, with nothing upgraded, takes back what waits to.
-     *
-     * @return whether there was anything to give
-     */
-    public boolean giveTo(Player player) {
-        for (int slot : new int[] {OUTPUT, INPUT}) {
-            var stack = held(slot);
-            if (!stack.isEmpty()) {
-                inventory.set(slot, ItemResource.EMPTY, 0);
-                player.getInventory().placeItemBackInInventory(stack);
-                return true;
-            }
-        }
-        return false;
-    }
-
     // -- persistence ----------------------------------------------------------------------------
 
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         dormancy.save(output);
-        inventory.serialize(output.child(ITEMS_KEY));
+        items.save(output);
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         dormancy.load(input);
-        inventory.deserialize(input.childOrEmpty(ITEMS_KEY));
+        items.load(input);
     }
 
     /** Broken, it drops what it holds; a payment toward its Dormant cost is lost with it. */
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        if (level == null) {
-            return;
-        }
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            var stack = held(slot);
-            if (!stack.isEmpty()) {
-                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-            }
-        }
-    }
-
-    /** The item capability: inserts go only to the input, and only of items with an upgrade; extracts come only from the output. */
-    private final class Face implements ResourceHandler<ItemResource> {
-
-        @Override
-        public int size() {
-            return inventory.size();
-        }
-
-        @Override
-        public ItemResource getResource(int index) {
-            return inventory.getResource(index);
-        }
-
-        @Override
-        public long getAmountAsLong(int index) {
-            return inventory.getAmountAsLong(index);
-        }
-
-        @Override
-        public long getCapacityAsLong(int index, ItemResource resource) {
-            return resource.isEmpty() || isValid(index, resource) ? inventory.getCapacityAsLong(index, resource) : 0;
-        }
-
-        @Override
-        public boolean isValid(int index, ItemResource resource) {
-            return index == INPUT && hasUpgrade(resource);
-        }
-
-        @Override
-        public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return isValid(index, resource) ? inventory.insert(index, resource, amount, transaction) : 0;
-        }
-
-        @Override
-        public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return index == OUTPUT ? inventory.extract(index, resource, amount, transaction) : 0;
+        if (level != null) {
+            items.drop(level, pos);
         }
     }
 }
