@@ -19,8 +19,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * What a Mutation Chamber shows a player looking at it: what its input holds, the upgrade it climbs
- * to with its count, cost and chance, and, once awake, what the best mote store touching it is worth
+ * What a Mutation Chamber shows a player looking at it, beside Jade's own view of what it holds:
+ * that its input is empty, or the upgrade it climbs to with its count, cost and chance, and, once awake, what the best mote store touching it is worth
  * there and whether it is upgrading or what stalls it. Read on the server, where Families, mote
  * stores and Void Pressure are, and sent to the client, which words it with {@link #lines}. A Dormant
  * one's payment is {@link io.github._5thlayer.voidworks.dormant.Dormancy#status}, shown beside it with
@@ -65,15 +65,14 @@ public record ChamberReport(ItemStack input, Optional<Next> next, boolean awake,
     }
 
     /**
-     * @return what its input holds, or that it holds nothing; the upgrade; then, awake, its best
+     * @return that it holds nothing, if so; the upgrade; then, awake, its best
      *         touching store and that it is upgrading in green, or what stalls it in red
      */
     public List<Component> lines() {
         var lines = new ArrayList<Component>();
+        // What it holds is Jade's own item view, from its item capability.
         if (input.isEmpty()) {
             lines.add(Component.translatable("voidworks.jade.chamber.empty").withStyle(ChatFormatting.GRAY));
-        } else {
-            lines.add(Component.translatable("voidworks.jade.chamber.holds", input.getCount(), input.getHoverName()));
         }
         next.ifPresent(upgrade -> lines.add(Component.translatable("voidworks.jade.chamber.upgrade", upgrade.count(),
                 upgrade.result().getHoverName(), upgrade.cost(), Math.round(upgrade.chance() * 100))));
