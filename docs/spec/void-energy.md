@@ -228,28 +228,36 @@ Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Gh
 A Family is a ladder of Rungs, one item form to a Family: metal ingots are one Family, metal blocks
 another. Each Family is a datapack registry entry listing its Rungs in order. A Rung names:
 
-- **items**: what it accepts, an item tag of Voidworks' own per Rung that takes in the conventional
-  tag (`#c:ingots/copper` on copper's ingot Rung), so another mod's item joins a Rung without code;
+- **items**: what it accepts, an item tag of Voidworks' own per Rung,
+  `#voidworks:rung/<family>/<rung>`, that takes in the conventional tag (`#c:ingots/iron` on
+  `#voidworks:rung/metal_ingots/iron`), so another mod's item joins a Rung without code;
 - **result**: the one item an upgrade from the Rung below lands on, never implied by order;
 - **count**: how many items the upgrade takes per result, 1 unless set;
-- **cost** and **chance**: the void energy a Mutation Chamber spends on the upgrade, and its odds.
+- **cost** and **chance**: the void energy a Mutation Chamber spends per result, and its odds.
+
+The bottom Rung names only its items: nothing upgrades into it, and a Family whose bottom Rung names
+a result, count, cost or chance fails to load. Every other Rung accepts its own result besides its
+tag, so an upgraded item climbs on. Families are not synced to clients until a client reads them.
 
 A datapack adds a Family with a file of its own and replaces one by overriding its file. An item on
-the top Rung, or in no Family, has no upgrade. An item in several Families upgrades if they agree on
-its next result; if they disagree, it has none, and loading warns, naming them. Every upgrade gives
-one result for its count of items.
+the top Rung, or in no Family, has no upgrade. An item that several Rungs accept, in one Family or
+several, upgrades only if their next steps are the same in result, count, cost and chance; if they
+differ in any, it has none, and loading warns, naming them. Every upgrade gives one result for its
+count of items.
 
-What Voidworks ships:
+What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, `dusts`,
+`hostile_drops`, `passive_drops`) but the metals:
 
-- **Metals**: ingots, nuggets, blocks, raw metal and raw blocks, each copper → iron → gold. Ores
+- **Metals**: five Families (`metal_ingots`, `metal_nuggets`, `metal_blocks`, `raw_metals`,
+  `raw_metal_blocks`), each copper → iron → gold. Ores
   are left out, since Fortune makes an ore worth more than its ingot and Displacers swap ores.
-- **Gems**: lapis → amethyst shard → quartz → emerald → diamond → netherite scrap, the last steep.
+- **Gems**: lapis → amethyst shard → quartz → emerald → diamond ⇒ netherite scrap.
   Gem blocks are left out: amethyst and quartz blocks hold four, the others nine.
-- **Dusts**: redstone → glowstone dust → blaze powder, the last steep.
-- **Hostile drops**, one ladder through the dimensions, steep at each border: rotten flesh → bone →
-  string → spider eye → gunpowder → slimeball → phantom membrane → breeze rod, then magma cream →
-  blaze rod → ghast tear → wither skeleton skull, then ender pearl → shulker shell. Boss drops
-  (nether star, dragon egg, dragon's breath) are left out.
+- **Dusts**: redstone → glowstone dust ⇒ blaze powder.
+- **Hostile drops**, one ladder through the dimensions, steep at each border and into each gate
+  item: rotten flesh → bone → string → spider eye → gunpowder → slimeball → phantom membrane →
+  breeze rod ⇒ magma cream ⇒ blaze rod ⇒ ghast tear → wither skeleton skull ⇒ ender pearl ⇒ shulker
+  shell. Boss drops (nether star, dragon egg, dragon's breath) are left out.
 - **Passive drops**: feather → leather → rabbit hide → ink sac → glow ink sac → rabbit's foot →
   armadillo scute → turtle scute.
 
@@ -279,8 +287,8 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Tool and armour Families** — wooden → stone → copper → iron → golden → diamond, and what an
   upgrade carries over: enchantments, damage, names, trims.
 - **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
-  each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (shape: metal, gem
-  and dust Rungs count 1, drop Rungs 2, steep Rungs and dimension borders 8, cost rising up each ladder and
-  sharply at the steep Rungs), breakdown yield against motes, mote speed, Void Well capacity,
+  each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
+  and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
+  the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes, mote speed, Void Well capacity,
   the Void Siphon's capacity per tier, and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
   cost.

@@ -136,9 +136,15 @@ _Avoid_: tier, quality, material ladder
 **Rung**:
 One step of a Family: the items accepted there, and the one result item an upgrade from the Rung
 below lands on, with what the step costs: how many items it takes per result, how much void energy
-a Mutation Chamber spends on it, and its chance. Another mod's item joins a Rung as an input; the
+a Mutation Chamber spends on it, and its chance. A Rung always accepts its own result, so an upgraded
+item climbs on; the bottom Rung only accepts. Another mod's item joins a Rung as an input; the
 result changes only on purpose.
 _Avoid_: tier, level
+
+**Steep Rung**:
+A Rung whose count and cost are set high on purpose: the toll before a Gate item or across a
+dimension border. It is a description of the numbers, not a kind of Rung.
+_Avoid_: hard Rung, gated Rung
 
 **Gate item**:
 An item the progression uses as a toll before the step that earns it: the Void Siphon's ghast tear
