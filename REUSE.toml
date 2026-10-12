@@ -24,12 +24,15 @@ path = [
 SPDX-FileCopyrightText = "2026 5thlayer"
 SPDX-License-Identifier = "MIT"
 
-# Malcolm Riley's unused textures: the Void Siphon's sprite, with the unmodified copies it is
-# built from (NOTICE).
+# Malcolm Riley's unused textures: the Void Siphon's and the Overworld Void Displacer's sprites,
+# with the unmodified copies they are built from (NOTICE).
 [[annotations]]
 path = [
     "data/art/*.png",
+    "data/art/*.png.mcmeta",
     "src/main/resources/assets/voidworks/textures/item/void_siphon.png",
+    "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png",
+    "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png.mcmeta",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = ["Malcolm Riley", "2026 5thlayer"]

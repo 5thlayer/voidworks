@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 5thlayer
 # SPDX-License-Identifier: MIT
-"""Builds the Void Siphon's item sprite from Malcolm Riley's unused textures in data/art/ (NOTICE).
+"""Builds sprites from Malcolm Riley's unused textures in data/art/ (NOTICE).
 
-Its recipe drawn as one wand: the infernal rod's lower end stands for the blaze rod, the obsidian
-rod's upper end for the crying obsidian, and the bound crystal, shrunk onto the tip, for the ghast
-tear. Run from the repository root; it needs Pillow.
+The Void Siphon's item sprite is its recipe drawn as one wand: the infernal rod's lower end stands
+for the blaze rod, the obsidian rod's upper end for the crying obsidian, and the bound crystal,
+shrunk onto the tip, for the ghast tear.
+
+The Overworld Void Displacer's faces are the abyssium block, a casing in crying obsidian's purple,
+with the lit brooding forge's void flame let into each side and its glowing eye into the top. Every
+frame of the forge's animation is built, and its animation copied beside the sprite.
+
+Run from the repository root; it needs Pillow.
 """
 
+import shutil
 from pathlib import Path
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 ART = ROOT / "data" / "art"
-OUT = ROOT / "src" / "main" / "resources" / "assets" / "voidworks" / "textures" / "item" / "void_siphon.png"
+TEXTURES = ROOT / "src" / "main" / "resources" / "assets" / "voidworks" / "textures"
 
 # Along the rods' diagonal, how far up from the lower-left corner the blaze handle reaches.
 HANDLE = 14
@@ -22,14 +29,36 @@ HANDLE = 14
 TIP_SIZE = 7
 TIP_AT = (9, 0)
 
+# The boxes, (left, top, right, bottom), of the forge's flame on its side and of its eye on its
+# top, let into the abyssium casing.
+FLAME = (4, 3, 12, 13)
+EYE = (5, 5, 11, 11)
+
+
+def frames(name):
+    image = Image.open(ART / f"{name}.png").convert("RGBA")
+    # An animated sprite's frames stack downwards.
+    size = image.width
+    return [image.crop((0, y, size, y + size)) for y in range(0, image.height, size)]
+
 
 def sprite(name):
-    image = Image.open(ART / f"{name}.png").convert("RGBA")
-    # An animated sprite's frames stack downwards: keep the first.
-    return image.crop((0, 0, image.width, image.width))
+    return frames(name)[0]
 
 
-def main():
+def stack(images):
+    strip = Image.new("RGBA", (16, 16 * len(images)))
+    for i, image in enumerate(images):
+        strip.paste(image, (0, 16 * i))
+    return strip
+
+
+def save(image, path):
+    image.save(path)
+    print(f"wrote {path.relative_to(ROOT)}")
+
+
+def void_siphon():
     handle, shaft, crystal = sprite("part_rod_infernal"), sprite("part_rod_obsidian"), sprite("artifact_bound_crystal")
     siphon = Image.new("RGBA", (16, 16))
     pixels, lower, upper = siphon.load(), handle.load(), shaft.load()
@@ -37,8 +66,25 @@ def main():
         for x in range(16):
             pixels[x, y] = lower[x, y] if x + (15 - y) < HANDLE else upper[x, y]
     siphon.alpha_composite(crystal.resize((TIP_SIZE, TIP_SIZE), Image.NEAREST), TIP_AT)
-    siphon.save(OUT)
-    print(f"wrote {OUT.relative_to(ROOT)}")
+    save(siphon, TEXTURES / "item" / "void_siphon.png")
+
+
+def displacer_face(forge, box, face):
+    casing = sprite("block_metal_abyssium")
+    built = []
+    for frame in frames(forge):
+        image = casing.copy()
+        image.paste(frame.crop(box), box[:2])
+        built.append(image)
+    path = TEXTURES / "block" / f"overworld_void_displacer_{face}.png"
+    save(stack(built), path)
+    shutil.copyfile(ART / f"{forge}.png.mcmeta", f"{path}.mcmeta")
+
+
+def main():
+    void_siphon()
+    displacer_face("device_brooding_forge_side_on", FLAME, "side")
+    displacer_face("device_brooding_forge_up_on", EYE, "top")
 
 
 if __name__ == "__main__":
