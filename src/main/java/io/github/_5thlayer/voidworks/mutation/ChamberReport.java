@@ -22,10 +22,10 @@ import net.minecraft.world.item.ItemStack;
  * What a Mutation Chamber shows a player looking at it, beside Jade's own view of what it holds:
  * that its input is empty, the upgrade it climbs to with its count, cost and chance, and, once awake,
  * what the mote stores touching it are worth there together and whether it is upgrading or what
- * stalls it. Read on the server, where Families, mote
- * stores and Void Pressure are, and sent to the client, which words it with {@link #lines}. A Dormant
- * one's payment is {@link io.github._5thlayer.voidworks.dormant.Dormancy#status}, shown beside it with
- * its own touching stores, so a Dormant one shows only what stalls its items.
+ * stalls it. Read on the server, where Families, mote stores and Void Pressure are, and sent to the
+ * client, which words it with {@link #lines}. A Dormant one's payment is
+ * {@link io.github._5thlayer.voidworks.dormant.Dormancy#status}, shown beside it with its own touching
+ * stores, so a Dormant one shows only what stalls its items.
  *
  * @param input what waits to upgrade, empty for nothing
  * @param next the upgrade it climbs to, empty for an empty input or an item with none

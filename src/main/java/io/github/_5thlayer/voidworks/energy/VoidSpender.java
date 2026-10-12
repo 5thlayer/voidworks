@@ -79,7 +79,7 @@ public final class VoidSpender {
      * @return the motes taken from each store, in their order, grade to count and empty for one that
      *         gave none, or empty when the spend is refused
      */
-    public static Optional<List<Map<Integer, Integer>>> spendFromAll(List<? extends ResourceHandler<MoteResource>> stores, ServerLevel level,
+    public static Optional<List<Map<Integer, Integer>>> spendTogether(List<? extends ResourceHandler<MoteResource>> stores, ServerLevel level,
             BlockPos pos, long required) {
         var motes = new TreeMap<Integer, Integer>();
         for (var store : stores) {

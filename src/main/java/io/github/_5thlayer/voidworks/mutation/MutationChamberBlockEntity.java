@@ -7,10 +7,8 @@ import java.util.Optional;
 
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
-import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
-import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -120,7 +118,7 @@ public final class MutationChamberBlockEntity extends BlockEntity implements Dor
             return;
         }
         var upgrade = next.get();
-        if (upgrade.cost() > 0 && !TouchingMotes.spend(level, worldPosition, upgrade.cost())) {
+        if (!TouchingMotes.spend(level, worldPosition, upgrade.cost())) {
             return;
         }
         if (level.getRandom().nextDouble() >= upgrade.chance()) {

@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -169,9 +170,9 @@ final class MutationChamberTests {
         helper.startSequence()
                 .thenWaitUntil(() -> assertHolds(helper, chamber, Items.CLAY_BALL, 0, new ItemStack(Items.BRICK)))
                 .thenExecute(() -> {
-                    long left = VoidSpender.countByGrade(east).values().stream().mapToLong(Integer::longValue).sum()
-                            + VoidSpender.countByGrade(north).values().stream().mapToLong(Integer::longValue).sum();
-                    helper.assertTrue(left == 1, "the stores hold " + left + " motes, not the one left after a brick's three");
+                    var left = List.of(VoidSpender.countByGrade(north), VoidSpender.countByGrade(east));
+                    helper.assertTrue(left.equals(List.of(Map.of(), Map.of(grade, 1))) || left.equals(List.of(Map.of(grade, 1), Map.of())),
+                            "the stores hold " + left + ", not the one mote left after a brick's three");
                 })
                 .thenSucceed();
     }
@@ -220,7 +221,7 @@ final class MutationChamberTests {
     /**
      * A plain store to the east worth five motes, and a Voidstone network worth three that touches the
      * Chamber on its north and west faces, joined round the back: together they are worth eight, the
-     * network once.
+     * network once, and spend eight and no more.
      */
     private static void touchingStoresWorth(GameTestHelper helper) {
         place(helper);
@@ -234,6 +235,11 @@ final class MutationChamberTests {
         var pos = helper.absolutePos(CHAMBER);
         helper.assertTrue(TouchingMotes.totalWorth(level, pos).equals(Optional.of(8 * VoidEnergy.BASE)),
                 "the stores touching it are worth " + TouchingMotes.totalWorth(level, pos) + " together, not eight motes'");
+        // Spent once: had the network been asked on both its faces, nine motes would have been planned.
+        helper.assertTrue(!TouchingMotes.spend(level, pos, 9 * VoidEnergy.BASE), "nine motes were spent from stores holding eight");
+        helper.assertTrue(TouchingMotes.spend(level, pos, 8 * VoidEnergy.BASE), "the eight motes touching it were not spent");
+        helper.assertTrue(TouchingMotes.totalWorth(level, pos).equals(Optional.of(0L)),
+                "the stores are worth " + TouchingMotes.totalWorth(level, pos) + " after spending all they held");
         helper.succeed();
     }
 

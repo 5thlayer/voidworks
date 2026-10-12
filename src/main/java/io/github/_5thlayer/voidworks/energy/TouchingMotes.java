@@ -69,14 +69,14 @@ public final class TouchingMotes {
 
     /**
      * Spends at least {@code required} void energy from the stores touching {@code pos} together, by
-     * the spend rule there ({@link VoidSpender#spendFromAll}), each store's motes flying in from it
-     * as butterflies. All or nothing.
+     * the spend rule there ({@link VoidSpender#spendTogether}), each store's motes flying in from it
+     * as butterflies. All or nothing; a cost of nothing is paid with no store touching it.
      *
      * @return whether it was paid
      */
     public static boolean spend(ServerLevel level, BlockPos pos, long required) {
         var stores = distinct(at(level, pos));
-        var taken = VoidSpender.spendFromAll(stores.stream().map(Store::motes).toList(), level, pos, required);
+        var taken = VoidSpender.spendTogether(stores.stream().map(Store::motes).toList(), level, pos, required);
         if (taken.isEmpty()) {
             return false;
         }

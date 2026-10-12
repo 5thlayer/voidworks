@@ -195,14 +195,15 @@ final class SpendTests {
     }
 
     /**
-     * The first store holds only a grade 4 mote, the second two grade 3: the spend of {@code 2 × BASE}
-     * takes the second's grade 3 motes, the lowest worthwhile grade of either, and leaves the first's.
+     * The first store holds one mote two steps above the pressure, the second two motes one step above:
+     * the spend of {@code 2 × BASE} takes the second's, the lowest worthwhile grade of either, and
+     * leaves the first's.
      */
     private static void severalStoresTakeTheLowestGradeFirst(GameTestHelper helper) {
         int pressure = VoidPressure.at(helper.getLevel(), here(helper));
         var first = new MoteStore().add(pressure + 2, 1);
         var second = new MoteStore().add(pressure + 1, 2);
-        var taken = VoidSpender.spendFromAll(List.of(first, second), helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
+        var taken = VoidSpender.spendTogether(List.of(first, second), helper.getLevel(), here(helper), 2 * VoidEnergy.BASE);
         var expected = List.of(Map.<Integer, Integer>of(), Map.of(pressure + 1, 2));
         helper.assertTrue(taken.equals(Optional.of(expected)), "the spend took " + taken + ", not " + expected);
         helper.assertTrue(VoidSpender.countByGrade(first).equals(Map.of(pressure + 2, 1)), "the first store holds " + VoidSpender.countByGrade(first));
@@ -216,7 +217,7 @@ final class SpendTests {
         var first = new MoteStore().add(pressure + 1, 2);
         var second = new MoteStore().add(pressure + 2, 1);
         var before = List.of(first.snapshot(), second.snapshot());
-        var taken = VoidSpender.spendFromAll(List.of(first, second), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE + 1);
+        var taken = VoidSpender.spendTogether(List.of(first, second), helper.getLevel(), here(helper), 4 * VoidEnergy.BASE + 1);
         helper.assertTrue(taken.isEmpty(), "the stores cannot release " + (4 * VoidEnergy.BASE + 1) + ", but the spend took " + taken);
         helper.assertTrue(List.of(first.snapshot(), second.snapshot()).equals(before), "a refused spend changed the stores");
         helper.succeed();
