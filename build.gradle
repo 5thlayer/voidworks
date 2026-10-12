@@ -6,8 +6,48 @@ plugins {
     id 'io.github.5thlayer.libworks.module' version '0.2.1'
 }
 
+repositories {
+    // EMI for 26.1 is an unofficial port, published on CurseForge only.
+    maven {
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+    // Jade.
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
+}
+
+// Mods the dev client loads alongside the Module, to look up recipes (EMI) and inspect blocks (Jade)
+// while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
+// which holds only what is listed here; the game tests run elsewhere and never load them, so they
+// still prove the Module plays alone. The Module names neither.
+configurations {
+    clientMods { transitive = false }
+}
+
+def syncClientMods = tasks.register('syncClientMods', Sync) {
+    from configurations.clientMods
+    into layout.projectDirectory.dir('run/mods')
+}
+
+tasks.named('runClient') { dependsOn syncClientMods }
+
+dependencies {
+    // EMI for 26.1 is the unofficial port.
+    clientMods 'curse.maven:emi-unofficial-port-1544558:8630349'
+    // Jade for 26.1.2 is built on NeoForge 26.1.2.76, so it runs on our .77.
+    clientMods 'maven.modrinth:jade:26.1.11+neoforge'
+}
+
 neoForge {
     runs {
+        // EMI's 26.1 port still carries @OnlyIn, and a dev run halts on a warning screen over it that
+        // production never shows.
+        configureEach {
+            systemProperty 'neoforge.warnings.onlyin.hide', 'true'
+        }
         gameTestServer {
             // Marks this run as the Module's own, which is when it gives a vanilla block voidworks:motes
             // (VoidworksGameTests).
