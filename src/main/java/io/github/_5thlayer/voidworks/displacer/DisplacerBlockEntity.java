@@ -14,6 +14,7 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import io.github._5thlayer.voidworks.inventory.ItemFace;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
@@ -24,7 +25,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -77,7 +77,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         }
     };
     private final ResourceHandler<ItemResource> output = RangedResourceHandler.of(inventory, 1, 1 + OUTPUT_SLOTS);
-    private final ResourceHandler<ItemResource> face = new Face();
+    private final ItemFace face = new ItemFace(inventory, INPUT, resource -> Density.of(resource) > 0);
 
     /** The positions it has harvested, each Voidstone now, in the order it harvested them. */
     private final Set<BlockPos> grown = new LinkedHashSet<>();
@@ -369,50 +369,6 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (level == null) {
             return;
         }
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            var stack = inventory.getResource(slot).toStack(inventory.getAmountAsInt(slot));
-            if (!stack.isEmpty()) {
-                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-            }
-        }
-    }
-
-    /** The item capability: inserts go only to the input, and only of a Density above 0; extracts come only from the output. */
-    private final class Face implements ResourceHandler<ItemResource> {
-
-        @Override
-        public int size() {
-            return inventory.size();
-        }
-
-        @Override
-        public ItemResource getResource(int index) {
-            return inventory.getResource(index);
-        }
-
-        @Override
-        public long getAmountAsLong(int index) {
-            return inventory.getAmountAsLong(index);
-        }
-
-        @Override
-        public long getCapacityAsLong(int index, ItemResource resource) {
-            return resource.isEmpty() || isValid(index, resource) ? inventory.getCapacityAsLong(index, resource) : 0;
-        }
-
-        @Override
-        public boolean isValid(int index, ItemResource resource) {
-            return index == INPUT && Density.of(resource) > 0;
-        }
-
-        @Override
-        public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return isValid(index, resource) ? inventory.insert(index, resource, amount, transaction) : 0;
-        }
-
-        @Override
-        public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return index == INPUT ? 0 : inventory.extract(index, resource, amount, transaction);
-        }
+        face.drop(level, pos);
     }
 }

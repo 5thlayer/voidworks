@@ -5,8 +5,8 @@ package io.github._5thlayer.voidworks.mutation;
 
 import java.util.function.Predicate;
 
+import io.github._5thlayer.voidworks.inventory.ItemFace;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -16,7 +16,6 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 /**
  * What every Mutation block holds, and how items go in and out of it: an input, which takes only
@@ -40,7 +39,7 @@ public final class MutationItems {
 
     private final Predicate<ItemResource> accepts;
     private final ItemStacksResourceHandler inventory;
-    private final ResourceHandler<ItemResource> face = new Face();
+    private final ItemFace face;
 
     /**
      * @param outputs   how many output slots it has, at least one
@@ -58,6 +57,7 @@ public final class MutationItems {
                 onChanged.run();
             }
         };
+        this.face = new ItemFace(inventory, INPUT, accepts);
     }
 
     /** A Mutation block's block entity, so its block finds what it holds. */
@@ -127,12 +127,7 @@ public final class MutationItems {
 
     /** Drops everything it holds at {@code pos}, as its block is broken. */
     public void drop(Level level, BlockPos pos) {
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            var stack = held(slot);
-            if (!stack.isEmpty()) {
-                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-            }
-        }
+        face.drop(level, pos);
     }
 
     public void save(ValueOutput output) {
@@ -141,44 +136,5 @@ public final class MutationItems {
 
     public void load(ValueInput input) {
         inventory.deserialize(input.childOrEmpty(KEY));
-    }
-
-    /** The item capability: inserts go only to the input, and only of what the rule accepts; extracts come only from the outputs. */
-    private final class Face implements ResourceHandler<ItemResource> {
-
-        @Override
-        public int size() {
-            return inventory.size();
-        }
-
-        @Override
-        public ItemResource getResource(int index) {
-            return inventory.getResource(index);
-        }
-
-        @Override
-        public long getAmountAsLong(int index) {
-            return inventory.getAmountAsLong(index);
-        }
-
-        @Override
-        public long getCapacityAsLong(int index, ItemResource resource) {
-            return resource.isEmpty() || isValid(index, resource) ? inventory.getCapacityAsLong(index, resource) : 0;
-        }
-
-        @Override
-        public boolean isValid(int index, ItemResource resource) {
-            return index == INPUT && accepts(resource);
-        }
-
-        @Override
-        public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return isValid(index, resource) ? inventory.insert(index, resource, amount, transaction) : 0;
-        }
-
-        @Override
-        public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
-            return index == INPUT ? 0 : inventory.extract(index, resource, amount, transaction);
-        }
     }
 }
