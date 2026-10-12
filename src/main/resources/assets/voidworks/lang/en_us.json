@@ -4,5 +4,7 @@
   "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",
   "commands.voidworks.mote": "Put %s motes of grade %s into the network at %s, which holds %s of %s",
   "commands.voidworks.mote.not_voidstone": "There is no Voidstone at %s",
-  "commands.voidworks.pressure": "Void Pressure here is %s, harvest kind %s"
+  "commands.voidworks.pressure": "Void Pressure here is %s, harvest kind %s",
+  "voidworks.dormant.awake": "Awake",
+  "voidworks.dormant.status": "Dormant: %s of %s void energy paid"
 }

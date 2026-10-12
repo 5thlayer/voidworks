@@ -52,6 +52,8 @@ public final class VoidworksGameTests {
         if (Boolean.getBoolean(OWN_RUN)) {
             // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
             modBus.addListener(SpendTests::registerCapabilities);
+            // A Dormant machine that ships with no Module, which the game-test pack gives a cost.
+            DormantTestMachine.register(modBus);
         }
     }
 
@@ -62,6 +64,7 @@ public final class VoidworksGameTests {
         ButterflyTests.register(tests);
         CommandTests.register(tests);
         DisplacerTests.register(tests);
+        DormantTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         PressureTests.register(tests);

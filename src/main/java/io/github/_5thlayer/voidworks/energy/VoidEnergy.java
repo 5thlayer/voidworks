@@ -119,6 +119,34 @@ public final class VoidEnergy {
     }
 
     /**
+     * Plans a spend of as much as the motes on hand release, up to {@code most}: as {@link #plan},
+     * when they are worth that much, and every worthwhile mote when they are worth less. It is never
+     * refused; a spend from motes worth nothing takes nothing. A Dormant machine soaks its cost so,
+     * paying what it can now and the rest as motes arrive.
+     *
+     * @param most the void energy to release at most, give or take the part of one mote; not negative
+     */
+    public static Spend planUpTo(Map<Integer, Integer> stacks, int pressure, long most) {
+        if (most < 0) {
+            throw new IllegalArgumentException("cannot release at most a negative amount: " + most);
+        }
+        return plan(stacks, pressure, Math.min(most, worth(stacks, pressure))).orElseThrow();
+    }
+
+    /** The void energy every worthwhile mote on hand releases together at {@code pressure}. */
+    private static long worth(Map<Integer, Integer> stacks, int pressure) {
+        requireNonNegative(pressure);
+        long worth = 0;
+        for (var stack : stacks.entrySet()) {
+            int grade = stack.getKey();
+            if (stack.getValue() > 0 && isGrade(grade) && grade > pressure) {
+                worth += stack.getValue() * release(grade, pressure).orElseThrow();
+            }
+        }
+        return worth;
+    }
+
+    /**
      * Refuses a grade no mote has.
      *
      * @return {@code grade}, when it runs from {@link #MIN_GRADE} to {@link #MAX_GRADE}

@@ -53,6 +53,16 @@ final class SpendTests {
         event.registerBlock(VoidworksCapabilities.MOTES, (level, pos, state, blockEntity, side) -> MACHINES.get(pos.immutable()), MACHINE);
     }
 
+    /**
+     * Places {@link #MACHINE} at {@code pos}, relative to the test, providing {@code store} as its
+     * {@code voidworks:motes}: a mote holder another test's machine can touch.
+     */
+    static void placeStore(GameTestHelper helper, BlockPos pos, ResourceHandler<MoteResource> store) {
+        var absolute = helper.absolutePos(pos);
+        MACHINES.put(absolute, store);
+        helper.getLevel().setBlockAndUpdate(absolute, MACHINE.defaultBlockState());
+    }
+
     /** A Consumer's void machine, as the spender finds it: a block that provides {@code voidworks:motes}. */
     private static void takesFromABlockThroughTheCapability(GameTestHelper helper) {
         var pos = helper.absolutePos(new BlockPos(1, 2, 1));

@@ -1,0 +1,185 @@
+// SPDX-FileCopyrightText: 2026 5thlayer
+// SPDX-License-Identifier: MIT
+
+package io.github._5thlayer.voidworks.dormant;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github._5thlayer.voidworks.Voidworks;
+import io.github._5thlayer.voidworks.VoidworksCapabilities;
+import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.butterfly.MoteFlight;
+import io.github._5thlayer.voidworks.energy.VoidSpender;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.datamaps.DataMapType;
+import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
+
+/**
+ * Dormant, the one piece every void machine whose recipe costs motes opts into: placed, it does
+ * nothing until it has soaked its cost in motes where it stands, from every mote store touching it
+ * (a Voidstone network, a Consumer's machine, anything providing {@code voidworks:motes}), by the
+ * spend rule at its own block. Paid, it wakes, and stays awake for good. A payment in part is kept,
+ * across a save and reload too, until the rest arrives.
+ *
+ * <p>A machine opts in in three places:
+ * <ul>
+ *   <li>its block entity holds a {@code Dormancy}, calls {@link #soak} on each server tick and works
+ *       only once it returns true, and saves and loads it with {@link #save} and {@link #load};</li>
+ *   <li>its block adds {@link #DORMANT} to its states, true by default, so its look can show it, and
+ *       may show a player {@link #status};</li>
+ *   <li>its cost, in void energy, is the {@link #DATA_MAP} entry for its block, which a datapack
+ *       overrides, such as
+ *       {@code {"values": {"voidworks:mutation_chamber": {"cost": 1600}}}} in
+ *       {@code data/<namespace>/data_maps/block/dormant_cost.json}. A block with no entry costs
+ *       nothing and wakes on its first tick.</li>
+ * </ul>
+ */
+public final class Dormancy {
+
+    /** Whether the machine is Dormant, for its look; {@link #awake} is the truth, and the state follows it. */
+    public static final BooleanProperty DORMANT = BooleanProperty.create("dormant");
+
+    /** The map's id, {@code voidworks:dormant_cost}, which names its file in a datapack. */
+    public static final Identifier DATA_MAP_ID = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dormant_cost");
+
+    /** An entry: the void energy a Dormant machine soaks before it wakes. */
+    public record Cost(long cost) {
+
+        public static final Codec<Cost> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ExtraCodecs.NON_NEGATIVE_LONG.fieldOf("cost").forGetter(Cost::cost)
+        ).apply(instance, Cost::new));
+    }
+
+    /** Each Dormant machine's cost, keyed by its block. */
+    public static final DataMapType<Block, Cost> DATA_MAP = DataMapType.builder(DATA_MAP_ID, Registries.BLOCK, Cost.CODEC).build();
+
+    private static final String KEY = "dormancy";
+    private static final String PAID_KEY = "paid";
+    private static final String AWAKE_KEY = "awake";
+
+    private final BlockEntity machine;
+    /** The void energy soaked so far; it may pass the cost by part of a mote. */
+    private long paid;
+    private boolean awake;
+    private int sinceSoak;
+
+    public Dormancy(BlockEntity machine) {
+        this.machine = machine;
+    }
+
+    public static void register(IEventBus modBus) {
+        modBus.addListener(Dormancy::registerDataMap);
+    }
+
+    private static void registerDataMap(RegisterDataMapTypesEvent event) {
+        event.register(DATA_MAP);
+    }
+
+    /**
+     * Soaks what it can of the cost from the mote stores touching the machine, once every
+     * {@link VoidworksConfig#soakInterval()} ticks, and wakes once it is paid. Called on each server
+     * tick; once awake, it takes nothing more.
+     *
+     * @return whether the machine is awake, so may work this tick
+     */
+    public boolean soak(ServerLevel level) {
+        if (!awake) {
+            if (++sinceSoak < VoidworksConfig.soakInterval() && paid < cost()) {
+                return false;
+            }
+            sinceSoak = 0;
+            soakFromNeighbours(level);
+            if (paid < cost()) {
+                return false;
+            }
+            awake = true;
+            machine.setChanged();
+        }
+        showAwake(level);
+        return true;
+    }
+
+    private void soakFromNeighbours(ServerLevel level) {
+        var pos = machine.getBlockPos();
+        for (var direction : Direction.values()) {
+            long owed = cost() - paid;
+            if (owed <= 0) {
+                return;
+            }
+            var neighbour = pos.relative(direction);
+            if (!level.isLoaded(neighbour)) {
+                continue;
+            }
+            var motes = level.getCapability(VoidworksCapabilities.MOTES, neighbour, direction.getOpposite());
+            if (motes == null) {
+                continue;
+            }
+            var spend = VoidSpender.spendUpTo(motes, level, pos, owed);
+            if (spend.released() > 0) {
+                paid += spend.released();
+                machine.setChanged();
+                spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, neighbour.getCenter(), pos, grade, count));
+            }
+        }
+    }
+
+    /** Brings the machine's look in line once it is awake, a machine loaded awake included. */
+    private void showAwake(ServerLevel level) {
+        var state = machine.getBlockState();
+        if (state.hasProperty(DORMANT) && state.getValue(DORMANT)) {
+            level.setBlock(machine.getBlockPos(), state.setValue(DORMANT, false), Block.UPDATE_ALL);
+        }
+    }
+
+    /** @return whether it has been paid and works; once true, it stays true */
+    public boolean awake() {
+        return awake;
+    }
+
+    /** @return the void energy soaked so far, at most the cost */
+    public long paid() {
+        return Math.min(paid, cost());
+    }
+
+    /** @return the void energy the machine soaks before it wakes, from its block's {@link #DATA_MAP} entry; 0 with none */
+    public long cost() {
+        return cost(machine.getBlockState());
+    }
+
+    /** @return the void energy a machine of {@code state}'s block soaks before it wakes; 0 with no entry */
+    public static long cost(BlockState state) {
+        var entry = state.typeHolder().getData(DATA_MAP);
+        return entry == null ? 0 : entry.cost();
+    }
+
+    /** @return for a player: Dormant with how much of its cost is paid, or awake */
+    public Component status() {
+        return awake
+                ? Component.translatable("voidworks.dormant.awake")
+                : Component.translatable("voidworks.dormant.status", paid(), cost());
+    }
+
+    public void save(ValueOutput output) {
+        var child = output.child(KEY);
+        child.putLong(PAID_KEY, paid);
+        child.putBoolean(AWAKE_KEY, awake);
+    }
+
+    public void load(ValueInput input) {
+        var child = input.childOrEmpty(KEY);
+        paid = child.getLongOr(PAID_KEY, 0);
+        awake = child.getBooleanOr(AWAKE_KEY, false);
+    }
+}

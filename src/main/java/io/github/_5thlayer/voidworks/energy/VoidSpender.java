@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.energy;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -48,11 +49,28 @@ public final class VoidSpender {
      */
     static Optional<Spend> spend(ResourceHandler<MoteResource> motes, int pressure, long required) {
         var plan = VoidEnergy.plan(countByGrade(motes), pressure, required);
-        if (plan.isEmpty()) {
-            return plan;
+        if (plan.isEmpty() || !take(motes, plan.get())) {
+            return Optional.empty();
         }
+        return plan;
+    }
+
+    /**
+     * Spends motes from {@code motes} to release as much void energy at {@code pos} as they hold, up
+     * to {@code most}, by the same rule as {@link #spend}: what a Dormant machine soaks. Where the
+     * motes are worth nothing, it takes nothing.
+     *
+     * @return what was taken and the void energy it released, with no motes when nothing was
+     */
+    public static Spend spendUpTo(ResourceHandler<MoteResource> motes, ServerLevel level, BlockPos pos, long most) {
+        var plan = VoidEnergy.planUpTo(countByGrade(motes), VoidPressure.at(level, pos), most);
+        return take(motes, plan) ? plan : new Spend(Map.of(), 0);
+    }
+
+    /** Takes what {@code plan} names from {@code motes}, all or nothing; the plan was made from what they held. */
+    private static boolean take(ResourceHandler<MoteResource> motes, Spend plan) {
         // Taken slot by slot: a store may keep the motes of one grade in several slots.
-        var left = new HashMap<>(plan.get().motes());
+        var left = new HashMap<>(plan.motes());
         // Closed without a commit, the transaction puts back whatever was taken.
         try (var transaction = Transaction.openRoot()) {
             for (int slot = 0; slot < motes.size(); slot++) {
@@ -66,11 +84,11 @@ public final class VoidSpender {
                 }
             }
             if (left.values().stream().anyMatch(count -> count > 0)) {
-                return Optional.empty();
+                return false;
             }
             transaction.commit();
         }
-        return plan;
+        return true;
     }
 
     /**

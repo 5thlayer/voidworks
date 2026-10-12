@@ -184,4 +184,38 @@ class VoidEnergyTest {
         assertEquals(Map.of(), spend.motes());
         assertEquals(0, spend.released());
     }
+
+    @Test
+    void aSpendUpToMoreThanTheMotesAreWorthTakesEveryWorthwhileMote() {
+        // At pressure 2: five grade 3 motes release 100 each and two grade 4 motes 200 each; grade 2 is worthless.
+        var spend = VoidEnergy.planUpTo(Map.of(2, 100, 3, 5, 4, 2), 2, 10_000);
+
+        assertEquals(Map.of(3, 5, 4, 2), spend.motes());
+        assertEquals(900, spend.released());
+    }
+
+    @Test
+    void aSpendUpToLessThanTheMotesAreWorthTakesTheLowestWorthwhileGradeFirst() {
+        var spend = VoidEnergy.planUpTo(Map.of(2, 100, 3, 5, 4, 2), 2, 300);
+
+        assertEquals(Map.of(3, 3), spend.motes());
+        assertEquals(300, spend.released());
+    }
+
+    @Test
+    void aSpendUpToFromWorthlessMotesTakesNothing() {
+        var spend = VoidEnergy.planUpTo(Map.of(2, 100), 2, 300);
+
+        assertEquals(Map.of(), spend.motes());
+        assertEquals(0, spend.released());
+    }
+
+    @Test
+    void aSpendUpToFromTheMostMotesOfTheHighestGradeDoesNotOverflow() {
+        var spend = VoidEnergy.planUpTo(Map.of(VoidEnergy.MAX_GRADE, Integer.MAX_VALUE), 0, Long.MAX_VALUE);
+
+        assertEquals(Map.of(VoidEnergy.MAX_GRADE, Integer.MAX_VALUE), spend.motes());
+        assertEquals(BigInteger.valueOf(VoidEnergy.BASE).shiftLeft(VoidEnergy.MAX_GRADE - 1)
+                .multiply(BigInteger.valueOf(Integer.MAX_VALUE)).longValueExact(), spend.released());
+    }
 }

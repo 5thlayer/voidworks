@@ -21,6 +21,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue ZONE;
     private static final ModConfigSpec.IntValue VOIDSTONE_CAPACITY;
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
+    private static final ModConfigSpec.IntValue SOAK_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
 
     static {
@@ -36,6 +37,9 @@ public final class VoidworksConfig {
         HARVEST_INTERVAL = builder
                 .comment("Ticks between an Overworld Void Displacer's harvests.")
                 .defineInRange("harvestInterval", 20, 1, 24000);
+        SOAK_INTERVAL = builder
+                .comment("Ticks between a Dormant machine's soaks of its cost from the mote stores touching it.")
+                .defineInRange("soakInterval", 20, 1, 24000);
         DENSITY_MOTES = builder
                 .comment("How many motes a fed block yields, by its Density from 1 to 4: steeply rising, about 4^(Density - 1).")
                 .defineList("densityMotes", List.of(1, 4, 16, 64), () -> 1,
@@ -59,6 +63,11 @@ public final class VoidworksConfig {
     /** @return ticks between a Displacer's harvests */
     public static int harvestInterval() {
         return HARVEST_INTERVAL.getAsInt();
+    }
+
+    /** @return ticks between a Dormant machine's soaks */
+    public static int soakInterval() {
+        return SOAK_INTERVAL.getAsInt();
     }
 
     /**

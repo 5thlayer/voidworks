@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.Displacement;
+import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
@@ -17,8 +18,8 @@ import net.neoforged.fml.config.ModConfig;
 /**
  * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
  * ships), Voidstone and the Overworld Void Displacer with their displacement table and server
- * config, the {@code /voidworks} commands and the game tests, which exist only when game tests are
- * enabled.
+ * config, the Dormant machines' cost map, the {@code /voidworks} commands and the game tests,
+ * which exist only when game tests are enabled.
  */
 @Mod(Voidworks.MOD_ID)
 public final class Voidworks {
@@ -33,6 +34,7 @@ public final class Voidworks {
         VoidworksButterflies.register(modBus);
         VoidworksBlocks.register(modBus);
         Displacement.register(modBus);
+        Dormancy.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);

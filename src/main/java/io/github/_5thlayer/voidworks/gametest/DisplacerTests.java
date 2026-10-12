@@ -314,7 +314,7 @@ final class DisplacerTests {
         return count;
     }
 
-    private static int pressure(GameTestHelper helper, BlockPos pos) {
+    static int pressure(GameTestHelper helper, BlockPos pos) {
         return VoidPressure.at(helper.getLevel(), helper.absolutePos(pos));
     }
 

@@ -10,6 +10,10 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 - Voidstone networks: touching Voidstone is one network, a single pool of motes whose capacity grows by a fixed amount per Voidstone, and networks that come to touch merge. Every Voidstone provides the network's `voidworks:motes`, so `VoidSpender.spend` spends from it. (#26)
 - A server config, `voidworks-server.toml`, with the provisional numbers: `zone` (64 harvests), `voidstoneCapacity` (16 motes), `harvestInterval` (20 ticks) and `densityMotes` (1, 4, 16, 64). (#26)
 - `/voidworks mote <pos> <grade> [count]` puts motes into the network of the Voidstone at `pos`, as many as it has room for, or with no count fills it. (#26)
+- Dormant, for any void machine whose recipe costs motes, a Consumer's too: its block entity holds a `Dormancy`, calls `soak(level)` each server tick and works only once it returns true, and saves it with `save` and `load`. Its block adds `Dormancy.DORMANT`, true when placed and false once awake, for its look, and `status()` tells a player how much of the cost is paid. Dormant, it soaks its cost from every touching mote store (`voidworks:motes`) by the spend rule at its own block, and wakes once paid, for good; a partial payment is saved. (#34)
+- The Dormant cost, in void energy, is the `voidworks:dormant_cost` data map on blocks (`data/<namespace>/data_maps/block/dormant_cost.json`), such as `{"values": {"voidworks:mutation_chamber": {"cost": 1600}}}`. A block with no entry costs nothing. Voidworks ships no entries yet. (#34)
+- `soakInterval` in `voidworks-server.toml`: ticks between a Dormant machine's soaks, 20 by default. (#34)
+- `VoidSpender.spendUpTo(motes, level, pos, most)` spends as much as a store's motes release where the spender stands, up to `most`, and is never refused; `VoidEnergy.planUpTo` is the same rule as plain logic. (#34)
 
 ## 0.1.0
 

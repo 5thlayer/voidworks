@@ -96,7 +96,7 @@ final class VoidstoneTests {
         return network;
     }
 
-    private static int insert(GameTestHelper helper, BlockPos pos, int grade, int count) {
+    static int insert(GameTestHelper helper, BlockPos pos, int grade, int count) {
         try (var transaction = Transaction.openRoot()) {
             int inserted = network(helper, pos).insert(MoteResource.of(grade), count, transaction);
             transaction.commit();
