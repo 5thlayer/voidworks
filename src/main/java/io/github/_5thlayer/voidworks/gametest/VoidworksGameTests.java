@@ -31,6 +31,10 @@ public final class VoidworksGameTests {
     /** The system property that build.gradle's {@code gameTestServer} run sets, for what only it registers. */
     private static final String OWN_RUN = "voidworks.gametest";
 
+    /** The system property the convention plugin names each run in, which DevPacks reads too. */
+    private static final String RUN = "libworks.run";
+    private static final String DEV_CLIENT = "client";
+
     private static final Identifier PLATFORM = id("gametest/platform");
 
     private static final DeferredRegister<MapCodec<? extends GameTestInstance>> TEST_TYPES =
@@ -52,7 +56,10 @@ public final class VoidworksGameTests {
         if (Boolean.getBoolean(OWN_RUN)) {
             // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
             modBus.addListener(SpendTests::registerCapabilities);
-            // A Dormant machine that ships with no Module, which the game-test pack gives a cost.
+        }
+        // A Dormant machine that ships with no Module, which the game-test pack gives a cost, and the dev
+        // pack too, so the dev client can pay it by hand with a Void Siphon until a real one ships.
+        if (Boolean.getBoolean(OWN_RUN) || DEV_CLIENT.equals(System.getProperty(RUN))) {
             DormantTestMachine.register(modBus);
         }
     }

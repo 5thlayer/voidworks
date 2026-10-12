@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dormant=false": {
+      "model": "minecraft:block/amethyst_block"
+    },
+    "dormant=true": {
+      "model": "minecraft:block/crying_obsidian"
+    }
+  }
+}

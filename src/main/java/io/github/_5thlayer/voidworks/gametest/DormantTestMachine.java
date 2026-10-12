@@ -9,6 +9,8 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -19,6 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -26,9 +29,11 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A void machine for the game tests alone, {@code voidworks:dormant_test_machine}: it opts into
- * {@link Dormancy} as a real one does, and its work is counting the ticks it has worked. Only the
- * game test run registers it, and the game-test pack gives its cost.
+ * A void machine for the Module's own runs, {@code voidworks:dormant_test_machine}: it opts into
+ * {@link Dormancy} as a real one does, and its work is counting the ticks it has worked. The game
+ * test run registers it, and the dev client too, so a player can pay it by hand; the game-test pack
+ * and the dev pack give its cost. It has no item: {@code /setblock} places it, and an empty hand
+ * asks it how much is paid.
  */
 final class DormantTestMachine extends BaseEntityBlock {
 
@@ -66,6 +71,18 @@ final class DormantTestMachine extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new Entity(pos, state);
+    }
+
+    /** An empty hand is told how much of its cost is paid, or that it is awake. */
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (level.getBlockEntity(pos) instanceof Entity machine) {
+            if (!level.isClientSide()) {
+                player.sendOverlayMessage(machine.dormancy().status());
+            }
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
     }
 
     @Override
