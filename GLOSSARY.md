@@ -82,8 +82,9 @@ Standing on Voidstone, it charges from the network or empties into it, as its ho
 _Avoid_: glove
 
 **Dormant**:
-A void machine placed but not yet paid for: it soaks its cost in motes where it stands, from a
-touching network or an emptying Void Siphon, and works once it is paid. A machine that costs no
+A void machine placed but not yet paid for: it soaks its cost in motes where it stands, from any
+touching mote store (a Voidstone network, another void machine) or an emptying Void Siphon, and
+works once it is paid. A machine that costs no
 motes, such as the Overworld's Void Displacer, is never dormant.
 _Avoid_: frame, uncharged (charging is the Void Siphon's)
 
