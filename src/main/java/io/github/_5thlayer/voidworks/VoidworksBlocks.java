@@ -21,7 +21,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -30,7 +29,6 @@ import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -124,7 +122,6 @@ public final class VoidworksBlocks {
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         modBus.addListener(VoidworksBlocks::registerCapabilities);
-        modBus.addListener(VoidworksBlocks::addToCreativeTabs);
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
@@ -137,15 +134,5 @@ public final class VoidworksBlocks {
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,
                 VOIDSTONE.get());
-    }
-
-    private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
-            event.accept(OVERWORLD_DISPLACER_ITEM.get());
-            event.accept(NETHER_DISPLACER_ITEM.get());
-            event.accept(END_DISPLACER_ITEM.get());
-            event.accept(MUTATION_CHAMBER_ITEM.get());
-            event.accept(VOID_CRUCIBLE_ITEM.get());
-        }
     }
 }

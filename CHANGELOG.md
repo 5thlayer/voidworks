@@ -5,6 +5,7 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 ## Unreleased
 
 - Jade's upgrade line on the Void Crucible no longer ends in "paid in time": it reads like the Mutation Chamber's, the Rung's count, result and void energy cost. (#46)
+- Every Voidworks item is in the suite's Works tab (`libworks:works`), in a fixed order, and no longer in vanilla's Functional Blocks or Tools & Utilities tabs.
 
 ## 0.1.1
 
