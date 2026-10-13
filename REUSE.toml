@@ -19,6 +19,7 @@ path = [
     "src/main/resources/**/*.png",
     "LICENSE",
     "NOTICE",
+    "publish/summary.txt",
     ".github/**",
 ]
 SPDX-FileCopyrightText = "2026 5thlayer"
@@ -58,3 +59,9 @@ path = [".claude/skills/**"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Matt Pocock"
 SPDX-License-Identifier = "MIT"
+
+# Temporary cover and icon for mod pages, drawn from the Voidstone and Displacer sprites.
+[[annotations]]
+path = ["publish/*.png"]
+SPDX-FileCopyrightText = ["Malcolm Riley", "2026 5thlayer"]
+SPDX-License-Identifier = "CC-BY-4.0"
