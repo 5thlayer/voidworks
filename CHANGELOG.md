@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+- Jade's upgrade line on the Void Crucible no longer ends in "paid in time": it reads like the Mutation Chamber's, the Rung's count, result and void energy cost. (#46)
+
 ## 0.1.1
 
 - Voidstone and the Overworld Void Displacer (crying obsidian on the corners, ender pearls on the sides, a sticky piston in the centre). The Displacer works only where the harvest kind is `overworld`: it swaps fed blocks with the natural terrain (`#voidworks:overworld_terrain`) touching it or its own Voidstone, nearest first, leaving Voidstone, and each harvest's motes, at one grade above the local Void Pressure, fly to it as butterflies and land in the network its Voidstone forms; each harvest plays vanilla's chorus fruit teleport sound for now, and the swapped-out terrain crumbles into its breaking particles. Its Zone is a count of harvests; spent, or with nothing left in reach, it becomes Voidstone and its motes stay, but one that could reach no terrain before its first harvest pops off as its item. Until then it cannot be broken or moved, and Voidstone never can; Voidstone has no item. A full output, or a network that cannot take a harvest's motes, stalls it; an empty hand takes back its fed blocks. Placed where the harvest kind is not `overworld`, it refuses: it pops off as its item with what it holds. (#26)
