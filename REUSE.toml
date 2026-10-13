@@ -26,7 +26,7 @@ SPDX-FileCopyrightText = "2026 5thlayer"
 SPDX-License-Identifier = "MIT"
 
 # Malcolm Riley's unused textures: the Void Siphon's, the Void Displacers', Voidstone's and the
-# Unmaking Chamber's sprites, with the unmodified copies they are built from (NOTICE).
+# Mutation and Unmaking Chambers' sprites, with the unmodified copies they are built from (NOTICE).
 [[annotations]]
 path = [
     "data/art/*.png",
@@ -41,6 +41,7 @@ path = [
     "src/main/resources/assets/voidworks/textures/block/voidstone.png",
     "src/main/resources/assets/voidworks/textures/block/end_voidstone.png",
     "src/main/resources/assets/voidworks/textures/block/nether_voidstone.png",
+    "src/main/resources/assets/voidworks/textures/block/mutation_chamber_side*.png",
     "src/main/resources/assets/voidworks/textures/block/unmaking_chamber_side*.png",
 ]
 precedence = "override"

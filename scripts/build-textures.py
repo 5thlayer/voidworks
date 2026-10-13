@@ -30,6 +30,10 @@ recoloured into the abyssium's purples and let into the abyssium casing inside i
 reads as a void machine beside the Displacers. Awake, the clutch's four engaged lights, red in the
 lit clutch, glow amethyst; Dormant, they stay the casing's own.
 
+The Mutation Chamber's sides are the workbench's crafting grid, standing for the smithing table,
+recoloured into the abyssium's purples and let into the casing inside its frame as the Unmaking
+Chamber's clutch is. Awake, the grid's cells glow amethyst; Dormant, they stay the casing's own.
+
 Run from the repository root; it needs Pillow.
 """
 
@@ -65,8 +69,12 @@ NETHER_CASING = [(0x16, 0x06, 0x08), (0x5A, 0x1A, 0x1E), (0x9C, 0x4A, 0x44)]
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
 VOIDSTONE_LIGHT = (0x62, 0x12, 0x50)
 
-# The box of the clutch let into the casing, inside the casing's frame.
+# The box of a sprite let into the casing, inside the casing's frame.
 CLUTCH = (2, 2, 14, 14)
+# The box of the crafting grid's cells, which glow on the awake Mutation Chamber, and how bright a
+# cell's pixels are in the workbench, from darkest to lightest.
+GRID = (4, 4, 12, 12)
+CELL = (380, 600)
 # What the lit clutch's engaged lights become on the awake Unmaking Chamber.
 AMETHYST = (0xD6, 0x8C, 0xFF)
 
@@ -141,11 +149,28 @@ def voidstone():
     save(recolour(sand, NETHER_CASING), TEXTURES / "block" / "nether_voidstone.png")
 
 
-def unmaking_chamber(abyssium):
+def let_into(abyssium, name):
+    """The sprite recoloured into the abyssium's purples and let into the casing inside its frame."""
     shades = sorted({pixel[:3] for pixel in abyssium.get_flattened_data() if pixel[3]}, key=sum)
-    clutch = recolour(sprite("device_gearbox_clutch_off"), shades)
-    dormant = abyssium.copy()
-    dormant.paste(clutch.crop(CLUTCH), CLUTCH[:2])
+    face = abyssium.copy()
+    face.paste(recolour(sprite(name), shades).crop(CLUTCH), CLUTCH[:2])
+    return face
+
+
+def mutation_chamber(abyssium):
+    dormant = let_into(abyssium, "device_workbench_top")
+    save(dormant, TEXTURES / "block" / "mutation_chamber_side_dormant.png")
+    awake = dormant.copy()
+    pixels, grid = awake.load(), sprite("device_workbench_top").load()
+    for y in range(GRID[1], GRID[3]):
+        for x in range(GRID[0], GRID[2]):
+            if CELL[0] < sum(grid[x, y][:3]) < CELL[1]:
+                pixels[x, y] = (*AMETHYST, 255)
+    save(awake, TEXTURES / "block" / "mutation_chamber_side.png")
+
+
+def unmaking_chamber(abyssium):
+    dormant = let_into(abyssium, "device_gearbox_clutch_off")
     save(dormant, TEXTURES / "block" / "unmaking_chamber_side_dormant.png")
     awake = dormant.copy()
     pixels, lit = awake.load(), sprite("device_gearbox_clutch_on").load()
@@ -172,6 +197,7 @@ def main():
     displacer_face(nether_casing, "device_brooding_forge_side_off", FLAME, "nether_void_displacer_side_dormant")
     displacer_face(nether_casing, "device_brooding_forge_up_off", EYE, "nether_void_displacer_top_dormant")
     voidstone()
+    mutation_chamber(abyssium)
     unmaking_chamber(abyssium)
 
 
