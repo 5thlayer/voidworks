@@ -13,7 +13,7 @@ final class CreativeTabTests {
 
     private static final List<String> WORKS_TAB_ORDER = List.of(
             "overworld_void_displacer", "nether_void_displacer", "end_void_displacer",
-            "mutation_chamber", "void_crucible", "void_siphon");
+            "mutation_chamber", "unmaking_chamber", "void_crucible", "void_siphon");
 
     private CreativeTabTests() {
     }

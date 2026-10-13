@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:crying_obsidian",
+    "G": "minecraft:grindstone"
+  },
+  "pattern": [
+    "ACA",
+    "AGA",
+    "ACA"
+  ],
+  "result": {
+    "id": "voidworks:unmaking_chamber"
+  }
+}

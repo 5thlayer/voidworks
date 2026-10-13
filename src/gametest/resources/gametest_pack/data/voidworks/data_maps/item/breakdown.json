@@ -1,0 +1,16 @@
+{
+  "values": {
+    "minecraft:stick": {
+      "count": 4,
+      "ingredients": [
+        {
+          "item": "minecraft:oak_planks",
+          "count": 2
+        }
+      ]
+    },
+    "minecraft:gold_block": {
+      "ingredients": []
+    }
+  }
+}

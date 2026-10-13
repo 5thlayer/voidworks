@@ -22,8 +22,9 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 - **Density.** What you feed sets how many motes a harvest yields: copper and coal blocks are the lightest, diamond and netherite blocks the densest.
 - **Voidstone networks.** Touching Voidstone is one network holding one pool of motes, and every Voidstone adds room.
 - **The Void Siphon.** A wand that harvests by hand, a step below a Displacer, and carries motes between networks and dimensions. Standing on Voidstone, it charges from the network or empties into it.
-- **Dormant machines.** The End and Nether Displacers and the Mutation Chamber are placed Dormant and wake once their cost in void energy is paid, by the networks touching them or by a Siphon.
+- **Dormant machines.** The End and Nether Displacers and the Mutation and Unmaking Chambers are placed Dormant and wake once their cost in void energy is paid, by the networks touching them or by a Siphon.
 - **The Mutation Chamber.** Upgrades items up their Family for motes, with a chance per upgrade. It has no screen: hoppers and belts feed and empty it.
+- **The Unmaking Chamber.** Breaks an item down into its crafting recipe's ingredients for motes, each coming back by chance at a yield that rises as it works.
 - **The Void Crucible.** Upgrades for free, slowly. It is fastest in the End and slowest in the Nether, and Crucibles working near each other share one rate.
 - **Jade support.** Jade shows a network's motes and what they are worth where you stand, a machine's upgrade, progress and what stalls it, and how much of a Dormant machine's cost is paid. Voidworks runs without Jade.
 

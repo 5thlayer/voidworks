@@ -23,6 +23,7 @@ final class WorksTabContents {
         event.accept(VoidworksBlocks.NETHER_DISPLACER_ITEM.get());
         event.accept(VoidworksBlocks.END_DISPLACER_ITEM.get());
         event.accept(VoidworksBlocks.MUTATION_CHAMBER_ITEM.get());
+        event.accept(VoidworksBlocks.UNMAKING_CHAMBER_ITEM.get());
         event.accept(VoidworksBlocks.VOID_CRUCIBLE_ITEM.get());
         event.accept(VoidworksItems.VOID_SIPHON.get());
     }
