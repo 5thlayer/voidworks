@@ -10,6 +10,8 @@
   "commands.voidworks.butterflies": "Showed %s butterflies for %s motes of grade %s",
   "commands.voidworks.mote": "Put %s motes of grade %s into the network at %s, which holds %s of %s",
   "commands.voidworks.mote.not_voidstone": "There is no Voidstone at %s",
+  "commands.voidworks.showcase": "Built %s Voidstone with %s motes at its near end, %s, and a Dormant Mutation Chamber at its far end",
+  "commands.voidworks.showcase.pressure_too_high": "The Void Pressure here is too high for any mote to be worth something",
   "commands.voidworks.pressure": "Void Pressure here is %s, harvest kind %s",
   "config.jade.plugin_voidworks.chamber": "Mutation Chamber state",
   "config.jade.plugin_voidworks.crucible": "Void Crucible state",

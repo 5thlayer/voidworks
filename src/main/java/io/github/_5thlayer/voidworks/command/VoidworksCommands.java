@@ -37,6 +37,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  *   <li>{@code /voidworks mote <pos> <grade> [count]} puts {@code count} motes of {@code grade}
  *       into the network of the Voidstone at {@code pos}, as many as it has room for, or with no
  *       count fills it.</li>
+ *   <li>{@code /voidworks showcase} builds a line of Voidstone ahead of the player, motes at its
+ *       near end and a Dormant Mutation Chamber at its far end, to watch motes conduct
+ *       ({@link Showcase}).</li>
  * </ul>
  */
 public final class VoidworksCommands {
@@ -55,6 +58,8 @@ public final class VoidworksCommands {
     private static void registerCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("voidworks")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.literal("showcase")
+                        .executes(VoidworksCommands::showcase))
                 .then(Commands.literal("pressure")
                         .executes(VoidworksCommands::pressure))
                 .then(Commands.literal("butterflies")
@@ -92,6 +97,21 @@ public final class VoidworksCommands {
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.mote",
                 inserted, grade, pos.toShortString(), holds, capacity), false);
         return inserted;
+    }
+
+    /** Builds the conduction showcase two blocks ahead of the player, at their feet. @return how many motes went in */
+    private static int showcase(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        var facing = player.getDirection();
+        var start = player.blockPosition().relative(facing, 2);
+        int motes = Showcase.build(player.level(), start, facing);
+        if (motes < 0) {
+            context.getSource().sendFailure(Component.translatable("commands.voidworks.showcase.pressure_too_high"));
+            return 0;
+        }
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.showcase",
+                Showcase.LENGTH, motes, start.toShortString()), false);
+        return motes;
     }
 
     /** @return the Void Pressure at the player's feet */

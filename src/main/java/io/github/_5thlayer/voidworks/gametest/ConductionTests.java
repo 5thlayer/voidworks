@@ -7,13 +7,16 @@ import java.util.Map;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
+import io.github._5thlayer.voidworks.command.Showcase;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -40,6 +43,8 @@ final class ConductionTests {
     private static final int WELL_STEPS = 5;
 
     private static final int TICKS = 400;
+    /** Long enough for the showcase's motes to crawl its whole line. */
+    private static final int SHOWCASE_TICKS = 600;
 
     private ConductionTests() {
     }
@@ -50,6 +55,7 @@ final class ConductionTests {
                 ConductionTests::wellSoaksUp);
         tests.test("a_broken_void_well_loses_its_motes", TICKS, ConductionTests::brokenWellLosesItsMotes);
         tests.test("the_void_well_has_a_recipe", 1, ConductionTests::hasARecipe);
+        tests.test("the_showcase_s_motes_crawl_to_its_chamber_and_wake_it", SHOWCASE_TICKS, ConductionTests::showcaseWakesItsChamber);
     }
 
     /** Motes put in at the west end are not at the east at once, and reach the machine there in time. */
@@ -107,6 +113,16 @@ final class ConductionTests {
                             "the network holds " + motes + ", not only the " + left + " motes the Voidstone held");
                 })
                 .thenSucceed();
+    }
+
+    /** The showcase fills the platform's width: its line from the west edge, its Chamber on the east. */
+    private static void showcaseWakesItsChamber(GameTestHelper helper) {
+        var start = new BlockPos(0, 1, 4);
+        int motes = Showcase.build(helper.getLevel(), helper.absolutePos(start), Direction.EAST);
+        helper.assertTrue(motes == Showcase.MOTES, "the showcase put in " + motes + " motes, not " + Showcase.MOTES);
+        var chamber = helper.getBlockEntity(start.east(Showcase.LENGTH), MutationChamberBlockEntity.class);
+        helper.succeedWhen(() -> helper.assertTrue(chamber.dormancy().awake(),
+                "the showcase's Chamber is still Dormant, paid " + chamber.dormancy().paid()));
     }
 
     private static void hasARecipe(GameTestHelper helper) {
