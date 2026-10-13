@@ -2,7 +2,7 @@
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
     "top": "minecraft:block/obsidian",
-    "bottom": "minecraft:block/polished_blackstone",
-    "side": "minecraft:block/smooth_stone"
+    "bottom": "minecraft:block/obsidian",
+    "side": "voidworks:block/unmaking_chamber_side_dormant"
   }
 }

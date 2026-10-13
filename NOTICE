@@ -104,3 +104,22 @@ Source:  https://github.com/malcolmriley/unused-textures
          into the Nether Void Displacer's casing reds.
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
+
+Unmaking Chamber sprites
+------------------------
+
+Files:   data/art/block_metal_abyssium.png
+         data/art/device_gearbox_clutch_off.png
+         data/art/device_gearbox_clutch_on.png
+         src/main/resources/assets/voidworks/textures/block/unmaking_chamber_side.png
+         src/main/resources/assets/voidworks/textures/block/unmaking_chamber_side_dormant.png
+Author:  Malcolm Riley
+Source:  https://github.com/malcolmriley/unused-textures
+         blocks/block_metal_abyssium.png, device_gearbox_clutch_off.png and
+         device_gearbox_clutch_on.png at commit 9218cb8997bf1dc83617bd7748acf44a16c19c42. The files
+         under data/art/ are the unmodified copies. The Chamber's sprites are built from them by
+         scripts/build-textures.py, which recolours the unlit clutch into the abyssium block's
+         purples and lets it into the abyssium casing, and for the awake sprite turns the lit
+         clutch's engaged lights amethyst.
+Licence: Creative Commons Attribution 4.0 International
+         https://creativecommons.org/licenses/by/4.0/
