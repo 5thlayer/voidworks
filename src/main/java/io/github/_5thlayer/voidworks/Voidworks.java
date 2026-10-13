@@ -7,6 +7,7 @@ import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.Displacement;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.Hatching;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.mutation.Families;
@@ -24,7 +25,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
  * ships), Voidstone and the Void Displacers with their displacement table and server
  * config, the Dormant machines' cost map, conduction through Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the
- * Void Siphon, the dragon eggs and the Dragonling they hatch, the {@code /voidworks} commands and the game tests, which exist only when game tests
+ * Void Siphon, the dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, the {@code /voidworks} commands and the game tests, which exist only when game tests
  * are enabled.
  */
 @Mod(Voidworks.MOD_ID)
@@ -49,6 +50,7 @@ public final class Voidworks {
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);
         NeoForge.EVENT_BUS.addListener(Conduction::onLevelTick);
         Hatching.register();
+        DragonPresences.register();
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);
     }

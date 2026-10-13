@@ -22,11 +22,12 @@ import net.minecraft.util.Mth;
 
 /**
  * Draws a Void Dragon as the vanilla Ender Dragon's model, baked from the player's own game, at
- * {@link #DRAGONLING_SCALE} of its size, posed from its flight history and wingbeat as the Ender
+ * {@link #DRAGONLING_SCALE} of its size for a Dragonling and {@link VoidDragon#GROWN_SCALE} times that
+ * for a grown dragon's presence, posed from its flight history and wingbeat as the Ender
  * Dragon is. Nothing of Mojang's ships in the jar: until it has a texture of its own, it wears the
  * vanilla texture, read from the player's game, tinted the void's purple.
  */
-final class VoidDragonRenderer extends EntityRenderer<VoidDragon, EnderDragonRenderState> {
+final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRenderer.State> {
 
     /** A Dragonling is about a fifth of the Ender Dragon's size. */
     static final float DRAGONLING_SCALE = 0.2F;
@@ -38,30 +39,42 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, EnderDragonRen
 
     private final EnderDragonModel model;
 
+    /** The Ender Dragon's, and how much smaller this one is drawn. */
+    static final class State extends EnderDragonRenderState {
+
+        float scale = DRAGONLING_SCALE;
+    }
+
     VoidDragonRenderer(EntityRendererProvider.Context context) {
         super(context);
-        shadowRadius = 8.0F * DRAGONLING_SCALE;
         model = new EnderDragonModel(context.bakeLayer(ModelLayers.ENDER_DRAGON));
     }
 
     @Override
-    public EnderDragonRenderState createRenderState() {
-        return new EnderDragonRenderState();
+    public State createRenderState() {
+        return new State();
     }
 
     @Override
-    public void extractRenderState(VoidDragon dragon, EnderDragonRenderState state, float partialTicks) {
+    public void extractRenderState(VoidDragon dragon, State state, float partialTicks) {
         super.extractRenderState(dragon, state, partialTicks);
+        state.scale = dragon.grown() ? DRAGONLING_SCALE * VoidDragon.GROWN_SCALE : DRAGONLING_SCALE;
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
         state.flightHistory.copyFrom(dragon.flightHistory);
     }
 
-    /** As the Ender Dragon's renderer poses its model, scaled down to a Dragonling's size. */
+    /** The Ender Dragon's shadow, scaled as the dragon is. */
     @Override
-    public void submit(EnderDragonRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
+    protected float getShadowRadius(State state) {
+        return 8.0F * state.scale;
+    }
+
+    /** As the Ender Dragon's renderer poses its model, scaled down to its own size. */
+    @Override
+    public void submit(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
         poseStack.pushPose();
-        poseStack.scale(DRAGONLING_SCALE, DRAGONLING_SCALE, DRAGONLING_SCALE);
+        poseStack.scale(state.scale, state.scale, state.scale);
         float yRot = state.getHistoricalPos(7).yRot();
         float climb = (float) (state.getHistoricalPos(5).y() - state.getHistoricalPos(10).y());
         poseStack.mulPose(Axis.YP.rotationDegrees(-yRot));

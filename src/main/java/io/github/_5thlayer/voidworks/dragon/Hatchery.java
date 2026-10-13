@@ -12,9 +12,7 @@ import java.util.function.Predicate;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.resources.Identifier;
 
 /**
  * Every owner's dragons, server-wide: the eggs soaking, by where they stand and who placed them, and
@@ -25,30 +23,17 @@ import net.minecraft.resources.Identifier;
  */
 public final class Hatchery {
 
-    /**
-     * Where an egg stands: its dimension and position.
-     *
-     * @param dimension the dimension's id, such as {@code minecraft:overworld}
-     */
-    public record Egg(Identifier dimension, BlockPos pos) {
-
-        static final Codec<Egg> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Identifier.CODEC.fieldOf("dimension").forGetter(Egg::dimension),
-                BlockPos.CODEC.fieldOf("pos").forGetter(Egg::pos)
-        ).apply(instance, Egg::new));
-    }
-
-    private record Soaking(Egg egg, UUID owner) {
+    private record Soaking(Place egg, UUID owner) {
 
         static final Codec<Soaking> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Egg.CODEC.fieldOf("egg").forGetter(Soaking::egg),
+                Place.CODEC.fieldOf("egg").forGetter(Soaking::egg),
                 UUIDUtil.CODEC.fieldOf("owner").forGetter(Soaking::owner)
         ).apply(instance, Soaking::new));
     }
 
     private final LongSupplier firstPrice;
     private final Map<UUID, Integer> hatched = new HashMap<>();
-    private final Map<Egg, UUID> soaking = new HashMap<>();
+    private final Map<Place, UUID> soaking = new HashMap<>();
     private Runnable onChange = () -> {
     };
 
@@ -78,7 +63,7 @@ public final class Hatchery {
      *
      * @return its price, fixed now, in void energy
      */
-    public long startSoaking(Egg egg, UUID owner) {
+    public long startSoaking(Place egg, UUID owner) {
         long price = price(firstPrice.getAsLong(), dragons(owner));
         soaking.put(egg, owner);
         onChange.run();
@@ -86,7 +71,7 @@ public final class Hatchery {
     }
 
     /** The egg at {@code egg} has hatched: its owner has one more dragon, and it soaks no longer. */
-    public void hatch(Egg egg) {
+    public void hatch(Place egg) {
         var owner = soaking.remove(egg);
         if (owner != null) {
             hatched.merge(owner, 1, Integer::sum);
@@ -95,7 +80,7 @@ public final class Hatchery {
     }
 
     /** The egg at {@code egg} is gone before it hatched, broken or otherwise, and no longer counts. */
-    public void lose(Egg egg) {
+    public void lose(Place egg) {
         if (soaking.remove(egg) != null) {
             onChange.run();
         }
@@ -105,7 +90,7 @@ public final class Hatchery {
      * Forgets each of {@code owner}'s soaking eggs that {@code gone} says no longer stands, such as
      * one a world edit took away unseen, so it no longer doubles their next egg's price.
      */
-    public void forgetGone(UUID owner, Predicate<Egg> gone) {
+    public void forgetGone(UUID owner, Predicate<Place> gone) {
         if (soaking.entrySet().removeIf(entry -> entry.getValue().equals(owner) && gone.test(entry.getKey()))) {
             onChange.run();
         }

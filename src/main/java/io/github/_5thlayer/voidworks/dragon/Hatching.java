@@ -3,9 +3,9 @@
 
 package io.github._5thlayer.voidworks.dragon;
 
-import io.github._5thlayer.voidworks.VoidworksBlocks;
 import java.util.Arrays;
 
+import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

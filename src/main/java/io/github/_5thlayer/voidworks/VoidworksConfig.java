@@ -38,6 +38,8 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_RATE;
     private static final ModConfigSpec.LongValue FIRST_EGG_PRICE;
+    private static final ModConfigSpec.IntValue DRAGONLING_GROW_TICKS;
+    private static final ModConfigSpec.LongValue DRAGONLING_FEED_ENERGY;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -108,6 +110,12 @@ public final class VoidworksConfig {
                 .comment("The void energy a player's first dragon egg soaks before it hatches. Each egg's price is fixed when it",
                         "starts soaking, at this doubled for every dragon its owner has hatched or is soaking.")
                 .defineInRange("firstEggPrice", 25_600L, 1L, Long.MAX_VALUE);
+        DRAGONLING_GROW_TICKS = builder
+                .comment("Ticks a Dragonling takes to grow into a Void Dragon, counted only while its chunk is loaded.")
+                .defineInRange("dragonlingGrowTicks", 48_000, 1, Integer.MAX_VALUE);
+        DRAGONLING_FEED_ENERGY = builder
+                .comment("The void energy its owner feeds a Dragonling, from a Void Siphon, that takes a minute off its growing.")
+                .defineInRange("dragonlingFeedEnergy", 1_000L, 1L, Long.MAX_VALUE);
         SPEC = builder.build();
     }
 
@@ -188,6 +196,16 @@ public final class VoidworksConfig {
     /** @return the void energy a player's first dragon egg soaks before it hatches */
     public static long firstEggPrice() {
         return FIRST_EGG_PRICE.getAsLong();
+    }
+
+    /** @return ticks a Dragonling takes to grow up, while its chunk is loaded */
+    public static int dragonlingGrowTicks() {
+        return DRAGONLING_GROW_TICKS.getAsInt();
+    }
+
+    /** @return the void energy fed to a Dragonling that takes a minute off its growing */
+    public static long dragonlingFeedEnergy() {
+        return DRAGONLING_FEED_ENERGY.getAsLong();
     }
 
     /** @return whether the server config is loaded, which the client has only on a server */

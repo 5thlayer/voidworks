@@ -12,8 +12,6 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -67,8 +65,8 @@ public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy
     }
 
     /** @return whether {@code owner}'s egg at {@code egg} is known to stand no longer; one in an unloaded chunk may still */
-    private static boolean gone(MinecraftServer server, Hatchery.Egg egg, UUID owner) {
-        var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, egg.dimension()));
+    private static boolean gone(MinecraftServer server, Place egg, UUID owner) {
+        var level = egg.level(server);
         if (level == null) {
             return true;
         }
@@ -98,8 +96,8 @@ public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy
         level.removeBlock(pos, false);
         var dragonling = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.BREEDING);
         if (dragonling != null) {
-            dragonling.setOwner(owner);
             dragonling.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
+            dragonling.hatchFor(owner);
             level.addFreshEntity(dragonling);
         }
         level.playSound(null, pos, SoundEvents.SNIFFER_EGG_HATCH, SoundSource.BLOCKS, 1.0F, 0.6F);
@@ -115,8 +113,8 @@ public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy
         }
     }
 
-    private Hatchery.Egg egg(ServerLevel level) {
-        return new Hatchery.Egg(level.dimension().identifier(), worldPosition);
+    private Place egg(ServerLevel level) {
+        return Place.of(level, worldPosition);
     }
 
     @Override

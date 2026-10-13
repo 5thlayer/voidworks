@@ -10,6 +10,7 @@ import io.github._5thlayer.voidworks.VoidworksItems;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.KnownPressure;
@@ -30,6 +31,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
+import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.access.ItemAccess;
 
 /**
@@ -73,6 +75,16 @@ public final class VoidSiphonItem extends Item {
         return new SiphonMoteHandler(siphon, ((VoidSiphonItem) siphon.getResource().getItem()).capacity());
     }
 
+    /**
+     * @return the motes of the Siphon {@code player} holds in {@code hand}, as a mote store that can
+     *         change, which a player pays or feeds with; only a player's hand reaches them
+     */
+    public static ResourceHandler<MoteResource> motesInHand(Player player, InteractionHand hand) {
+        return moteStore(hand == InteractionHand.MAIN_HAND
+                ? ItemAccess.forPlayerSlot(player, player.getInventory().getSelectedSlot())
+                : ItemAccess.forPlayerSlot(player, Inventory.SLOT_OFFHAND));
+    }
+
     /** @return the motes {@code stack} holds, by grade */
     public static SiphonMotes heldMotes(ItemStack stack) {
         return stack.getOrDefault(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY);
@@ -104,14 +116,11 @@ public final class VoidSiphonItem extends Item {
             player.sendOverlayMessage(refusal.get());
             return InteractionResult.SUCCESS;
         }
-        var slot = context.getHand() == InteractionHand.MAIN_HAND
-                ? ItemAccess.forPlayerSlot(player, player.getInventory().getSelectedSlot())
-                : ItemAccess.forPlayerSlot(player, Inventory.SLOT_OFFHAND);
         if (mode(context.getItemInHand()) != SiphonMode.EMPTY) {
             player.sendOverlayMessage(Component.translatable("voidworks.siphon.pay.charging"));
             return InteractionResult.FAIL;
         }
-        long paid = machine.dormancy().payFrom(server, moteStore(slot), MoteFlight.aimAt(player));
+        long paid = machine.dormancy().payFrom(server, motesInHand(player, context.getHand()), MoteFlight.aimAt(player));
         player.sendOverlayMessage(paid > 0 ? machine.dormancy().status() : Component.translatable("voidworks.siphon.pay.nothing"));
         return paid > 0 ? InteractionResult.SUCCESS : InteractionResult.FAIL;
     }

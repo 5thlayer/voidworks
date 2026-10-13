@@ -88,7 +88,7 @@ class HatcheryTest {
 
     @Test
     void anEggInAnotherDimensionAtTheSamePositionIsAnotherEgg() {
-        var end = new Hatchery.Egg(Identifier.withDefaultNamespace("the_end"), egg(0).pos());
+        var end = new Place(Identifier.withDefaultNamespace("the_end"), egg(0).pos());
         hatchery.startSoaking(egg(0), ALICE);
         hatchery.startSoaking(end, ALICE);
         hatchery.lose(egg(0));
@@ -142,7 +142,7 @@ class HatcheryTest {
         assertEquals(4, changes[0]);
     }
 
-    private static Hatchery.Egg egg(int x) {
-        return new Hatchery.Egg(Identifier.withDefaultNamespace("overworld"), new BlockPos(x, 64, 0));
+    private static Place egg(int x) {
+        return new Place(Identifier.withDefaultNamespace("overworld"), new BlockPos(x, 64, 0));
     }
 }

@@ -67,13 +67,16 @@ public final class VoidworksGameTests {
     private static void registerTests(RegisterGameTestsEvent event) {
         // Registered rather than borrowed, since the event hands out no lookup for vanilla's.
         var environment = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
-        var tests = new Registrar(event, environment);
+        // A batch runs its tests together and the next batch only after, so a test in this one runs with no other.
+        var alone = event.registerEnvironment(id("alone"), new TestEnvironmentDefinition.AllOf(List.of()));
+        var tests = new Registrar(event, environment, alone);
         ButterflyTests.register(tests);
         CommandTests.register(tests);
         ConductionTests.register(tests);
         CreativeTabTests.register(tests);
         DisplacerTests.register(tests);
         DormantTests.register(tests);
+        DragonlingTests.register(tests);
         EggTests.register(tests);
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
@@ -95,12 +98,24 @@ public final class VoidworksGameTests {
     }
 
     /** What a test class is handed: a name, a tick budget and a body per test. */
-    record Registrar(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment) {
+    record Registrar(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment, Holder<TestEnvironmentDefinition<?>> alone) {
 
         void test(String name, int maxTicks, Consumer<GameTestHelper> body) {
+            register(name, maxTicks, body, environment);
+        }
+
+        /**
+         * A test that runs in a batch with no other test of the Module's, for one whose setup would
+         * reach another's, such as a player in the level, whom every mob nearby sees.
+         */
+        void testAlone(String name, int maxTicks, Consumer<GameTestHelper> body) {
+            register(name, maxTicks, body, alone);
+        }
+
+        private void register(String name, int maxTicks, Consumer<GameTestHelper> body, Holder<TestEnvironmentDefinition<?>> batch) {
             var id = id(name);
             CodeGameTest.define(id, body);
-            event.registerTest(id, new CodeGameTest(id, new TestData<>(environment, PLATFORM, maxTicks, 0, true, Rotation.NONE)));
+            event.registerTest(id, new CodeGameTest(id, new TestData<>(batch, PLATFORM, maxTicks, 0, true, Rotation.NONE)));
         }
     }
 }
