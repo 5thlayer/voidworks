@@ -1,0 +1,14 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:test/snowball"
+    },
+    {
+      "items": "#voidworks:test/snow_block",
+      "result": "minecraft:snow_block",
+      "count": 2,
+      "cost": 1,
+      "chance": 1e-300
+    }
+  ]
+}

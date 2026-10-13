@@ -12,6 +12,8 @@ import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlock;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
+import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
+import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.network.VoidstoneMotes;
 import net.minecraft.core.registries.Registries;
@@ -35,10 +37,10 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Voidstone, the Void Displacers, the Mutation Chamber and their capabilities. Voidstone and the
- * Displacers are unbreakable and cannot be pushed: Voidstone for good, a Displacer until it becomes
- * Voidstone. Voidstone has no item; each Displacer's is its only one. The Mutation Chamber breaks
- * with a pickaxe, as its smithing table and crying obsidian do.
+ * Voidstone, the Void Displacers, the Mutation Chamber, the Void Crucible and their capabilities.
+ * Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for good, a Displacer
+ * until it becomes Voidstone. Voidstone has no item; each Displacer's is its only one. The Mutation
+ * Chamber and the Void Crucible break with a pickaxe, as their crying obsidian does.
  */
 public final class VoidworksBlocks {
 
@@ -102,6 +104,18 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("mutation_chamber",
                     () -> new BlockEntityType<>(MutationChamberBlockEntity::new, MUTATION_CHAMBER.get()));
 
+    /** Never Dormant, it gives the awake Chamber's light from the start. */
+    public static final DeferredBlock<VoidCrucibleBlock> VOID_CRUCIBLE = BLOCKS.registerBlock("void_crucible",
+            VoidCrucibleBlock::new,
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 1200.0F).requiresCorrectToolForDrops()
+                    .sound(SoundType.AMETHYST).lightLevel(state -> 7));
+
+    public static final DeferredItem<BlockItem> VOID_CRUCIBLE_ITEM = ITEMS.registerSimpleBlockItem(VOID_CRUCIBLE);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<VoidCrucibleBlockEntity>> VOID_CRUCIBLE_ENTITY =
+            BLOCK_ENTITIES.register("void_crucible",
+                    () -> new BlockEntityType<>(VoidCrucibleBlockEntity::new, VOID_CRUCIBLE.get()));
+
     private VoidworksBlocks() {
     }
 
@@ -119,6 +133,7 @@ public final class VoidworksBlocks {
         event.registerBlockEntity(Capabilities.Item.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.itemFace());
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.fluidFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, MUTATION_CHAMBER_ENTITY.get(), (chamber, side) -> chamber.itemFace());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, VOID_CRUCIBLE_ENTITY.get(), (crucible, side) -> crucible.itemFace());
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,
                 VOIDSTONE.get());
@@ -130,6 +145,7 @@ public final class VoidworksBlocks {
             event.accept(NETHER_DISPLACER_ITEM.get());
             event.accept(END_DISPLACER_ITEM.get());
             event.accept(MUTATION_CHAMBER_ITEM.get());
+            event.accept(VOID_CRUCIBLE_ITEM.get());
         }
     }
 }

@@ -23,6 +23,8 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
     private static final ModConfigSpec.IntValue SOAK_INTERVAL;
     private static final ModConfigSpec.IntValue MUTATION_INTERVAL;
+    private static final ModConfigSpec.IntValue CRUCIBLE_TICKS;
+    private static final ModConfigSpec.IntValue CRUCIBLE_RADIUS;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
     private static final ModConfigSpec.IntValue SIPHON_CAPACITY;
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
@@ -47,6 +49,14 @@ public final class VoidworksConfig {
         MUTATION_INTERVAL = builder
                 .comment("Ticks between a Mutation Chamber's upgrades, each one result for its Rung's count of items.")
                 .defineInRange("mutationInterval", 20, 1, 24000);
+        CRUCIBLE_TICKS = builder
+                .comment("Ticks a Void Crucible takes per void energy of a Rung's cost, alone at a Void Pressure of 3, the End's",
+                        "by default: each step of pressure above halves the time and each below doubles it.")
+                .defineInRange("crucibleTicks", 30, 1, 24000);
+        CRUCIBLE_RADIUS = builder
+                .comment("How near, in blocks, working Void Crucibles share one rate: each one's time is multiplied by the",
+                        "working Crucibles within this distance of it, itself included.")
+                .defineInRange("crucibleRadius", 8, 0, 64);
         DENSITY_MOTES = builder
                 .comment("How many motes a fed block yields, by its Density from 1 to 4: steeply rising, about 4^(Density - 1).")
                 .defineList("densityMotes", List.of(1, 4, 16, 64), () -> 1,
@@ -90,6 +100,16 @@ public final class VoidworksConfig {
     /** @return ticks between a Mutation Chamber's upgrades */
     public static int mutationInterval() {
         return MUTATION_INTERVAL.getAsInt();
+    }
+
+    /** @return ticks a lone Void Crucible takes per void energy of cost at a Void Pressure of 3 */
+    public static int crucibleTicks() {
+        return CRUCIBLE_TICKS.getAsInt();
+    }
+
+    /** @return how near, in blocks, working Void Crucibles share one rate */
+    public static int crucibleRadius() {
+        return CRUCIBLE_RADIUS.getAsInt();
     }
 
     /** @return how many motes a Void Siphon holds, of every grade together */
