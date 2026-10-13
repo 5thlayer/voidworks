@@ -30,7 +30,8 @@ import org.slf4j.Logger;
 /**
  * The Families an upgrade climbs: the {@code voidworks:family} datapack registry, read on the server
  * whenever its data loads. It is the seam the Mutation Chamber and the Void Crucible ask for an
- * item's next Rung. Families are not synced to clients.
+ * item's next Rung. Families are synced to clients, where a recipe viewer reads them by
+ * {@link #ladders(RegistryAccess)}.
  */
 public final class Families {
 
@@ -74,17 +75,21 @@ public final class Families {
     }
 
     private static void registerRegistry(DataPackRegistryEvent.NewRegistry event) {
-        event.dataPackRegistry(REGISTRY, Family.CODEC);
+        event.dataPackRegistry(REGISTRY, Family.CODEC, Family.CODEC);
     }
 
     /** Re-reads the Families once the server's tags are bound: a Rung's items are a tag. */
     private static void reload(TagsUpdatedEvent.ServerDataLoad event) {
-        ladders = read(event.getRegistries());
+        ladders = ladders(event.getRegistries());
         ladders.disagreements().forEach((item, families) -> LOGGER.warn(
                 "{} has no upgrade: the Families {} disagree on its next Rung", item, families));
     }
 
-    private static Ladders<Item> read(RegistryAccess registries) {
+    /**
+     * @return the ladders of the Families {@code registries} hold, with their Rungs' tags as bound
+     *         there: the server's, or a client's for what the server sent it
+     */
+    public static Ladders<Item> ladders(RegistryAccess registries) {
         var families = registries.lookup(REGISTRY);
         if (families.isEmpty()) {
             return Ladders.empty();

@@ -110,6 +110,27 @@ class LaddersTest {
     }
 
     @Test
+    void eachStepListsEveryItemThatTakesIt() {
+        var steps = Ladders.of(Map.of("ingots", INGOTS)).steps();
+        assertEquals(Map.of(TO_IRON, Set.of("copper_ingot"), TO_GOLD, Set.of("iron_ingot", "tin_ingot")), steps);
+    }
+
+    @Test
+    void familiesThatAgreeShowOneStep() {
+        var also = List.of(bottom("copper_ingot", "bronze_ingot"), new Rung<>(Set.<String>of(), Optional.of(TO_IRON)));
+        var steps = Ladders.of(Map.of("ingots", INGOTS, "also", also)).steps();
+        assertEquals(Set.of("copper_ingot", "bronze_ingot"), steps.get(TO_IRON));
+    }
+
+    @Test
+    void anItemWhoseRungsDisagreeShowsNoStep() {
+        var other = List.of(bottom("copper_ingot"), new Rung<>(Set.<String>of(), Optional.of(TO_GOLD)));
+        var steps = Ladders.of(Map.of("ingots", INGOTS, "other", other)).steps();
+        assertEquals(Set.of("iron_ingot", "tin_ingot"), steps.get(TO_GOLD));
+        assertEquals(null, steps.get(TO_IRON));
+    }
+
+    @Test
     void anUpgradeRefusesImpossibleNumbers() {
         assertThrows(IllegalArgumentException.class, () -> new Upgrade<>("x", 0, 100, 0.5));
         assertThrows(IllegalArgumentException.class, () -> new Upgrade<>("x", 1, -1, 0.5));

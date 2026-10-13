@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.mutation;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -81,12 +82,24 @@ public final class Ladders<I> {
                 disagreements.put(item, named);
             }
         });
-        return new Ladders<>(Map.copyOf(next), Map.copyOf(disagreements));
+        // Unmodifiable, not copied: a copy loses the Families' order, which steps() keeps.
+        return new Ladders<>(Collections.unmodifiableMap(next), Map.copyOf(disagreements));
     }
 
     /** @return the upgrade {@code item} climbs to, or empty for an item only on top Rungs, in no Family, or where its Rungs disagree */
     public Optional<Upgrade<I>> next(I item) {
         return Optional.ofNullable(next.get(item));
+    }
+
+    /**
+     * @return every upgrade some item climbs to, with the items that climb to it, in the order the
+     *         Families name them: a recipe viewer's steps. An item whose Rungs disagree is in none.
+     */
+    public Map<Upgrade<I>, Set<I>> steps() {
+        var steps = new LinkedHashMap<Upgrade<I>, Set<I>>();
+        next.forEach((item, upgrade) -> steps.computeIfAbsent(upgrade, unused -> new LinkedHashSet<>()).add(item));
+        steps.replaceAll((upgrade, items) -> Collections.unmodifiableSet(items));
+        return Collections.unmodifiableMap(steps);
     }
 
     /** @return each item whose Rungs disagree on its next step, with the Families that name it */

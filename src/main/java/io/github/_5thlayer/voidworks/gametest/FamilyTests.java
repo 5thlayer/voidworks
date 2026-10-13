@@ -15,6 +15,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.registries.DataPackRegistriesHooks;
 
 /**
  * The Families on a real server: the shipped ladders, read from the {@code voidworks:family}
@@ -37,6 +38,8 @@ final class FamilyTests {
         tests.test("family_datapack_adds_a_family", 1, FamilyTests::datapackAddsAFamily);
         tests.test("family_datapack_replaces_a_shipped_family", 1, FamilyTests::datapackReplacesAShippedFamily);
         tests.test("family_disagreeing_families_leave_no_upgrade", 1, FamilyTests::disagreeingFamiliesLeaveNoUpgrade);
+        tests.test("family_registry_is_synced_to_clients", 1, FamilyTests::registryIsSyncedToClients);
+        tests.test("family_steps_list_a_rungs_tagged_items_and_no_disagreement", 1, FamilyTests::stepsListTaggedItemsAndNoDisagreement);
         tests.test("family_bottom_rung_naming_an_upgrade_is_refused", 1, FamilyTests::bottomRungNamingAnUpgradeIsRefused);
         tests.test("family_rung_above_the_bottom_missing_its_cost_is_refused", 1, FamilyTests::rungMissingItsCostIsRefused);
     }
@@ -74,6 +77,27 @@ final class FamilyTests {
 
     private static void datapackAddsAnItemToARung(GameTestHelper helper) {
         expect(helper, Items.COAL, new Upgrade<>(Items.IRON_INGOT, 1, 100, 0.8));
+        helper.succeed();
+    }
+
+    /** A recipe viewer reads the Families on the client, so the server sends them (#42). */
+    private static void registryIsSyncedToClients(GameTestHelper helper) {
+        helper.assertTrue(DataPackRegistriesHooks.getSyncedCustomRegistries().contains(Families.REGISTRY),
+                "the Family registry is not synced to clients");
+        helper.succeed();
+    }
+
+    /**
+     * The steps a recipe viewer shows, read from the registries as a client reads its own: coal joins
+     * copper's step by the datapack's tag, and flint, on which two Families disagree, is in none.
+     */
+    private static void stepsListTaggedItemsAndNoDisagreement(GameTestHelper helper) {
+        var steps = Families.ladders(helper.getLevel().registryAccess()).steps();
+        var toIron = steps.get(new Upgrade<>(Items.IRON_INGOT, 1, 100, 0.8));
+        helper.assertTrue(toIron != null && toIron.containsAll(Set.of(Items.COPPER_INGOT, Items.COAL)),
+                "copper's step to iron lists " + toIron + ", not copper ingot and coal");
+        helper.assertTrue(steps.values().stream().noneMatch(items -> items.contains(Items.FLINT)),
+                "flint, on which two Families disagree, shows a step");
         helper.succeed();
     }
 

@@ -45,3 +45,12 @@ type = "optional"
 versionRange = "[26.1.11,)"
 ordering = "NONE"
 side = "BOTH"
+
+# Shows the Family ladders as Mutation Chamber and Void Crucible upgrades (#42). Not required: its
+# plugin is only loaded by EMI.
+[[dependencies.${mod_id}]]
+modId = "emi"
+type = "optional"
+versionRange = "[0,)"
+ordering = "NONE"
+side = "CLIENT"

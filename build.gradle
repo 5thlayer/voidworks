@@ -37,8 +37,8 @@ repositories {
 // Mods the dev client loads alongside the Module, to look up recipes (EMI) and inspect blocks (Jade)
 // while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
 // which holds only what is listed here; the game tests run elsewhere and never load them, so they
-// still prove the Module plays alone. The Module names no EMI type, and Jade's only from its
-// plugin, which Jade alone loads.
+// still prove the Module plays alone. It names EMI's types only from compat/emi and Jade's only from
+// its plugin, each loaded by its viewer alone.
 configurations {
     clientMods { transitive = false }
 }
@@ -51,7 +51,9 @@ def syncClientMods = tasks.register('syncClientMods', Sync) {
 tasks.named('runClient') { dependsOn syncClientMods }
 
 dependencies {
-    // EMI for 26.1 is the unofficial port.
+    // EMI for 26.1 is the unofficial port. EMI finds the Module's plugin by its annotation, so the
+    // Module runs without it (#42).
+    compileOnly 'curse.maven:emi-unofficial-port-1544558:8630349'
     clientMods 'curse.maven:emi-unofficial-port-1544558:8630349'
     // Jade for 26.1.2 is built on NeoForge 26.1.2.76, so it runs on our .77. Jade finds the Module's
     // plugin by its annotation, so the Module runs without it (#37).
