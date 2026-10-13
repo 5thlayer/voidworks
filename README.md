@@ -44,3 +44,4 @@ None beyond NeoForge. Voidworks nests libworks-runtime, so there is nothing more
 ## License
 
 MIT. Source is on [GitHub](https://github.com/5thlayer/voidworks). The block and Siphon sprites are from Malcolm Riley's [unused-textures](https://github.com/malcolmriley/unused-textures), under CC BY 4.0; [NOTICE](NOTICE) credits each.
+Releases are on [CurseForge](https://www.curseforge.com/projects/1742531).
