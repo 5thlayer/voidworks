@@ -41,6 +41,12 @@ way, so it reads as the quiet one beside the Chambers' lit faces. Its top is the
 the crystal glass's rim, which frames the result floating above it: the rim in the casing's own
 purples while it is idle, and amethyst while it upgrades.
 
+The Void Well is masonry in the placeholder's colours, so it reads as a built well and not a box of
+panels: its casing the large brooding brick in obsidian's shades, its rim the small stone tiles in
+purpur's, both tiling without a seam across the well's faces. Its core's front is a window in the
+casing, framed in the rim's tiles, with the roiling plasma churning behind it in the void's purples,
+every frame of it and its animation copied beside the sprite; Dormant, the window shows still dark.
+
 Run from the repository root; it needs Pillow.
 """
 
@@ -76,6 +82,14 @@ END_CASING = [(0x3A, 0x38, 0x24), (0xAE, 0xAC, 0x76), (0xEC, 0xEE, 0xB6)]
 # The Nether casing's shades, darkest to lightest: nether bricks' dark reds, lifted at the top so
 # the casing's rivets still catch the light.
 NETHER_CASING = [(0x16, 0x06, 0x08), (0x5A, 0x1A, 0x1E), (0x9C, 0x4A, 0x44)]
+
+# Obsidian's and purpur's shades, darkest to lightest, which the Void Well's casing and rim run
+# through: the placeholder's colours, read off vanilla's obsidian and purpur pillar.
+WELL_CASING = [(0x00, 0x00, 0x01), (0x10, 0x0C, 0x1C), (0x3B, 0x27, 0x54)]
+WELL_RIM = [(0x90, 0x65, 0x90), (0xAC, 0x7B, 0xAC), (0xC7, 0xA8, 0xC7)]
+# The void behind the core's window, darkest to lightest, and the box of the window with its frame.
+WELL_VOID = [(0x0A, 0x02, 0x14), (0x3C, 0x0C, 0x6E), (0x9A, 0x4C, 0xE6), (0xE6, 0xC0, 0xFF)]
+WINDOW = (2, 2, 14, 14)
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
@@ -206,6 +220,30 @@ def unmaking_chamber(abyssium):
     save(awake, TEXTURES / "block" / "unmaking_chamber_side.png")
 
 
+def well_window(casing, rim, inside):
+    """The casing with the window let into it: the rim's tiles for its frame, and inside it, inside."""
+    face = casing.copy()
+    pixels, frame, view = face.load(), rim.load(), inside.load()
+    left, top, right, bottom = WINDOW
+    for y in range(top, bottom):
+        for x in range(left, right):
+            edge = x in (left, right - 1) or y in (top, bottom - 1)
+            pixels[x, y] = frame[x, y] if edge else view[x, y]
+    return face
+
+
+def void_well():
+    casing = recolour(sprite("brooding_brick_large"), WELL_CASING)
+    rim = recolour(sprite("stone_tiles_small"), WELL_RIM)
+    save(casing, TEXTURES / "block" / "void_well_casing.png")
+    save(rim, TEXTURES / "block" / "void_well_rim.png")
+    front = TEXTURES / "block" / "void_well_front.png"
+    save(stack([well_window(casing, rim, recolour(frame, WELL_VOID)) for frame in frames("fluid_roiling_plasma")]), front)
+    shutil.copyfile(ART / "fluid_roiling_plasma.png.mcmeta", f"{front}.mcmeta")
+    still = Image.new("RGBA", (16, 16), (*WELL_VOID[0], 255))
+    save(well_window(casing, rim, still), TEXTURES / "block" / "void_well_front_dormant.png")
+
+
 def main():
     void_siphon()
     void_siphon("resonant_void_siphon", RESONANT_CRYSTAL)
@@ -226,6 +264,7 @@ def main():
     mutation_chamber(abyssium)
     unmaking_chamber(abyssium)
     void_crucible(abyssium)
+    void_well()
 
 
 if __name__ == "__main__":

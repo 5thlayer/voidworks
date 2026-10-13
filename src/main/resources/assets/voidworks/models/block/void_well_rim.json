@@ -1,7 +1,6 @@
 {
-  "parent": "minecraft:block/cube_column",
+  "parent": "minecraft:block/cube_all",
   "textures": {
-    "side": "minecraft:block/purpur_pillar",
-    "end": "minecraft:block/purpur_pillar_top"
+    "all": "voidworks:block/void_well_rim"
   }
 }

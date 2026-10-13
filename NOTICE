@@ -163,3 +163,26 @@ Source:  https://github.com/malcolmriley/unused-textures
          recoloured into the abyssium's purples while idle and into amethyst while it works.
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
+
+Void Well sprites
+-----------------
+
+Files:   data/art/brooding_brick_large.png
+         data/art/stone_tiles_small.png
+         data/art/fluid_roiling_plasma.png and its .mcmeta
+         src/main/resources/assets/voidworks/textures/block/void_well_casing.png
+         src/main/resources/assets/voidworks/textures/block/void_well_rim.png
+         src/main/resources/assets/voidworks/textures/block/void_well_front.png and its .mcmeta
+         src/main/resources/assets/voidworks/textures/block/void_well_front_dormant.png
+Author:  Malcolm Riley
+Source:  https://github.com/malcolmriley/unused-textures
+         blocks/brooding_brick_large.png, blocks/stone_tiles_small.png and
+         fluids/fluid_roiling_plasma.png with its .mcmeta file, at commit
+         9218cb8997bf1dc83617bd7748acf44a16c19c42. The files under data/art/ are the unmodified
+         copies. The Well's sprites are built from them by scripts/build-textures.py, which recolours
+         the large brooding brick into obsidian's shades for its casing and the small stone tiles
+         into purpur's for its rim, and for its core's front lets a window framed in the rim's tiles
+         into the casing, the roiling plasma behind it frame by frame in the void's purples while it
+         works and still dark while it is Dormant, copying the plasma's animation beside its sprite.
+Licence: Creative Commons Attribution 4.0 International
+         https://creativecommons.org/licenses/by/4.0/

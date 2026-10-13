@@ -1,7 +1,6 @@
 {
-  "parent": "minecraft:block/cube_column",
+  "parent": "minecraft:block/cube_all",
   "textures": {
-    "side": "minecraft:block/obsidian",
-    "end": "minecraft:block/obsidian"
+    "all": "voidworks:block/void_well_casing"
   }
 }
