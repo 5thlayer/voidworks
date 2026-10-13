@@ -23,7 +23,7 @@
   "voidworks.jade.chamber.upgrading": "Upgrading",
   "voidworks.jade.crucible.sharing": "%s working Crucibles share its rate",
   "voidworks.jade.crucible.stall.output_full": "Done: its output cannot take the result",
-  "voidworks.jade.crucible.upgrade": "%s → 1 %s: %s void energy, paid in time",
+  "voidworks.jade.crucible.upgrade": "%s → 1 %s: %s void energy",
   "voidworks.jade.crucible.upgrading": "Upgrading: %s%%, %s left",
   "voidworks.jade.displacer.fed": "Fed: %s × %s",
   "voidworks.jade.displacer.harvests_left": "Harvests left: %s",
