@@ -103,17 +103,36 @@ A large store of motes on a Voidstone network, and the stop where the Void Drago
 and heals: a 5×5×5 well of casing and a raised rim, its core, the store itself, set in one wall.
 _Avoid_: roost, Void Displacer
 
+**Fill target**:
+How full a Void Well asks to be kept, as a share of all it can hold: none, a quarter, a half, three
+quarters or full. Void Dragons deliver to a Well below its target and take from one above it; a
+Well with none is a reservoir, which only gives.
+_Avoid_: quota, setpoint
+
+**Owner**:
+The player a Void Dragon and a Void Well belong to: whoever placed the egg it hatched from, or the
+Well's core. A dragon serves only its owner's Wells.
+_Avoid_: tamer, master
+
 **Void Dragon**:
 A dragon raised on void that carries motes between Void Wells, diving through the void between
-them, across dimensions. It grows from a Dragonling.
+them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens outside the
+End, and never dies.
 _Avoid_: Ender Dragon (the boss), tamed dragon
 
+**Dive**:
+A Void Dragon's passage through the void between two Void Wells, in any dimensions. It takes a
+travel time set by distance, and nothing in the world sees the dragon, or its rider, while it lasts.
+_Avoid_: teleport, flight
+
 **Dragonling**:
-A young Void Dragon, hatched from an egg soaked in motes. It cannot carry yet.
+A young Void Dragon, hatched from an egg soaked in motes. It cannot carry yet; it stays near where
+it hatched, follows a player holding a Void Siphon, and grows faster for the motes a Siphon feeds it.
 
 **Drained Dragon Egg**:
-The egg every dragon kill after the first drops: a dragon egg drained of void, which hatches once
-it has soaked up enough motes.
+The egg a grown Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
+the founder of every line, both soak motes once a player places them touching Voidstone, and hatch
+once they have soaked enough; broken first, an egg loses what it soaked.
 _Avoid_: lesser egg
 
 ### Mutation

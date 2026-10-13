@@ -4,7 +4,9 @@ Resolved in two grilling sessions on 2026-10-06, the second on void logistics, a
 2026-10-07 that made motes a resource and never an item ([ADR 0002](../adr/0002-motes-are-a-resource-never-items.md)), and a fourth on
 2026-10-11 that started void in the Overworld, before the End ([ADR 0003](../adr/0003-void-starts-in-the-overworld-before-the-end.md)), and a fifth the same day
 on Families, from the original
-idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written.
+idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written,
+and a sixth on 2026-10-13 on the Void Dragon, which made it server state rather than an entity
+([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)).
 Factorio fidelity was not a constraint.
 
 The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
@@ -38,7 +40,8 @@ lesson the next one pays off:
    anything at the End's Void Pressure, so they alone pay for a Dormant End Displacer. Dragon's
    breath goes to a higher Siphon tier.
 5. **Wells and the Dragon.** The first egg soaks on a network and hatches while the player raids End
-   cities, whose shulker shells make the Void Well; the Void Dragon carries between Wells.
+   cities, whose shulker shells make the Void Well; the Void Dragon carries between Wells, and lays
+   the eggs of the dragons after it.
 
 Before the Nether, crying obsidian comes only from ruined portals, enough for a Displacer or two;
 after it, piglins barter it, so relocating Displacers pulls a player into the Nether.
@@ -204,30 +207,84 @@ shulker shells from the End cities, an ender chest and crying obsidian, placed D
 its cost only once the well around it is whole. A Well that is no longer whole stops: it leaves its
 network, keeping its motes, until it is whole again. A broken core loses them. Before it, Voidstone
 bodies are a base's storage. Its pressure stays low until it is nearly full, so with no fill target
-it is a reservoir that soaks up surplus and gives it back. With a fill target, a Void Dragon
-delivers to it until the target is met.
+it is a reservoir that soaks up surplus and gives it back.
+
+A Well has an **owner**, the player who placed its core, and only its owner's dragons serve it. A
+Well from before owners existed is claimed by the first player to name it or set its target.
+Every control is in the world, with no screen:
+
+- **Fill target**: none, a quarter, a half, three quarters or full of its capacity, one total over
+  every grade. Its owner cycles it by sneak-using the core with an empty hand; using it plainly
+  shows its status and target, and Jade shows both. A Void Dragon delivers to a Well below its
+  target and takes from one above it; a Well with none is a reservoir, which only gives.
+- **Name**: a name tag used on the core names the Well and is used up, as naming a mob is.
+  Unnamed, a Well goes by its dimension and position.
+- **Calling**: its owner standing in its shaft calls a dragon (§ The Void Dragon).
 
 ### The Void Dragon
 
-Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Ghast.
+Named and raised on the pattern of vanilla's Dried Ghast, Ghastling and Happy Ghast, and reusing
+what it can of them: an egg whose stages are its block's, one creature that is young and then
+grown, a home it stays near, and an item it follows. Unlike the Happy Ghast it has an **owner**, the
+player who placed its egg, and it serves only its owner's Wells
+([#53](https://github.com/5thlayer/voidworks/issues/53) weighs making it stealable). A grown dragon
+is server state, not an entity: it routes, dives, weakens and heals with no chunk loaded, and the
+dragon a player sees near a Well is only its presence
+([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)). Nothing hurts a
+Dragonling or a Void Dragon.
 
-- **Hatching.** The first dragon kill gives the vanilla egg; every later kill drops a **Drained
-  Dragon Egg**. Either egg is placed touching a Voidstone network and soaks up motes from it over
-  time, in visible stages, until it hatches; each egg needs more motes than the last. So carriers
-  scale with dragon fights won.
-- **Growing.** It hatches a **Dragonling**, which grows into a **Void Dragon**, faster when fed
-  motes. A Dragonling cannot carry.
-- **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension, carrying from high
-  pressure to low until each Well's fill target is met. Several dragons share the work.
-- **Travel.** It flies visibly near its Wells and dives into the void between them, emerging after
-  a travel time set by distance. It is the only thing that carries motes between dimensions at
-  scale; a player carries a Siphon's worth.
-- **Riding.** A player mounts it at a Void Well and picks another of their Wells; it dives and
-  emerges there, in any dimension. It is not free flight. A rider costs nothing and the load
-  travels as usual.
-- **Harm.** Outside the End it weakens at a rate set by how far the local Void Pressure is below the
-  End's, so it suffers most in the Nether, where motes pay most. Hurt, it flies more slowly; it
-  cannot die. It heals with motes at a Void Well.
+- **Eggs.** The first dragon kill gives the vanilla egg, the founder of every line. Later kills give
+  nothing, but while no player has hatched a dragon in the world, a kill places a vanilla egg on the
+  exit portal again, so a lost founder is replaced. Every other egg is a **Drained Dragon Egg**,
+  laid by a grown Void Dragon each time it has carried a set number of motes since its last: it
+  pops out of the shaft of the Well it is at, as an item, so eggs are given and traded. Until it
+  soaks, a Drained Dragon Egg falls and teleports when hit, as the vanilla egg does.
+- **Hatching.** Either egg, placed by a player touching a Voidstone network, soaks up motes from it
+  by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling its
+  placer owns. A soaking egg neither falls nor teleports. Its price is fixed when it starts soaking
+  and doubles with every dragon its owner has hatched or is soaking, so carriers grow as fast as an
+  owner can pay for them, and an egg given away starts its new owner cheap. An egg no player placed
+  never soaks. Broken while soaking, it drops the egg it was and loses what it soaked.
+- **Growing.** A **Dragonling** is a young Void Dragon, an ordinary creature until it grows. It stays
+  near where it hatched, follows a player holding a Void Siphon, and grows up over a set time while
+  its chunk is loaded. Its owner feeds it by using a Siphon on it, which empties into it by the spend
+  rule at the Dragonling, and the void energy takes time off its growing. It cannot carry, and does
+  not weaken.
+- **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension. It flies only to a
+  Well below its fill target, and takes from the owner's Well of highest network pressure that holds
+  something worth delivering there, a reservoir or a Well above its target, which gives its excess;
+  a Well below its target never gives. It loads only grades worth something at the destination's
+  Void Pressure, highest first, up to its load. Each trip is claimed, and a Well's need counts the
+  motes already on their way to it, so several dragons share the work without overshooting. A
+  destination that is broken, no longer whole or no longer short when the dragon arrives sends the
+  load on to another of the owner's Wells that needs it, else to the one with most room; with no
+  room anywhere it holds the load and rests until there is.
+- **Travel.** It flies visibly near its Wells and **dives** into the void between them, emerging
+  after a travel time: a fixed dive, and a time per block of distance in Overworld blocks, the
+  Nether's counting eight and the End's one. It is the only thing that carries motes between
+  dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests near the Well
+  it last stopped at, neither weakening nor healing; one that has never stopped at a Well rests
+  where it grew up.
+- **Riding.** Its owner uses a dragon at one of their Wells, resting or loading, and mounts it, with
+  no harness. It hovers: strafing left and right steps through the owner's other Wells, the one
+  picked shown above the hotbar, jumping dives, and sneaking gets off before the dive. Through the
+  dive the rider sees only the void and cannot act or get off; the dragon sets them down on the rim
+  of the Well they picked. It is not free flight. A rider costs nothing and the load travels as
+  usual: the rider's Well is a stop added to the trip, which drops what that Well is short of, in
+  grades worth something there, and the rest goes on to the claimed destination.
+- **Calling.** The owner standing in a Well's shaft calls a dragon: the next of theirs to finish its
+  stop comes to that Well, carrying what it carries, and waits while the owner stays in the shaft.
+- **Harm.** Outside the End, out of the void and not resting, it weakens at a rate set by how far
+  the local Void Pressure is below the End's, so it suffers most in the Nether, where motes pay
+  most; it does not weaken while it dives. Hurt, it flies more slowly, down to a quarter of its
+  speed; it cannot die. It heals at every Well it stops at, from that Well's store, a fixed number of
+  motes per point of health, lowest grade first and not by the spend rule; an empty Well heals
+  nothing.
+- **Look.** The vanilla Ender Dragon's model, built from the player's own game at runtime, wears a
+  texture of our own on its layout: the Void Dragon about half the Ender Dragon's size, the
+  Dragonling about a fifth. Nothing of Mojang's ships in the jar, so until the art the placeholder is
+  the vanilla texture tinted at runtime. The Drained Dragon Egg is a pale, cracked dragon egg whose
+  four stages glow as it fills.
 
 ## Mutation
 
@@ -338,5 +395,10 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
   closing half the gap), the Void Crucible's speed and how near Crucibles share it, mote speed, Void Well capacity,
-  the Void Siphon's capacity per tier, and the network pressure cap, the Void Dragon's load, speed and harm rate, and the rise in hatching
-  cost.
+  the Void Siphon's capacity per tier, and the network pressure cap, and the Void Dragon's (provisional:
+  the first egg 25,600 void energy, doubling per dragon; Dragonling growth 40 minutes, 1 minute off
+  per 1,000 void energy fed; a load of 8,192 motes; about 5 seconds a stop; a dive of 10 seconds and
+  1 second per 64 blocks; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
+  motes; an egg laid each 65,536 motes carried).
+- **Void Dragon life stages** — young, adult, senior and old, trading speed for load, and death in
+  old age ([#54](https://github.com/5thlayer/voidworks/issues/54)).
