@@ -127,12 +127,12 @@ final class DragonlingTests {
         var owner = UUID.randomUUID();
         var dragonling = hatch(helper, HERE, owner);
         dragonling.setTicksToGrow(40);
-        var where = dragonling.blockPosition();
         helper.startSequence()
                 .thenIdle(20)
                 .thenExecute(() -> helper.assertTrue(dragonling.isAlive(), "the Dragonling grew up before its time"))
                 .thenWaitUntil(() -> helper.assertTrue(dragonling.isRemoved(), "the Dragonling has not grown up"))
-                .thenExecute(() -> assertGrewUp(helper, owner, where))
+                // It flies about its home meanwhile, so it grew where it last was, not where it hatched.
+                .thenExecute(() -> assertGrewUp(helper, owner, dragonling.blockPosition()))
                 .thenSucceed();
     }
 
