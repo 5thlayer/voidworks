@@ -91,6 +91,7 @@ public final class VoidworksGameTests {
         UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
+        WellTests.register(tests);
     }
 
     private static Identifier id(String path) {

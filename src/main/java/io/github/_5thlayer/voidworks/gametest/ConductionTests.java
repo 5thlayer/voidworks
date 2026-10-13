@@ -17,7 +17,6 @@ import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
-import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -181,12 +180,7 @@ final class ConductionTests {
      */
     private static VoidWellBlockEntity placeWell(GameTestHelper helper, boolean whole) {
         if (whole) {
-            WellStructure.layout(helper.absolutePos(WELL), Direction.NORTH).forEach((pos, part) -> helper.getLevel().setBlockAndUpdate(pos,
-                    switch (part) {
-                        case CASING -> VoidworksBlocks.WELL_CASING.get().defaultBlockState();
-                        case RIM -> VoidworksBlocks.WELL_RIM.get().defaultBlockState();
-                        case OPEN, NONE -> Blocks.AIR.defaultBlockState();
-                    }));
+            WellTests.buildWell(helper, WELL, Direction.NORTH);
         }
         helper.setBlock(BESIDE_WELL, VoidworksBlocks.VOIDSTONE.get());
         helper.setBlock(WELL, VoidworksBlocks.VOID_WELL.get().defaultBlockState().setValue(VoidWellBlock.FACING, Direction.NORTH));

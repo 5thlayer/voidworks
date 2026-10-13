@@ -23,6 +23,8 @@ import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
+import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.WellReport;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -41,7 +43,8 @@ import snownee.jade.api.WailaPlugin;
  * Voidstone's network ({@link VoidstoneReport}); any Dormant machine's payment, a Consumer's too, by
  * {@link Dormancy#status}, with what the mote stores touching a Dormant one are worth; a Void
  * Displacer's {@link DisplacerReport}; a Mutation Chamber's {@link ChamberReport}; an Unmaking
- * Chamber's {@link UnmakingReport}; and a Void Crucible's {@link CrucibleReport}. All but the
+ * Chamber's {@link UnmakingReport}; a Void Crucible's {@link CrucibleReport}; and a Void Well's
+ * {@link WellReport}, its name, target and owner, beside its network and payment. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
@@ -65,6 +68,9 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     private static final MachineReport<VoidCrucibleBlockEntity, CrucibleReport> CRUCIBLE =
             new MachineReport<>(id("crucible"), VoidCrucibleBlockEntity.class, VoidworksJadePlugin::crucible, CrucibleReport.STREAM_CODEC);
+
+    private static final MachineReport<VoidWellBlockEntity, WellReport> WELL =
+            new MachineReport<>(id("well"), VoidWellBlockEntity.class, VoidworksJadePlugin::well, WellReport.STREAM_CODEC);
 
     static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, path);
@@ -97,6 +103,10 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return crucible.getLevel() instanceof ServerLevel level ? CrucibleReport.of(crucible, level) : null;
     }
 
+    private static @Nullable WellReport well(VoidWellBlockEntity well) {
+        return well.getLevel() instanceof ServerLevel level ? WellReport.of(well, level) : null;
+    }
+
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
@@ -106,6 +116,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         registration.registerBlockDataProvider(CHAMBER, MutationChamberBlockEntity.class);
         registration.registerBlockDataProvider(UNMAKING, UnmakingChamberBlockEntity.class);
         registration.registerBlockDataProvider(CRUCIBLE, VoidCrucibleBlockEntity.class);
+        registration.registerBlockDataProvider(WELL, VoidWellBlockEntity.class);
     }
 
     @Override
@@ -121,5 +132,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 UnmakingChamberBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(CRUCIBLE, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidCrucibleBlock.class);
+        registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
+                VoidWellBlock.class);
     }
 }
