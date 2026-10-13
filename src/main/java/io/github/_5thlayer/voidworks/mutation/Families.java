@@ -24,6 +24,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.slf4j.Logger;
 
 /**
@@ -55,6 +56,16 @@ public final class Families {
      */
     public static Optional<Upgrade<Item>> next(ItemStack stack) {
         return stack.isEmpty() ? Optional.empty() : ladders.next(stack.getItem());
+    }
+
+    /** @return the upgrade an item of {@code resource} climbs to, as {@link #next(ItemStack)}, or empty for nothing */
+    static Optional<Upgrade<Item>> next(ItemResource resource) {
+        return resource.isEmpty() ? Optional.empty() : ladders.next(resource.getItem());
+    }
+
+    /** @return whether an item of {@code resource} climbs a Family, so an upgrading block's input takes it */
+    static boolean hasUpgrade(ItemResource resource) {
+        return next(resource).isPresent();
     }
 
     /** @return each item whose Rungs disagree on its next step, with the Families that name it; the loader warns of each */

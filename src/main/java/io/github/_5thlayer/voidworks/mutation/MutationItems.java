@@ -65,6 +65,21 @@ public final class MutationItems {
 
         /** @return what it holds, the same each time */
         MutationItems items();
+
+        /** Its input, then its outputs, for its own work and the game tests. */
+        default ItemStacksResourceHandler inventory() {
+            return items().inventory();
+        }
+
+        /** Its item capability, the same on every side: the input takes only what its rule accepts, and only the outputs give. */
+        default ResourceHandler<ItemResource> itemFace() {
+            return items().itemFace();
+        }
+
+        /** @return what waits to Mutate, empty for nothing */
+        default ItemStack input() {
+            return items().held(INPUT);
+        }
     }
 
     /** Its input, then its outputs, for the block's own work and the game tests. */
@@ -85,6 +100,18 @@ public final class MutationItems {
     /** @return what {@code slot} holds, empty for nothing */
     public ItemStack held(int slot) {
         return inventory.getResource(slot).toStack(inventory.getAmountAsInt(slot));
+    }
+
+    /** @return whether the input holds fewer than {@code count} items, as before a Mutation that takes that many */
+    public boolean holdsFewer(int count) {
+        return inventory.getAmountAsInt(INPUT) < count;
+    }
+
+    /** @return whether {@code slot} takes {@code amount} of {@code resource} now, tried and rolled back */
+    public boolean fits(int slot, ItemResource resource, int amount) {
+        try (var transaction = Transaction.openRoot()) {
+            return inventory.insert(slot, resource, amount, transaction) == amount;
+        }
     }
 
     /**

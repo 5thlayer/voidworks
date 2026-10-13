@@ -71,7 +71,7 @@ public record CrucibleReport(ItemStack input, Optional<Next> next, double progre
         var lines = new ArrayList<Component>();
         // What it holds is Jade's own item view, from its item capability.
         if (input.isEmpty()) {
-            lines.add(Component.translatable("voidworks.jade.crucible.empty").withStyle(ChatFormatting.GRAY));
+            lines.add(UpgradeLines.empty());
         }
         next.ifPresent(upgrade -> lines.add(Component.translatable("voidworks.jade.crucible.upgrade", upgrade.count(),
                 upgrade.result().getHoverName(), upgrade.cost())));
@@ -89,9 +89,8 @@ public record CrucibleReport(ItemStack input, Optional<Next> next, double progre
 
     private MutableComponent stallLine(VoidCrucibleBlockEntity.Stall stall) {
         return switch (stall) {
-            case NO_UPGRADE -> Component.translatable("voidworks.jade.crucible.stall.no_upgrade");
-            case TOO_FEW -> Component.translatable("voidworks.jade.crucible.stall.too_few",
-                    next.map(upgrade -> upgrade.count() - input.getCount()).orElse(0));
+            case NO_UPGRADE -> UpgradeLines.noUpgrade();
+            case TOO_FEW -> UpgradeLines.tooFew(next.map(upgrade -> upgrade.count() - input.getCount()).orElse(0));
             case OUTPUT_FULL -> Component.translatable("voidworks.jade.crucible.stall.output_full");
         };
     }

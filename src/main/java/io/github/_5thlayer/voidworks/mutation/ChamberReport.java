@@ -73,7 +73,7 @@ public record ChamberReport(ItemStack input, Optional<Next> next, boolean awake,
         var lines = new ArrayList<Component>();
         // What it holds is Jade's own item view, from its item capability.
         if (input.isEmpty()) {
-            lines.add(Component.translatable("voidworks.jade.chamber.empty").withStyle(ChatFormatting.GRAY));
+            lines.add(UpgradeLines.empty());
         }
         next.ifPresent(upgrade -> lines.add(Component.translatable("voidworks.jade.chamber.upgrade", upgrade.count(),
                 upgrade.result().getHoverName(), upgrade.cost(), Math.round(upgrade.chance() * 100))));
@@ -91,9 +91,8 @@ public record ChamberReport(ItemStack input, Optional<Next> next, boolean awake,
 
     private MutableComponent stallLine(MutationChamberBlockEntity.Stall stall) {
         return switch (stall) {
-            case NO_UPGRADE -> Component.translatable("voidworks.jade.chamber.stall.no_upgrade");
-            case TOO_FEW -> Component.translatable("voidworks.jade.chamber.stall.too_few",
-                    next.map(upgrade -> upgrade.count() - input.getCount()).orElse(0));
+            case NO_UPGRADE -> UpgradeLines.noUpgrade();
+            case TOO_FEW -> UpgradeLines.tooFew(next.map(upgrade -> upgrade.count() - input.getCount()).orElse(0));
             case OUTPUT_FULL -> Component.translatable("voidworks.jade.chamber.stall.output_full");
             case NO_MOTE_STORE -> Component.translatable("voidworks.motes.none_touching");
             case CANNOT_AFFORD -> Component.translatable("voidworks.jade.chamber.stall.cannot_afford");

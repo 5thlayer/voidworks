@@ -28,7 +28,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
@@ -64,7 +63,7 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     private static final String WORKING_ON_KEY = "working_on";
     private static final String FLOATING_KEY = "floating";
 
-    private final MutationItems items = new MutationItems(1, VoidCrucibleBlockEntity::hasUpgrade, this::setChanged);
+    private final MutationItems items = new MutationItems(1, Families::hasUpgrade, this::setChanged);
     private final ItemStacksResourceHandler inventory = items.inventory();
     /** The item its progress belongs to, empty for none. */
     private ItemResource workingOn = ItemResource.EMPTY;
@@ -82,21 +81,6 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         return items;
     }
 
-    /** Its input, then its output, for the game tests. */
-    public ItemStacksResourceHandler inventory() {
-        return inventory;
-    }
-
-    /** The item capability, the same on every side: the input takes only items with an upgrade, and only the output gives. */
-    public ResourceHandler<ItemResource> itemFace() {
-        return items.itemFace();
-    }
-
-    /** @return what waits to upgrade, empty for nothing */
-    public ItemStack input() {
-        return items.held(INPUT);
-    }
-
     /** @return what upgraded, empty for nothing */
     public ItemStack output() {
         return items.held(OUTPUT);
@@ -112,17 +96,9 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         return progress;
     }
 
-    private static boolean hasUpgrade(ItemResource resource) {
-        return next(resource).isPresent();
-    }
-
-    private static Optional<Upgrade<Item>> next(ItemResource resource) {
-        return resource.isEmpty() ? Optional.empty() : Families.next(resource.toStack(1));
-    }
-
     /** @return the upgrade what its input holds climbs to, or empty for an empty input or an item with none */
     public Optional<Upgrade<Item>> next() {
-        return next(inventory.getResource(INPUT));
+        return Families.next(inventory.getResource(INPUT));
     }
 
     public void serverTick(ServerLevel level) {
@@ -235,16 +211,12 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         if (next.isEmpty()) {
             return Optional.of(Stall.NO_UPGRADE);
         }
-        if (inventory.getAmountAsInt(INPUT) < next.get().count()) {
+        if (items.holdsFewer(next.get().count())) {
             return Optional.of(Stall.TOO_FEW);
         }
-        if (progress >= DONE) {
-            try (var transaction = Transaction.openRoot()) {
-                // Tried and rolled back: the output takes the result or it waits, done.
-                if (inventory.insert(OUTPUT, ItemResource.of(next.get().result()), 1, transaction) != 1) {
-                    return Optional.of(Stall.OUTPUT_FULL);
-                }
-            }
+        // Only once done: the output takes the result or it waits, done.
+        if (progress >= DONE && !items.fits(OUTPUT, ItemResource.of(next.get().result()), 1)) {
+            return Optional.of(Stall.OUTPUT_FULL);
         }
         return Optional.empty();
     }
