@@ -21,7 +21,7 @@ import net.minecraft.world.level.storage.TagValueInput;
  * A void machine placed Dormant, on a real server: it soaks its cost from the mote stores touching
  * it, by the spend rule at its own block, and works once it is paid, for good. The machine is
  * {@link DormantTestMachine}, which opts into {@link Dormancy} as a Consumer's machine would, and
- * its cost is the game-test pack's {@link #COST}. The tests stand in the Overworld, where the grade
+ * its cost is the game-test pack's {@link #COST}, unless a test gives it a price of its own. The tests stand in the Overworld, where the grade
  * above the pressure releases {@link VoidEnergy#BASE} a mote.
  */
 final class DormantTests {
@@ -46,6 +46,8 @@ final class DormantTests {
                 DormantTests::partialPaymentSurvivesAReload);
         tests.test("a_woken_machine_never_goes_back_to_dormant", TICKS, DormantTests::neverDormantAgain);
         tests.test("a_dormant_machine_soaks_its_cost_from_a_touching_voidstone_network", TICKS, DormantTests::soaksFromAVoidstoneNetwork);
+        tests.test("a_dormant_machine_with_a_price_of_its_own_soaks_exactly_that_and_wakes", TICKS, DormantTests::soaksItsOwnPrice);
+        tests.test("a_dormant_machine_keeps_its_own_price_across_a_save_and_reload_and_wakes_once_it_is_paid", TICKS, DormantTests::ownPriceSurvivesAReload);
     }
 
     private static void soaksAndWakes(GameTestHelper helper) {
@@ -140,6 +142,51 @@ final class DormantTests {
             var motes = DisplacerTests.motes(helper, BESIDE);
             helper.assertTrue(motes.equals(Map.of(grade, 6)), "the network holds " + motes + ", not the 6 of 10 left after a cost of " + COST);
         });
+    }
+
+    /** Priced at two motes, half the pack's cost, it takes two of ten and leaves eight. */
+    private static void soaksItsOwnPrice(GameTestHelper helper) {
+        var machine = place(helper);
+        long price = 2 * VoidEnergy.BASE;
+        machine.dormancy().setPrice(price);
+        helper.assertTrue(machine.dormancy().cost() == price, "the machine's cost is " + machine.dormancy().cost() + ", not its own price " + price);
+        var unpaid = Component.translatable("voidworks.dormant.status", 0L, price);
+        helper.assertTrue(machine.dormancy().status().equals(unpaid), "the machine tells a player " + machine.dormancy().status() + ", not " + unpaid);
+        int grade = pressure(helper) + 1;
+        var store = new MoteStore().add(grade, 10);
+        SpendTests.placeStore(helper, BESIDE, store);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(machine.dormancy().awake() && !dormantLook(helper), "the machine is still Dormant, paid " + machine.dormancy().paid());
+            helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, 8)),
+                    "the store holds " + VoidSpender.countByGrade(store) + ", not the 8 of 10 left after its price of " + price);
+        });
+    }
+
+    /** Priced at six motes, above the pack's cost: three pay half, and after the reload it still owes the other three. */
+    private static void ownPriceSurvivesAReload(GameTestHelper helper) {
+        long price = 6 * VoidEnergy.BASE;
+        place(helper).dormancy().setPrice(price);
+        int grade = pressure(helper) + 1;
+        var store = new MoteStore().add(grade, 3);
+        SpendTests.placeStore(helper, BESIDE, store);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(VoidSpender.countByGrade(store).isEmpty(), "the machine has not soaked the three motes"))
+                .thenExecute(() -> {
+                    var reloaded = reload(helper);
+                    helper.assertTrue(reloaded.dormancy().cost() == price,
+                            "the reloaded machine's cost is " + reloaded.dormancy().cost() + ", not its own price " + price);
+                    var status = Component.translatable("voidworks.dormant.status", 3 * VoidEnergy.BASE, price);
+                    helper.assertTrue(reloaded.dormancy().status().equals(status),
+                            "the machine tells a player " + reloaded.dormancy().status() + ", not " + status);
+                    store.add(grade, 4);
+                })
+                .thenWaitUntil(() -> {
+                    var machine = machine(helper);
+                    helper.assertTrue(machine.dormancy().awake() && !dormantLook(helper), "the machine did not wake once the rest arrived");
+                    helper.assertTrue(VoidSpender.countByGrade(store).equals(Map.of(grade, 1)),
+                            "the store holds " + VoidSpender.countByGrade(store) + ", not the 1 of 4 left after the rest of its price");
+                })
+                .thenSucceed();
     }
 
     private static DormantTestMachine.Entity place(GameTestHelper helper) {

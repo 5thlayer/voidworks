@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.dormant;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -49,7 +50,8 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
  *       overrides, such as
  *       {@code {"values": {"voidworks:mutation_chamber": {"cost": 1600}}}} in
  *       {@code data/<namespace>/data_maps/block/dormant_cost.json}. A block with no entry costs
- *       nothing and wakes on its first tick.</li>
+ *       nothing and wakes on its first tick. A machine may instead {@link #setPrice set a price of
+ *       its own} when it is placed, which it soaks in place of its block's.</li>
  * </ul>
  */
 public final class Dormancy {
@@ -90,11 +92,14 @@ public final class Dormancy {
     private static final String KEY = "dormancy";
     private static final String PAID_KEY = "paid";
     private static final String AWAKE_KEY = "awake";
+    private static final String PRICE_KEY = "price";
 
     private final BlockEntity machine;
     /** The void energy soaked so far; it may pass the cost by part of a mote. */
     private long paid;
     private boolean awake;
+    /** Its own price, in place of its block's {@link #DATA_MAP} entry; empty while it sets none. */
+    private OptionalLong price = OptionalLong.empty();
     private int sinceSoak;
 
     public Dormancy(BlockEntity machine) {
@@ -185,9 +190,24 @@ public final class Dormancy {
         return Math.min(paid, cost());
     }
 
-    /** @return the void energy the machine soaks before it wakes, from its block's {@link #DATA_MAP} entry; 0 with none */
+    /**
+     * Gives the machine a price of its own, in void energy, which it soaks before it wakes in place
+     * of its block's {@link #DATA_MAP} entry, such as an egg whose price rests on who placed it. Set
+     * when the machine is placed, before it soaks anything; it is saved with the payment.
+     *
+     * @throws IllegalArgumentException if {@code price} is negative
+     */
+    public void setPrice(long price) {
+        if (price < 0) {
+            throw new IllegalArgumentException("a Dormant price is never negative: " + price);
+        }
+        this.price = OptionalLong.of(price);
+        machine.setChanged();
+    }
+
+    /** @return the void energy the machine soaks before it wakes: its own price, else its block's {@link #DATA_MAP} entry, 0 with none */
     public long cost() {
-        return cost(machine.getBlockState());
+        return price.orElseGet(() -> cost(machine.getBlockState()));
     }
 
     /** @return the void energy a machine of {@code state}'s block soaks before it wakes; 0 with no entry */
@@ -207,11 +227,13 @@ public final class Dormancy {
         var child = output.child(KEY);
         child.putLong(PAID_KEY, paid);
         child.putBoolean(AWAKE_KEY, awake);
+        price.ifPresent(own -> child.putLong(PRICE_KEY, own));
     }
 
     public void load(ValueInput input) {
         var child = input.childOrEmpty(KEY);
         paid = child.getLongOr(PAID_KEY, 0);
         awake = child.getBooleanOr(AWAKE_KEY, false);
+        price = child.getLong(PRICE_KEY).map(OptionalLong::of).orElseGet(OptionalLong::empty);
     }
 }
