@@ -5,6 +5,7 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 ## Unreleased
 
 - Void Crucibles share a rate within `crucibleRadius` blocks on every axis, a cube, so Crucibles on a diagonal, up to 8 blocks along each axis by default, now share where they did not. (#46)
+- A working Void Crucible glimmers: end rod sparks drift up about the result floating above it, and stop while it is stalled, empty or waiting, done; `VoidCrucibleBlockEntity.glimmers()` reads it. (#47)
 - A Void Crucible waiting, done, on a full output holds its floating result still, so it reads apart from a working one; `VoidCrucibleBlockEntity.floatingStill()` reads it. (#46)
 - Jade's upgrade line on the Void Crucible no longer ends in "paid in time": it reads like the Mutation Chamber's, the Rung's count, result and void energy cost. (#46)
 - Every Voidworks item is in the suite's Works tab (`libworks:works`), in a fixed order, and no longer in vanilla's Functional Blocks or Tools & Utilities tabs.

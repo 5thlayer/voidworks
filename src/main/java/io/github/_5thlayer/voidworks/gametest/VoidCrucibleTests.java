@@ -207,7 +207,8 @@ final class VoidCrucibleTests {
     }
 
     /**
-     * The result floats above it while it works on it, and holds still while it waits with it, done; nothing
+     * The result floats above it while it works on it, glimmering, and holds still while it waits
+     * with it, done, with no glimmer; nothing
      * floats over an empty input, one with too few, or one with no upgrade. What floats is in what
      * its watchers are sent.
      */
@@ -215,21 +216,32 @@ final class VoidCrucibleTests {
         var crucible = place(helper, CRUCIBLE);
         crucible.inventory().set(VoidCrucibleBlockEntity.OUTPUT, ItemResource.of(Items.DIRT), 64);
         helper.startSequence()
-                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "an empty Crucible"))
+                .thenExecuteAfter(1, () -> {
+                    assertFloating(helper, crucible, ItemStack.EMPTY, "an empty Crucible");
+                    helper.assertTrue(!crucible.glimmers(), "an empty Crucible glimmers");
+                })
                 .thenExecute(() -> insert(crucible, Items.SNOWBALL, 1))
-                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible with too few snowballs"))
+                .thenExecuteAfter(1, () -> {
+                    assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible with too few snowballs");
+                    helper.assertTrue(!crucible.glimmers(), "a Crucible with too few snowballs glimmers");
+                })
                 .thenExecute(() -> insert(crucible, Items.STICK, 4))
-                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible holding sticks"))
+                .thenExecuteAfter(1, () -> {
+                    assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible holding sticks");
+                    helper.assertTrue(!crucible.glimmers(), "a Crucible holding sticks glimmers");
+                })
                 .thenExecute(() -> insert(crucible, Items.SNOWBALL, 2))
                 .thenExecuteAfter(1, () -> {
                     assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a working Crucible");
                     helper.assertTrue(!crucible.floatingStill(), "a working Crucible holds its result still");
+                    helper.assertTrue(crucible.glimmers(), "a working Crucible does not glimmer");
                     assertWatcherSees(helper, crucible, new ItemStack(Items.SNOW_BLOCK), false);
                 })
                 .thenIdle(soloTicks(helper) + SLACK)
                 .thenExecute(() -> {
                     assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a Crucible waiting, done,");
                     helper.assertTrue(crucible.floatingStill(), "a Crucible waiting, done, does not hold its result still");
+                    helper.assertTrue(!crucible.glimmers(), "a Crucible waiting, done, glimmers");
                     assertWatcherSees(helper, crucible, new ItemStack(Items.SNOW_BLOCK), true);
                 })
                 .thenExecute(() -> crucible.inventory().set(VoidCrucibleBlockEntity.INPUT, ItemResource.EMPTY, 0))
@@ -242,6 +254,9 @@ final class VoidCrucibleTests {
         var sent = crucible.getUpdateTag(helper.getLevel().registryAccess());
         var watched = new VoidCrucibleBlockEntity(crucible.getBlockPos(), crucible.getBlockState());
         watched.handleUpdateTag(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), sent));
+        boolean glimmers = !expected.isEmpty() && !still;
+        helper.assertTrue(watched.glimmers() == glimmers, glimmers ? "a watcher sees no glimmer over a working Crucible"
+                : "a watcher sees a glimmer over a Crucible with nothing working");
         helper.assertTrue(watched.floatingStill() == still && ItemStack.matches(watched.floating(), expected),
                 "a watcher is sent " + watched.floating() + (watched.floatingStill() ? " still" : " moving") + ", not " + expected
                         + (still ? " still" : " moving"));

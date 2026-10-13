@@ -56,6 +56,9 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     /** The slot of what upgraded. */
     public static final int OUTPUT = MutationItems.FIRST_OUTPUT;
 
+    /** Where its result floats, in block units above its base: the height it is drawn and glimmers at. */
+    public static final double FLOAT_HEIGHT = 1.3;
+
     /** How near done counts as done, for the sum of a result's per-tick shares. */
     private static final double DONE = 1 - 1e-9;
 
@@ -99,6 +102,14 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     /** @return whether the floating result holds still, as it does while it is done and waits on its output */
     public boolean floatingStill() {
         return still;
+    }
+
+    /**
+     * @return whether particles glimmer about its floating result: while it works on it, and never
+     *         while it waits, done, or floats nothing; a watcher reads it from what it is sent
+     */
+    public boolean glimmers() {
+        return !floating.isEmpty() && !still;
     }
 
     /**
