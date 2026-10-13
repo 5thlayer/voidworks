@@ -43,8 +43,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The player who places it owns it. Every control is in the world: its owner sneak-using it with
  * an empty hand cycles its {@link FillTarget}, and a name tag its owner uses on it names it and is
- * used up, as naming a mob is; anyone else is told whose it is. Used plainly, by anyone, it shows
- * whether the well is whole or how much of its cost is paid, and its target.
+ * used up, as naming a mob is; anyone else is told whose it is. Used plainly with an empty hand, by
+ * anyone, it shows whether the well is whole or how much of its cost is paid, and its target; any
+ * other held item has its own use, so a Void Siphon emptying into it pays its cost.
  */
 public final class VoidWellBlock extends BaseEntityBlock {
 
@@ -116,11 +117,11 @@ public final class VoidWellBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (!(level.getBlockEntity(pos) instanceof VoidWellBlockEntity well)) {
+        if (!player.getMainHandItem().isEmpty() || !(level.getBlockEntity(pos) instanceof VoidWellBlockEntity well)) {
             return InteractionResult.PASS;
         }
         if (!level.isClientSide()) {
-            if (!player.isSecondaryUseActive() || !player.getMainHandItem().isEmpty()) {
+            if (!player.isSecondaryUseActive()) {
                 player.sendOverlayMessage(Component.translatable("voidworks.well.use", well.status(level), well.target().label()));
             } else if (well.ownsOrClaims(player)) {
                 well.cycleTarget();

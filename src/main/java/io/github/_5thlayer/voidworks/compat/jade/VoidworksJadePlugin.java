@@ -84,7 +84,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         var dormancy = holder.dormancy();
         return dormancy.awake()
                 ? List.of(dormancy.status())
-                : List.of(dormancy.status(), TouchingMotes.describe(TouchingMotes.totalWorth(level, machine.getBlockPos())));
+                : List.of(dormancy.status(), TouchingMotes.describe(TouchingMotes.totalWorth(level, machine.getBlockPos(), holder.parts())));
     }
 
     private static @Nullable DisplacerReport displacer(DisplacerBlockEntity displacer) {

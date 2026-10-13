@@ -11,6 +11,13 @@ import java.util.UUID;
 import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.VoidworksItems;
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import io.github._5thlayer.voidworks.network.StoreKind;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
+import io.github._5thlayer.voidworks.siphon.SiphonMode;
+import io.github._5thlayer.voidworks.siphon.SiphonMotes;
+import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
@@ -39,9 +46,11 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 /**
  * A Void Well's owner, fill target and name, each set in the world: the player who places its core
  * owns it; its owner cycles its target by sneak-using the core with an empty hand, and anyone else is
- * told whose it is; plain use shows its status and target, and Jade its status, target and name; a
- * name tag names it and is used up; and a Well with no owner is claimed by the first player to name
- * it or set its target. All of it is kept while the Well is not whole and across a reload.
+ * told whose it is; plain use with an empty hand shows its status and target, and Jade its status,
+ * target and name; a name tag names it and is used up; and a Well with no owner is claimed by the
+ * first player to name it or set its target. All of it is kept while the Well is not whole and across
+ * a reload. A Void Siphon used on its core pays it once whole, and Voidstone touching any block of
+ * the well, casing, rim or core, reaches it, so its core's face stays free.
  */
 final class WellTests {
 
@@ -49,6 +58,12 @@ final class WellTests {
     private static final BlockPos WELL = new BlockPos(4, 3, 2);
     /** A second core, alone, apart from the first's well. */
     private static final BlockPos OTHER = new BlockPos(1, 1, 7);
+    /** Beside the east wall's middle course, outside the well. */
+    private static final BlockPos BESIDE_CASING = new BlockPos(7, 3, 4);
+    /** Beside the east side of the rim, outside the well. */
+    private static final BlockPos BESIDE_RIM = new BlockPos(7, 5, 4);
+    /** Grades above the pressure that pay the Well's cost in as many motes as one Voidstone holds. */
+    private static final int COST_STEPS = 5;
 
     private static final int TICKS = 200;
 
@@ -63,6 +78,11 @@ final class WellTests {
         tests.test("jade_shows_a_void_well_s_status_target_and_name", TICKS, WellTests::jadeShowsStatusTargetAndName);
         tests.test("a_name_tag_names_a_void_well_and_is_used_up", TICKS, WellTests::nameTagNamesIt);
         tests.test("a_void_well_no_one_owns_is_claimed_by_the_first_player_to_name_it_or_set_its_target", TICKS, WellTests::unownedIsClaimed);
+        tests.test("an_emptying_siphon_used_on_a_dormant_void_well_core_pays_its_cost", TICKS, WellTests::siphonPaysIt);
+        tests.test("a_void_well_soaks_its_cost_and_joins_the_network_through_voidstone_touching_its_casing_leaving_its_core_free", TICKS,
+                WellTests::joinsThroughItsCasing);
+        tests.test("a_void_well_saved_before_its_casing_touched_for_it_rejoins_through_its_casing_once_loaded", TICKS,
+                WellTests::savedWellRejoinsThroughItsCasing);
         tests.test("a_void_well_keeps_its_owner_target_and_name_while_not_whole_and_across_a_save_and_reload", TICKS, WellTests::keptWhileNotWholeAndReloaded);
     }
 
@@ -210,6 +230,101 @@ final class WellTests {
         helper.assertTrue(ownedBy(first, setter) && first.target() == FillTarget.QUARTER,
                 "a claimed Well was taken by the next player");
         helper.succeed();
+    }
+
+    /** Used as a player uses it, through the core's own use, the Siphon empties into the whole Well and wakes it. */
+    private static void siphonPaysIt(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        var well = placeCore(helper, owner);
+        int grade = DisplacerTests.pressure(helper, WELL) + COST_STEPS;
+        var siphon = new ItemStack(VoidworksItems.DRACONIC_VOID_SIPHON.get());
+        siphon.set(VoidworksItems.SIPHON_MODE.get(), SiphonMode.EMPTY);
+        siphon.set(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY.with(grade, costInMotes(helper, well)));
+        owner.setItemInHand(InteractionHand.MAIN_HAND, siphon);
+        helper.setBlock(WELL.east(), Blocks.AIR);
+        helper.useBlock(WELL, owner);
+        helper.assertTrue(well.dormancy().paid() == 0, "a Siphon paid a Well that is not whole " + well.dormancy().paid());
+        helper.setBlock(WELL.east(), VoidworksBlocks.WELL_CASING.get());
+        helper.useBlock(WELL, owner);
+        helper.assertTrue(well.dormancy().paid() == well.dormancy().cost(),
+                "the Siphon paid the Well " + well.dormancy().paid() + " of " + well.dormancy().cost());
+        helper.assertTrue(VoidSiphonItem.heldMotes(owner.getMainHandItem()).total() == 0,
+                "the Siphon still holds " + VoidSiphonItem.heldMotes(owner.getMainHandItem()));
+        helper.succeedWhen(() -> helper.assertTrue(well.dormancy().awake(), "the paid Well is still Dormant"));
+    }
+
+    /**
+     * Voidstone outside the east wall's middle course pays the Well's cost and is its network, with
+     * nothing on the core's own face; Voidstone beside its rim joins that network too.
+     */
+    private static void joinsThroughItsCasing(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        var well = placeCore(helper, owner);
+        helper.setBlock(BESIDE_CASING, VoidworksBlocks.VOIDSTONE.get());
+        int pressure = DisplacerTests.pressure(helper, WELL);
+        VoidstoneTests.insert(helper, BESIDE_CASING, pressure + COST_STEPS, costInMotes(helper, well));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant, paid " + well.dormancy().paid()))
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(Blocks.AIR, WELL.north());
+                    assertSameNetwork(helper, BESIDE_CASING, "the Voidstone touching its casing");
+                    helper.setBlock(BESIDE_RIM, VoidworksBlocks.VOIDSTONE.get());
+                    assertSameNetwork(helper, BESIDE_RIM, "the Voidstone touching its rim");
+                    VoidstoneTests.insert(helper, BESIDE_CASING, pressure + 1, 10);
+                })
+                // A Well's pressure stays below a Voidstone's until it is nearly full, so it takes all but the last mote.
+                .thenWaitUntil(() -> helper.assertTrue(heldInWell(helper) == 9, "the Well holds " + heldInWell(helper) + ", not 9 of the 10 motes"))
+                .thenSucceed();
+    }
+
+    /**
+     * A Well awake in a network that touches only at its core, as one saved before its casing touched
+     * for it does: loaded again, it rejoins through its casing.
+     */
+    private static void savedWellRejoinsThroughItsCasing(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        var well = placeCore(helper, owner);
+        helper.setBlock(BESIDE_CASING, VoidworksBlocks.VOIDSTONE.get());
+        VoidstoneTests.insert(helper, BESIDE_CASING, DisplacerTests.pressure(helper, WELL) + COST_STEPS, costInMotes(helper, well));
+        var networks = VoidstoneNetworks.of(helper.getLevel());
+        var level = helper.getLevel();
+        var pos = helper.absolutePos(WELL);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake() && networks.store(pos).isPresent(), "the Well has not woken"))
+                .thenExecute(() -> {
+                    var state = level.getBlockState(pos);
+                    var saved = well.saveWithFullMetadata(level.registryAccess());
+                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS);
+                    level.setBlock(pos, state, Block.UPDATE_ALL);
+                    core(helper, WELL).loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), saved));
+                    networks.leave(pos);
+                    networks.join(pos, StoreKind.WELL);
+                    helper.assertTrue(!networks.at(pos).equals(networks.at(helper.absolutePos(BESIDE_CASING))),
+                            "a Well joined only at its core is in the network of the Voidstone beside its casing");
+                })
+                .thenWaitUntil(() -> assertSameNetwork(helper, BESIDE_CASING, "the Voidstone touching its casing once it loaded"))
+                .thenSucceed();
+    }
+
+    private static void assertSameNetwork(GameTestHelper helper, BlockPos voidstone, String what) {
+        var networks = VoidstoneNetworks.of(helper.getLevel());
+        helper.assertTrue(networks.store(helper.absolutePos(WELL)).isPresent()
+                && networks.at(helper.absolutePos(WELL)).equals(networks.at(helper.absolutePos(voidstone))),
+                "the Well is not in the network of " + what);
+    }
+
+    private static long heldInWell(GameTestHelper helper) {
+        return VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(WELL)).map(store -> store.total()).orElse(0L);
+    }
+
+    /** @return how many motes {@link #COST_STEPS} above the pressure pay {@code well}'s cost, rounded up */
+    private static int costInMotes(GameTestHelper helper, VoidWellBlockEntity well) {
+        int pressure = DisplacerTests.pressure(helper, WELL);
+        long each = VoidEnergy.release(pressure + COST_STEPS, pressure).orElseThrow();
+        return Math.toIntExact((well.dormancy().cost() + each - 1) / each);
     }
 
     private static void keptWhileNotWholeAndReloaded(GameTestHelper helper) {

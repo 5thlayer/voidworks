@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
@@ -328,6 +329,94 @@ class VoidNetworksTest {
         assertEquals(PER_VOIDSTONE + PER_WELL, networks.at(A).orElseThrow().capacity());
     }
 
+    /** A Well's parts: a column above its core, standing in for the casing and rim of a well around it. */
+    private static final Set<BlockPos> PARTS = Set.of(A.above(), A.above(2));
+
+    @Test
+    void aWellJoinsTheNetworkTouchingAnyOfItsParts() {
+        networks.join(A.above(2).east());
+        networks.join(A, StoreKind.WELL, PARTS);
+        assertSame(networks.at(A).orElseThrow(), networks.at(A.above(2).east()).orElseThrow());
+        assertTrue(networks.store(A.above()).isEmpty(), "a Well's part holds motes of its own");
+    }
+
+    @Test
+    void voidstoneComingToTouchAWellsPartJoinsItsNetwork() {
+        networks.join(A, StoreKind.WELL, PARTS);
+        networks.join(A.above().west());
+        assertSame(networks.at(A).orElseThrow(), networks.at(A.above().west()).orElseThrow());
+        assertEquals(PER_WELL + PER_VOIDSTONE, networks.at(A).orElseThrow().capacity());
+    }
+
+    @Test
+    void networksTouchingAWellOnlyThroughDifferentPartsAreOneThroughIt() {
+        networks.join(A.above().west());
+        networks.join(A.above(2).east());
+        networks.join(A, StoreKind.WELL, PARTS);
+        assertSame(networks.at(A.above().west()).orElseThrow(), networks.at(A.above(2).east()).orElseThrow());
+
+        networks.leave(A);
+
+        assertNotSame(networks.at(A.above().west()).orElseThrow(), networks.at(A.above(2).east()).orElseThrow());
+        networks.join(A.above(2).north());
+        assertEquals(PER_VOIDSTONE, networks.at(A.above(2).north()).orElseThrow().capacity(), "a gone Well's part still joins a network");
+    }
+
+    @Test
+    void motesConductIntoAWellThroughItsPartsAndAreSeenWalkingIntoThePart() {
+        var beside = A.above(2).east();
+        networks.join(beside);
+        networks.join(A, StoreKind.WELL, PARTS);
+        insert(beside, 3, 10);
+
+        var flows = networks.conduct(RATE);
+
+        assertEquals(Map.of(3, RATE), held(A));
+        assertEquals(List.of(new VoidNetworks.Flow(beside, A.above(2), 3, RATE)), flows);
+    }
+
+    @Test
+    void aPartTwoWellsShareStillTouchesForOneWhenTheOtherGoes() {
+        var shared = A.above();
+        networks.join(A, StoreKind.WELL, Set.of(shared));
+        networks.join(A.east(3), StoreKind.WELL, Set.of(shared));
+        networks.join(shared.north());
+        assertSame(networks.at(A).orElseThrow(), networks.at(A.east(3)).orElseThrow());
+
+        networks.leave(A.east(3));
+        networks.join(shared.south());
+
+        assertSame(networks.at(A).orElseThrow(), networks.at(shared.south()).orElseThrow());
+    }
+
+    @Test
+    void theRoomAVoidstoneWouldHaveCountsAWellItWouldTouchThroughAPart() {
+        networks.join(A, StoreKind.WELL, PARTS);
+        assertEquals(PER_VOIDSTONE + PER_WELL, networks.roomIfJoined(A.above(2).east()));
+    }
+
+    @Test
+    void aWithdrawnWellRejoinsThroughItsParts() {
+        networks.join(A.above(2).east());
+        networks.join(A, StoreKind.WELL, PARTS);
+        var held = networks.withdraw(A);
+
+        networks.rejoin(A, StoreKind.WELL, PARTS, held);
+
+        assertSame(networks.at(A).orElseThrow(), networks.at(A.above(2).east()).orElseThrow());
+    }
+
+    @Test
+    void aWellIsSavedWithItsParts() {
+        networks.join(A, StoreKind.WELL, PARTS);
+        var codec = VoidNetworks.codec(() -> PER_VOIDSTONE, () -> PER_WELL);
+        var read = codec.parse(JsonOps.INSTANCE, codec.encodeStart(JsonOps.INSTANCE, networks).getOrThrow()).getOrThrow();
+
+        read.join(A.above().west());
+
+        assertSame(read.at(A).orElseThrow(), read.at(A.above().west()).orElseThrow());
+    }
+
     @Test
     void theRoomAVoidstoneWouldHaveTouchingNothingIsItsOwn() {
         assertEquals(PER_VOIDSTONE, networks.roomIfJoined(A));
@@ -381,7 +470,7 @@ class VoidNetworksTest {
 
         assertEquals(Map.of(3, 40L, 5, 2L), held);
         assertTrue(networks.store(A.east()).isEmpty());
-        networks.rejoin(A.east(), StoreKind.WELL, held);
+        networks.rejoin(A.east(), StoreKind.WELL, Set.of(), held);
         assertEquals(Map.of(3, 40, 5, 2), held(A.east()));
         assertSame(networks.at(A).orElseThrow(), networks.at(A.east()).orElseThrow());
     }

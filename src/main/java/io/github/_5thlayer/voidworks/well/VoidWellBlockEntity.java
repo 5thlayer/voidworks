@@ -5,7 +5,9 @@ package io.github._5thlayer.voidworks.well;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import com.mojang.serialization.Codec;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
@@ -29,7 +31,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * A Void Well core's block entity. It looks over the well around it once every
  * {@link VoidworksConfig#soakInterval()} ticks. Whole and Dormant, it soaks its cost; whole and
- * awake, it is a store of its network. No longer whole, it leaves the network and keeps the motes it
+ * awake, it is a store of its network. Either way it touches through every block of the well, its
+ * casing and rim as well as the core ({@link #parts}), so Voidstone beside any of them reaches it
+ * and the core's face stays free for a player. No longer whole, it leaves the network and keeps the motes it
  * held, saved with it, until it is whole again. Awake and in a network, its motes are the network's,
  * saved with the dimension's networks.
  *
@@ -53,6 +57,8 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     private FillTarget target = FillTarget.NONE;
     private @Nullable Component name;
     private int sinceLook = Integer.MAX_VALUE - 1;
+    /** Whether, since it loaded, it has rejoined its network with its parts, which a Well saved before they touched for it lacks. */
+    private boolean joinedWithParts;
 
     public VoidWellBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.VOID_WELL_ENTITY.get(), pos, state);
@@ -126,6 +132,15 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
         return whole(level) ? dormancy.status() : Component.translatable("voidworks.well.not_whole");
     }
 
+    /** @return the well's casing and rim around it, which touch for it what it soaks from and the network it joins */
+    @Override
+    public Set<BlockPos> parts() {
+        return WellStructure.layout(worldPosition, getBlockState().getValue(VoidWellBlock.FACING)).entrySet().stream()
+                .filter(entry -> entry.getValue() == WellStructure.Part.CASING || entry.getValue() == WellStructure.Part.RIM)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+    }
+
     /** A Void Siphon pays the core only once the well around it is whole, as its soak does. */
     @Override
     public Optional<Component> refusesPayment() {
@@ -161,11 +176,17 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
             }
             return;
         }
-        if (dormancy.soak(level) && networks.store(worldPosition).isEmpty()) {
-            networks.rejoin(worldPosition, StoreKind.WELL, kept);
+        if (!dormancy.soak(level)) {
+            return;
+        }
+        if (networks.store(worldPosition).isEmpty()) {
+            networks.rejoin(worldPosition, StoreKind.WELL, parts(), kept);
             kept = new TreeMap<>();
             setChanged();
+        } else if (!joinedWithParts) {
+            networks.rejoin(worldPosition, StoreKind.WELL, parts(), networks.withdraw(worldPosition));
         }
+        joinedWithParts = true;
     }
 
     @Override

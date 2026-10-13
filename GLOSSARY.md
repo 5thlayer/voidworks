@@ -101,6 +101,7 @@ _Avoid_: frame, uncharged (charging is the Void Siphon's)
 **Void Well**:
 A large store of motes on a Voidstone network, and the stop where the Void Dragon loads, unloads
 and heals: a 5×5×5 well of casing and a raised rim, its core, the store itself, set in one wall.
+Voidstone touching any block of it reaches the store.
 _Avoid_: roost, Void Displacer
 
 **Fill target**:

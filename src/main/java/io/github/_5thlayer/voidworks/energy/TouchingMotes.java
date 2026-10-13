@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.google.common.math.LongMath;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
@@ -24,7 +25,8 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 /**
  * The mote stores touching a void machine, which it spends from: any loaded block on one of its six
  * faces that provides {@code voidworks:motes}: a Voidstone's or a Void Well's own motes, which its
- * network conducts to it, or a Consumer's machine.
+ * network conducts to it, or a Consumer's machine. A machine built of several blocks, as a Void Well
+ * is, touches through the faces of each of its parts too.
  */
 public final class TouchingMotes {
 
@@ -41,10 +43,24 @@ public final class TouchingMotes {
 
     /** @return the mote stores touching {@code pos}, face by face */
     public static List<Store> at(ServerLevel level, BlockPos pos) {
+        return at(level, pos, Set.of());
+    }
+
+    /**
+     * @return the mote stores touching a machine at {@code pos} or any of its {@code parts}, the
+     *         positions beyond its block that it is built of, face by face; its own blocks never count
+     */
+    public static List<Store> at(ServerLevel level, BlockPos pos, Set<BlockPos> parts) {
         var stores = new ArrayList<Store>();
+        touching(level, pos, pos, parts, stores);
+        parts.forEach(part -> touching(level, part, pos, parts, stores));
+        return stores;
+    }
+
+    private static void touching(ServerLevel level, BlockPos from, BlockPos pos, Set<BlockPos> parts, List<Store> stores) {
         for (var direction : Direction.values()) {
-            var neighbour = pos.relative(direction);
-            if (!level.isLoaded(neighbour)) {
+            var neighbour = from.relative(direction);
+            if (neighbour.equals(pos) || parts.contains(neighbour) || !level.isLoaded(neighbour)) {
                 continue;
             }
             var motes = level.getCapability(VoidworksCapabilities.MOTES, neighbour, direction.getOpposite());
@@ -52,7 +68,6 @@ public final class TouchingMotes {
                 stores.add(new Store(neighbour, motes));
             }
         }
-        return stores;
     }
 
     /**
@@ -61,8 +76,13 @@ public final class TouchingMotes {
      *         reached on several faces counts once; empty when none touches it
      */
     public static Optional<Long> totalWorth(ServerLevel level, BlockPos pos) {
+        return totalWorth(level, pos, Set.of());
+    }
+
+    /** @return what the stores touching a machine at {@code pos} or any of its {@code parts} are worth there together, as {@link #totalWorth(ServerLevel, BlockPos)} */
+    public static Optional<Long> totalWorth(ServerLevel level, BlockPos pos, Set<BlockPos> parts) {
         int pressure = VoidPressure.at(level, pos);
-        var stores = distinct(at(level, pos));
+        var stores = distinct(at(level, pos, parts));
         return stores.isEmpty()
                 ? Optional.empty()
                 : Optional.of(stores.stream().mapToLong(store -> worth(store.motes(), pressure)).reduce(0, LongMath::saturatedAdd));

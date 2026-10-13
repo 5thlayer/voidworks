@@ -3,6 +3,9 @@
 
 package io.github._5thlayer.voidworks.network;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import net.minecraft.core.BlockPos;
@@ -24,19 +27,31 @@ public final class MoteStore extends SnapshotJournal<long[]> implements Resource
 
     private final BlockPos pos;
     private final StoreKind kind;
+    /** The positions beyond its own that it takes in, such as a Void Well's casing and rim: what touches them touches it. */
+    private final Set<BlockPos> parts;
     private final VoidNetworks networks;
     /** Motes by slot, a slot per grade from the lowest. */
     long[] motes = new long[SLOTS];
 
     MoteStore(BlockPos pos, StoreKind kind, VoidNetworks networks) {
+        this(pos, kind, Set.of(), networks);
+    }
+
+    MoteStore(BlockPos pos, StoreKind kind, Set<BlockPos> parts, VoidNetworks networks) {
         this.pos = pos;
         this.kind = kind;
+        this.parts = parts.stream().map(BlockPos::immutable).collect(Collectors.toUnmodifiableSet());
         this.networks = networks;
     }
 
     /** @return where it stands */
     public BlockPos pos() {
         return pos;
+    }
+
+    /** @return the positions beyond its own that it takes in, which hold no motes of their own; none for Voidstone */
+    Set<BlockPos> parts() {
+        return parts;
     }
 
     /** @return whether it is a Voidstone's or a Void Well's */

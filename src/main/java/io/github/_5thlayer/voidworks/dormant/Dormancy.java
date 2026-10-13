@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.dormant;
 
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,6 +15,7 @@ import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -84,6 +86,15 @@ public final class Dormancy {
         default Optional<Component> refusesPayment() {
             return Optional.empty();
         }
+
+        /**
+         * @return the positions beyond its own block through which it touches the mote stores it soaks
+         *         from, for a machine built of several blocks, such as a Void Well's casing and rim;
+         *         none for most machines
+         */
+        default Set<BlockPos> parts() {
+            return Set.of();
+        }
     }
 
     /** Each Dormant machine's cost, keyed by its block. */
@@ -139,7 +150,7 @@ public final class Dormancy {
     }
 
     private void soakFromNeighbours(ServerLevel level) {
-        var stores = TouchingMotes.at(level, machine.getBlockPos());
+        var stores = TouchingMotes.at(level, machine.getBlockPos(), parts());
         TouchingMotes.want(level, stores);
         for (var store : stores) {
             if (paid >= cost()) {
@@ -178,6 +189,11 @@ public final class Dormancy {
         if (state.hasProperty(DORMANT) && state.getValue(DORMANT)) {
             level.setBlock(machine.getBlockPos(), state.setValue(DORMANT, false), Block.UPDATE_ALL);
         }
+    }
+
+    /** @return the machine's {@link Holder#parts}, the positions beyond its block it soaks through */
+    private Set<BlockPos> parts() {
+        return machine instanceof Holder holder ? holder.parts() : Set.of();
     }
 
     /** @return whether it has been paid and works; once true, it stays true */

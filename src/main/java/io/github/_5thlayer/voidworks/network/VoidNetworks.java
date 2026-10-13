@@ -13,6 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
@@ -26,11 +27,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.ExtraCodecs;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Every network of one dimension, as plain logic over positions. Voidstone, and a Void Well, that
  * touch face to face are one network, and one that comes to touch two networks merges them: pressure,
- * not topology, decides where motes go, so a merge is harmless.
+ * not topology, decides where motes go, so a merge is harmless. A store may take in positions beyond
+ * its own, its parts, as a Void Well takes in its casing and rim: what touches a part touches the
+ * store, though the part holds no motes of its own.
  *
  * <p>Each position holds its own motes ({@link MoteStore}), which a spend there reaches. Motes
  * conduct ({@link #conduct}): each grade on its own, from a store of higher network pressure to a
@@ -50,6 +54,8 @@ public final class VoidNetworks {
     private final IntSupplier perVoidstone;
     private final IntSupplier perWell;
     private final Map<BlockPos, MoteStore> stores = new HashMap<>();
+    /** Each store's parts, beyond its own position, to every store that takes them in, as two Wells sharing a wall both do. */
+    private final Map<BlockPos, List<MoteStore>> parts = new HashMap<>();
     private final Map<MoteStore, MoteNetwork> networkOf = new IdentityHashMap<>();
     /** The stores motes are wanted at, each with the last step of conduction it is wanted for; not saved. */
     private final Map<MoteStore, Long> wanted = new IdentityHashMap<>();
@@ -103,18 +109,25 @@ public final class VoidNetworks {
         join(pos, StoreKind.VOIDSTONE);
     }
 
-    /**
-     * Puts a store of {@code kind} at {@code pos}, holding nothing, into a network: the one it
-     * touches, all of them merged when it touches several, or a new one of its own. A position
-     * already in a network stays as it is.
-     */
+    /** Puts a store of {@code kind} at {@code pos} into a network, as {@link #join(BlockPos, StoreKind, Set)}, with no parts. */
     public void join(BlockPos pos, StoreKind kind) {
+        join(pos, kind, Set.of());
+    }
+
+    /**
+     * Puts a store of {@code kind} at {@code pos}, holding nothing, into a network: the one it or any
+     * of its {@code parts} touches, all of them merged when they touch several, or a new one of its
+     * own. A position already in a network stays as it is.
+     *
+     * @param parts the positions beyond its own that it takes in, such as a Void Well's casing and rim
+     */
+    public void join(BlockPos pos, StoreKind kind, Set<BlockPos> parts) {
         pos = pos.immutable();
         if (stores.containsKey(pos)) {
             return;
         }
-        var store = new MoteStore(pos, kind, this);
-        var touching = touching(pos);
+        var store = new MoteStore(pos, kind, parts, this);
+        var touching = touching(store);
         MoteNetwork network;
         if (touching.isEmpty()) {
             network = new MoteNetwork();
@@ -130,6 +143,7 @@ public final class VoidNetworks {
         }
         network.stores.add(store);
         stores.put(pos, store);
+        store.parts().forEach(part -> this.parts.computeIfAbsent(part, shared -> new ArrayList<>()).add(store));
         networkOf.put(store, network);
         changed.run();
     }
@@ -143,6 +157,13 @@ public final class VoidNetworks {
         var store = stores.remove(pos);
         if (store == null) {
             return;
+        }
+        for (var part : store.parts()) {
+            var sharing = parts.get(part);
+            sharing.remove(store);
+            if (sharing.isEmpty()) {
+                parts.remove(part);
+            }
         }
         var network = networkOf.remove(store);
         network.stores.remove(store);
@@ -172,11 +193,11 @@ public final class VoidNetworks {
     }
 
     /**
-     * Puts a store of {@code kind} at {@code pos} into a network, as {@link #join(BlockPos, StoreKind)}
+     * Puts a store of {@code kind} at {@code pos} into a network, as {@link #join(BlockPos, StoreKind, Set)}
      * does, holding {@code motes}, what {@link #withdraw} handed back; what it has no room for is lost.
      */
-    public void rejoin(BlockPos pos, StoreKind kind, Map<Integer, Long> motes) {
-        join(pos, kind);
+    public void rejoin(BlockPos pos, StoreKind kind, Set<BlockPos> parts, Map<Integer, Long> motes) {
+        join(pos, kind, parts);
         var store = stores.get(pos.immutable());
         motes.forEach((grade, count) -> {
             int slot = MoteStore.slot(grade);
@@ -185,7 +206,7 @@ public final class VoidNetworks {
         changed.run();
     }
 
-    /** Parts {@code network} into a network for each set of its stores that still touch. */
+    /** Splits {@code network} into a network for each set of its stores that still touch. */
     private void split(MoteNetwork network) {
         var unvisited = new LinkedHashSet<>(network.stores);
         boolean first = true;
@@ -214,10 +235,9 @@ public final class VoidNetworks {
         while (!queue.isEmpty()) {
             var store = queue.poll();
             reached.add(store);
-            for (var direction : Direction.values()) {
-                var next = stores.get(store.pos().relative(direction));
-                if (next != null && seen.add(next)) {
-                    queue.add(next);
+            for (var face : faces(store)) {
+                if (seen.add(face.store())) {
+                    queue.add(face.store());
                 }
             }
         }
@@ -234,7 +254,9 @@ public final class VoidNetworks {
         if (already.isPresent()) {
             return already.get().room();
         }
-        return perVoidstone.getAsInt() + touching(pos).stream().mapToLong(MoteNetwork::room).sum();
+        var faces = new ArrayList<Face>();
+        faces(null, pos, faces);
+        return perVoidstone.getAsInt() + faces.stream().map(face -> networkOf.get(face.store())).distinct().mapToLong(MoteNetwork::room).sum();
     }
 
     /**
@@ -274,12 +296,13 @@ public final class VoidNetworks {
         var flows = new ArrayList<Flow>();
         var arrived = new IdentityHashMap<MoteStore, long[]>();
         for (var from : List.copyOf(stores.values())) {
+            var faces = faces(from);
             for (int slot = 0; slot < MoteStore.SLOTS; slot++) {
-                for (var direction : Direction.values()) {
-                    var to = stores.get(from.pos().relative(direction));
+                for (var face : faces) {
+                    var to = face.store();
                     long waiting = arrived.containsKey(from) ? arrived.get(from)[slot] : 0;
                     long ready = from.motes[slot] - waiting;
-                    if (to == null || ready <= 0) {
+                    if (ready <= 0) {
                         continue;
                     }
                     int moved = flow(from, to, slot, (int) Math.min(rate, ready), toWanted);
@@ -287,7 +310,7 @@ public final class VoidNetworks {
                         from.motes[slot] -= moved;
                         to.motes[slot] += moved;
                         arrived.computeIfAbsent(to, store -> new long[MoteStore.SLOTS])[slot] += moved;
-                        flows.add(new Flow(from.pos(), to.pos(), MoteStore.grade(slot), moved));
+                        flows.add(new Flow(face.from(), face.to(), MoteStore.grade(slot), moved));
                     }
                 }
             }
@@ -350,11 +373,10 @@ public final class VoidNetworks {
         }
         while (!queue.isEmpty()) {
             var store = queue.poll();
-            for (var direction : Direction.values()) {
-                var next = stores.get(store.pos().relative(direction));
-                if (next != null && !distances.containsKey(next)) {
-                    distances.put(next, distances.get(store) + 1);
-                    queue.add(next);
+            for (var face : faces(store)) {
+                if (!distances.containsKey(face.store())) {
+                    distances.put(face.store(), distances.get(store) + 1);
+                    queue.add(face.store());
                 }
             }
         }
@@ -378,22 +400,60 @@ public final class VoidNetworks {
     }
 
     /**
-     * Motes that conducted in one step.
+     * Motes that conducted in one step, across one face.
      *
-     * @param from the store they left
-     * @param to the touching store they reached
+     * @param from where they left: the store's own position, or the part of it they left through
+     * @param to where they arrived, touching {@code from}: the store's own position, or its part they came in through
      */
     public record Flow(BlockPos from, BlockPos to, int grade, int count) {
     }
 
-    private List<MoteNetwork> touching(BlockPos pos) {
-        var networks = new LinkedHashSet<MoteNetwork>();
+    /**
+     * A face where one store touches another.
+     *
+     * @param from the position of the first store, its own or a part, on this side of the face
+     * @param to the position of {@code store}, its own or a part, on the other side
+     */
+    private record Face(BlockPos from, BlockPos to, MoteStore store) {
+    }
+
+    /** @return every face where {@code store}, at its own position or a part, touches another store, one for each face */
+    private List<Face> faces(MoteStore store) {
+        var faces = new ArrayList<Face>();
+        faces(store, store.pos(), faces);
+        store.parts().forEach(part -> faces(store, part, faces));
+        return faces;
+    }
+
+    /** Adds the faces where {@code from}, a position of {@code store} or, for null, of a store still to come, touches another store. */
+    private void faces(@Nullable MoteStore store, BlockPos from, List<Face> faces) {
         for (var direction : Direction.values()) {
-            var store = stores.get(pos.relative(direction));
-            if (store != null) {
-                networks.add(networkOf.get(store));
+            var to = from.relative(direction);
+            for (var other : occupants(to)) {
+                if (other != store) {
+                    faces.add(new Face(from, to, other));
+                }
             }
         }
+    }
+
+    /** @return the store at {@code pos} and every store that takes it in as a part; none for neither */
+    private List<MoteStore> occupants(BlockPos pos) {
+        var store = stores.get(pos);
+        var sharing = parts.getOrDefault(pos, List.of());
+        if (store == null) {
+            return sharing;
+        }
+        var occupants = new ArrayList<MoteStore>(sharing.size() + 1);
+        occupants.add(store);
+        occupants.addAll(sharing);
+        return occupants;
+    }
+
+    /** @return the networks {@code store}, not yet in one, would join */
+    private List<MoteNetwork> touching(MoteStore store) {
+        var networks = new LinkedHashSet<MoteNetwork>();
+        faces(store).forEach(face -> networks.add(networkOf.get(face.store())));
         return List.copyOf(networks);
     }
 
@@ -407,12 +467,13 @@ public final class VoidNetworks {
         ).apply(instance, SavedMotes::new));
     }
 
-    /** One store as saved: where it is, what it is and its motes. */
-    private record SavedStore(BlockPos pos, StoreKind kind, List<SavedMotes> motes) {
+    /** One store as saved: where it is, what it is, its motes and its parts. */
+    private record SavedStore(BlockPos pos, StoreKind kind, List<SavedMotes> motes, List<BlockPos> parts) {
         static final Codec<SavedStore> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 BlockPos.CODEC.fieldOf("pos").forGetter(SavedStore::pos),
                 StoreKind.CODEC.optionalFieldOf("kind", StoreKind.VOIDSTONE).forGetter(SavedStore::kind),
-                SavedMotes.CODEC.listOf().fieldOf("motes").forGetter(SavedStore::motes)
+                SavedMotes.CODEC.listOf().fieldOf("motes").forGetter(SavedStore::motes),
+                BlockPos.CODEC.listOf().optionalFieldOf("parts", List.of()).forGetter(SavedStore::parts)
         ).apply(instance, SavedStore::new));
     }
 
@@ -441,7 +502,7 @@ public final class VoidNetworks {
     private static VoidNetworks read(IntSupplier perVoidstone, IntSupplier perWell, Saved saved) {
         var networks = new VoidNetworks(perVoidstone, perWell);
         for (var entry : saved.stores()) {
-            networks.join(entry.pos(), entry.kind());
+            networks.join(entry.pos(), entry.kind(), Set.copyOf(entry.parts()));
             var store = networks.stores.get(entry.pos());
             for (var motes : entry.motes()) {
                 store.motes[MoteStore.slot(motes.grade())] += motes.count();
@@ -475,7 +536,7 @@ public final class VoidNetworks {
                     motes.add(new SavedMotes(MoteStore.grade(slot), store.motes[slot]));
                 }
             }
-            saved.add(new SavedStore(store.pos(), store.kind(), motes));
+            saved.add(new SavedStore(store.pos(), store.kind(), motes, List.copyOf(store.parts())));
         }
         return new Saved(saved);
     }

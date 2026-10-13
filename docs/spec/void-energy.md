@@ -201,8 +201,10 @@ durability.
 A built well, 5 by 5 by 5: a large store of motes, the Void Dragon's stop and its healing point. A
 3×3 floor of Well casing, a 5×5 ring of casing walls three courses high standing around it, the
 shaft inside them open, and a raised rim of Well rim around the top. Its core sits in the middle of
-one wall, in its middle course, facing out, so Voidstone and a Void Siphon reach it; the core is the
-store, and the rest is structure. It comes with the Dragon, after the dragon: the core's recipe is
+one wall, in its middle course, facing out, so a player and a Void Siphon reach it; the core is the
+store, and the rest is structure. The Well touches through every block of it: Voidstone beside its
+casing, its rim or its core joins it to that network and pays its Dormant cost, so the core's face
+stays free. It comes with the Dragon, after the dragon: the core's recipe is
 shulker shells from the End cities, an ender chest and crying obsidian, placed Dormant, and it soaks
 its cost only once the well around it is whole. A Well that is no longer whole stops: it leaves its
 network, keeping its motes, until it is whole again. A broken core loses them. Before it, Voidstone
@@ -215,7 +217,7 @@ Every control is in the world, with no screen:
 
 - **Fill target**: none, a quarter, a half, three quarters or full of its capacity, one total over
   every grade. Its owner cycles it by sneak-using the core with an empty hand; using it plainly
-  shows its status and target, and Jade shows both. A Void Dragon delivers to a Well below its
+  with an empty hand shows its status and target, and Jade shows both. A Void Dragon delivers to a Well below its
   target and takes from one above it; a Well with none is a reservoir, which only gives.
 - **Name**: a name tag used on the core names the Well and is used up, as naming a mob is.
   Unnamed, a Well goes by its dimension and position.
