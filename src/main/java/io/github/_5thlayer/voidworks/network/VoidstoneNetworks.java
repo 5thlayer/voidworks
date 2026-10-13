@@ -10,13 +10,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
-/** A dimension's Voidstone networks, saved with the dimension. */
+/** A dimension's networks of Voidstone and Void Wells, saved with the dimension. */
 public final class VoidstoneNetworks extends SavedData {
 
     private static final SavedDataType<VoidstoneNetworks> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "voidstone_networks"),
-            () -> new VoidstoneNetworks(new VoidNetworks(VoidworksConfig::voidstoneCapacity)),
-            VoidNetworks.codec(VoidworksConfig::voidstoneCapacity).xmap(VoidstoneNetworks::new, saved -> saved.networks));
+            () -> new VoidstoneNetworks(new VoidNetworks(VoidworksConfig::voidstoneCapacity, VoidworksConfig::wellCapacity)),
+            VoidNetworks.codec(VoidworksConfig::voidstoneCapacity, VoidworksConfig::wellCapacity).xmap(VoidstoneNetworks::new, saved -> saved.networks));
 
     private final VoidNetworks networks;
 

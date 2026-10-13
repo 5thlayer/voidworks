@@ -12,7 +12,6 @@ import java.util.Optional;
 import com.google.common.math.LongMath;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
-import io.github._5thlayer.voidworks.network.VoidstoneMotes;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,8 +21,8 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 
 /**
  * The mote stores touching a void machine, which it spends from: any loaded block on one of its six
- * faces that provides {@code voidworks:motes}, a Voidstone network or a Consumer's machine. A network
- * touching it on several faces is found once per face.
+ * faces that provides {@code voidworks:motes}: a Voidstone's or a Void Well's own motes, which its
+ * network conducts to it, or a Consumer's machine.
  */
 public final class TouchingMotes {
 
@@ -56,8 +55,8 @@ public final class TouchingMotes {
 
     /**
      * @return what the stores touching {@code pos} are worth spent there together, in void energy,
-     *         which is what a Dormant machine soaks from them and an upgrade can spend; a network
-     *         touching it on several faces counts once; empty when none touches it
+     *         which is what a Dormant machine soaks from them and an upgrade can spend; a store
+     *         reached on several faces counts once; empty when none touches it
      */
     public static Optional<Long> totalWorth(ServerLevel level, BlockPos pos) {
         int pressure = VoidPressure.at(level, pos);
@@ -98,14 +97,14 @@ public final class TouchingMotes {
     }
 
     /**
-     * @return each store once, on the first face it touches: a Voidstone's is its network's, which
-     *         the Voidstone on every face it touches shares
+     * @return each store once, on the first face it touches, should one store, such as a Consumer's
+     *         multiblock, be reached on several
      */
     private static List<Store> distinct(List<Store> stores) {
         var seen = Collections.<ResourceHandler<MoteResource>>newSetFromMap(new IdentityHashMap<>());
         var distinct = new ArrayList<Store>();
         for (var store : stores) {
-            if (seen.add(store.motes() instanceof VoidstoneMotes voidstone ? voidstone.network() : store.motes())) {
+            if (seen.add(store.motes())) {
                 distinct.add(store);
             }
         }

@@ -243,7 +243,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         grown.add(target.immutable());
         try (var transaction = Transaction.openRoot()) {
             // The room was asked for above, so the network takes them all.
-            networks.at(target).orElseThrow().insert(MoteResource.of(grade), motes, transaction);
+            networks.deposit(target, MoteResource.of(grade), motes, transaction);
             transaction.commit();
         }
         MoteFlight.toBlock(level, target.getCenter(), worldPosition, grade, motes);

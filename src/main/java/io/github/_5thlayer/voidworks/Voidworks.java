@@ -10,17 +10,19 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.mutation.Families;
 import io.github._5thlayer.voidworks.mutation.UnmakingRecipes;
+import io.github._5thlayer.voidworks.network.Conduction;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
  * ships), Voidstone and the Void Displacers with their displacement table and server
- * config, the Dormant machines' cost map, the Families, the Unmaking Chamber's breakdown map, the
+ * config, the Dormant machines' cost map, conduction through Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the
  * Void Siphon, the {@code /voidworks} commands and the game tests, which exist only when game tests
  * are enabled.
  */
@@ -43,6 +45,7 @@ public final class Voidworks {
         Families.register(modBus);
         UnmakingRecipes.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);
+        NeoForge.EVENT_BUS.addListener(Conduction::onLevelTick);
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);
     }

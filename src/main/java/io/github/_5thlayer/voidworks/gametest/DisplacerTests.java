@@ -10,6 +10,9 @@ import java.util.function.Consumer;
 
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
+import net.minecraft.server.level.ServerLevel;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
+import java.util.TreeMap;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.displacer.DisplacerBlockEntity;
 import io.github._5thlayer.voidworks.displacer.DisplacerReport;
@@ -345,7 +348,14 @@ final class DisplacerTests {
 
     /** The motes, grade to count, of the network of the Voidstone at {@code pos}. */
     static Map<Integer, Integer> motes(GameTestHelper helper, BlockPos pos) {
-        var network = helper.getLevel().getCapability(VoidworksCapabilities.MOTES, helper.absolutePos(pos), null);
-        return network == null ? Map.of() : VoidSpender.countByGrade(network);
+        return networkMotes(helper.getLevel(), helper.absolutePos(pos));
+    }
+
+    /** The motes, grade to count, of the network at the absolute {@code pos}, in every store of it together. */
+    static Map<Integer, Integer> networkMotes(ServerLevel level, BlockPos pos) {
+        var counts = new TreeMap<Integer, Integer>();
+        VoidstoneNetworks.of(level).at(pos).ifPresent(network -> network.countByGrade()
+                .forEach((grade, count) -> counts.put(grade, Math.toIntExact(count))));
+        return counts;
     }
 }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dormant=false": {
+      "model": "voidworks:block/void_well"
+    },
+    "dormant=true": {
+      "model": "voidworks:block/void_well_dormant"
+    }
+  }
+}

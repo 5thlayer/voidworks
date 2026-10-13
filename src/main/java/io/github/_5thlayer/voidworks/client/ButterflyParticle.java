@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.client;
 
 import io.github._5thlayer.voidworks.butterfly.Butterflies;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
+import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
@@ -17,8 +18,9 @@ import java.util.function.Consumer;
 
 /**
  * One butterfly of a {@link MoteFlight}: it flutters out of the source, then flies to the target,
- * following the target entity if it has one, and vanishes on arrival. Its wings flap through the
- * sprite's frames, its grade tints it, and the motes it stands for size it.
+ * following the target entity if it has one, and vanishes on arrival. Or one of a {@link MoteCrawl},
+ * smaller, walking straight along a network's faces. Its wings flap through the sprite's frames, its
+ * grade tints it, and the motes it stands for size it.
  */
 final class ButterflyParticle extends SingleQuadParticle {
 
@@ -28,14 +30,25 @@ final class ButterflyParticle extends SingleQuadParticle {
     private static final int MAX_LIFETIME = 200;
     /** Blocks per tick at full speed. */
     private static final double SPEED = 0.35;
+    /** Blocks per tick a walking butterfly goes: a block in a step of conduction, by default. */
+    private static final double CRAWL_SPEED = 0.1;
+    /** How much smaller a walking butterfly is than a flying one of as many motes. */
+    private static final float CRAWL_SCALE = 0.5F;
 
     private final SpriteSet sprites;
     private final int targetEntity;
     private Vec3 target;
     private final int phase;
+    private final boolean crawling;
 
     ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites) {
+        this(level, source, target, targetEntity, grade, motes, sprites, false);
+    }
+
+    private ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites,
+            boolean crawling) {
         super(level, source.x, source.y, source.z, sprites.first());
+        this.crawling = crawling;
         this.sprites = sprites;
         this.target = target;
         this.targetEntity = targetEntity;
@@ -47,11 +60,27 @@ final class ButterflyParticle extends SingleQuadParticle {
         this.quadSize = Butterflies.scale(motes);
         int rgb = GradeColor.of(grade);
         setColor((rgb >> 16 & 0xFF) / 255F, (rgb >> 8 & 0xFF) / 255F, (rgb & 0xFF) / 255F);
-        // A scattered take-off, so a harvest's butterflies part before they converge.
-        this.xd = (random.nextDouble() - 0.5) * 0.3;
-        this.yd = random.nextDouble() * 0.2 + 0.05;
-        this.zd = (random.nextDouble() - 0.5) * 0.3;
+        if (crawling) {
+            this.quadSize *= CRAWL_SCALE;
+            var step = target.subtract(source).normalize().scale(CRAWL_SPEED);
+            this.xd = step.x;
+            this.yd = step.y;
+            this.zd = step.z;
+        } else {
+            // A scattered take-off, so a harvest's butterflies part before they converge.
+            this.xd = (random.nextDouble() - 0.5) * 0.3;
+            this.yd = random.nextDouble() * 0.2 + 0.05;
+            this.zd = (random.nextDouble() - 0.5) * 0.3;
+        }
         setSprite(frame());
+    }
+
+    /** Shows a step of conduction's butterflies, one per size its count splits into, walking. */
+    static void crawl(ClientLevel level, MoteCrawl crawl, SpriteSet sprites, Consumer<ButterflyParticle> add) {
+        for (int motes : Butterflies.sizes(crawl.count())) {
+            add.accept(new ButterflyParticle(level, crawl.source(), crawl.target(), MoteFlight.NO_ENTITY, crawl.grade(), motes, sprites,
+                    true));
+        }
     }
 
     /** Shows a flight's butterflies, one per size its count splits into. */
@@ -79,6 +108,16 @@ final class ButterflyParticle extends SingleQuadParticle {
         }
         var toTarget = target.subtract(x, y, z);
         double distance = toTarget.length();
+        if (crawling) {
+            // Straight along the face, at a walk, until it is there.
+            if (distance <= CRAWL_SPEED) {
+                remove();
+                return;
+            }
+            move(xd, yd, zd);
+            setSprite(frame());
+            return;
+        }
         if (distance < 0.3) {
             remove();
             return;

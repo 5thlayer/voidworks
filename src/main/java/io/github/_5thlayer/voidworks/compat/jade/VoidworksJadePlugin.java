@@ -22,6 +22,7 @@ import io.github._5thlayer.voidworks.mutation.UnmakingReport;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
+import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -99,6 +100,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
+        registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidWellBlock.class);
         registration.registerBlockDataProvider(DORMANT, BlockEntity.class);
         registration.registerBlockDataProvider(DISPLACER, DisplacerBlockEntity.class);
         registration.registerBlockDataProvider(CHAMBER, MutationChamberBlockEntity.class);
@@ -109,6 +111,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
     @Override
     public void registerClient(IWailaClientRegistration registration) {
         registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidstoneBlock.class);
+        registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidWellBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(DORMANT, (lines, tooltip) -> lines.forEach(tooltip::add)), Block.class);
         registration.registerBlockComponent(new MachineReport.Client<>(DISPLACER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 DisplacerBlock.class);

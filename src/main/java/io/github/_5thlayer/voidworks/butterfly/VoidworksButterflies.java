@@ -14,7 +14,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * The butterflies harvested motes are seen as: the particle type whose sprites they are drawn with,
- * and the {@link MoteFlight} payload that shows them. The client draws them
+ * the {@link MoteFlight} payload that shows them flying and the {@link MoteCrawl} one that shows them
+ * walking through a network. The client draws them
  * ({@code client.VoidworksClient}); {@code /voidworks butterflies} shows them by hand
  * ({@code command.VoidworksCommands}).
  */
@@ -38,6 +39,8 @@ public final class VoidworksButterflies {
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         // The client registers the handler; a dedicated server only sends. Optional, so a client
         // without Voidworks can still join and sees nothing.
-        event.registrar("1").optional().playToClient(MoteFlight.TYPE, MoteFlight.STREAM_CODEC);
+        var registrar = event.registrar("1").optional();
+        registrar.playToClient(MoteFlight.TYPE, MoteFlight.STREAM_CODEC);
+        registrar.playToClient(MoteCrawl.TYPE, MoteCrawl.STREAM_CODEC);
     }
 }

@@ -22,6 +22,9 @@ public final class VoidworksConfig {
 
     private static final ModConfigSpec.IntValue ZONE;
     private static final ModConfigSpec.IntValue VOIDSTONE_CAPACITY;
+    private static final ModConfigSpec.IntValue WELL_CAPACITY;
+    private static final ModConfigSpec.IntValue CONDUCTION_INTERVAL;
+    private static final ModConfigSpec.IntValue CONDUCTION_RATE;
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
     private static final ModConfigSpec.IntValue SOAK_INTERVAL;
     private static final ModConfigSpec.IntValue MUTATION_INTERVAL;
@@ -41,10 +44,20 @@ public final class VoidworksConfig {
                 .comment("How many positions a new Void Displacer harvests before it becomes Voidstone.")
                 .defineInRange("zone", 64, 1, 1 << 20);
         VOIDSTONE_CAPACITY = builder
-                .comment("How many motes each Voidstone adds to its network's capacity: about one harvest at a middling",
-                        "Density, so a Displacer's body holds its harvest. A harvest of more motes than this fits only in",
-                        "a network with room to spare, and stalls the Displacer until it has.")
+                .comment("How many motes each Voidstone holds: about one harvest at a middling Density, so a Displacer's body",
+                        "holds its harvest. A harvest of more motes than this settles into the nearest Voidstone with room,",
+                        "and one its network has no room for stalls the Displacer until it has.")
                 .defineInRange("voidstoneCapacity", 16, 1, 1 << 20);
+        WELL_CAPACITY = builder
+                .comment("How many motes a Void Well holds, of every grade together: many times a Void Siphon's top tier.")
+                .defineInRange("wellCapacity", 65_536, 1, 1 << 30);
+        CONDUCTION_INTERVAL = builder
+                .comment("Ticks between steps of conduction, in which motes move one Voidstone through their network.")
+                .defineInRange("conductionInterval", 10, 1, 24000);
+        CONDUCTION_RATE = builder
+                .comment("How many motes of each grade cross a face between two Voidstone, or a Voidstone and a Void Well,",
+                        "in one step of conduction, at most.")
+                .defineInRange("conductionRate", 4, 1, 1 << 20);
         HARVEST_INTERVAL = builder
                 .comment("Ticks between a Void Displacer's harvests.")
                 .defineInRange("harvestInterval", 20, 1, 24000);
@@ -101,9 +114,24 @@ public final class VoidworksConfig {
         return ZONE.getAsInt();
     }
 
-    /** @return how many motes a Voidstone adds to its network's capacity */
+    /** @return how many motes a Voidstone holds */
     public static int voidstoneCapacity() {
         return VOIDSTONE_CAPACITY.getAsInt();
+    }
+
+    /** @return how many motes a Void Well holds */
+    public static int wellCapacity() {
+        return WELL_CAPACITY.getAsInt();
+    }
+
+    /** @return ticks between steps of conduction */
+    public static int conductionInterval() {
+        return CONDUCTION_INTERVAL.getAsInt();
+    }
+
+    /** @return how many motes of a grade cross one face in a step of conduction, at most */
+    public static int conductionRate() {
+        return CONDUCTION_RATE.getAsInt();
     }
 
     /** @return ticks between a Displacer's harvests */

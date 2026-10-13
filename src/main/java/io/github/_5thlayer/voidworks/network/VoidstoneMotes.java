@@ -10,57 +10,56 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
 /**
- * A Voidstone's {@code voidworks:motes}: its network's motes, whichever network it is in now, so a
- * holder that keeps it still reaches the motes after a merge. A Voidstone in no network holds none.
+ * A Voidstone's or an awake Void Well's {@code voidworks:motes}: the motes held at its position,
+ * which conduction fills from the rest of its network and drains into it. A position in no network
+ * holds none.
  */
 public record VoidstoneMotes(ServerLevel level, BlockPos pos) implements ResourceHandler<MoteResource> {
 
-    /** What a Voidstone in no network holds: nothing, with no room. */
-    private static final ResourceHandler<MoteResource> EMPTY = new MoteNetwork(() -> 0, () -> {
-    });
+    /** What a position in no network holds: nothing, with no room. */
+    private static final ResourceHandler<MoteResource> EMPTY = new VoidNetworks(() -> 0, () -> 0).empty();
 
-    /** @return the network it reaches now, the same one for every Voidstone in it, or an empty store for none */
-    public ResourceHandler<MoteResource> network() {
-        return VoidstoneNetworks.of(level).at(pos).<ResourceHandler<MoteResource>>map(network -> network)
-                .orElse(EMPTY);
+    /** @return the store it reaches now, or an empty one for none */
+    public ResourceHandler<MoteResource> store() {
+        return VoidstoneNetworks.of(level).store(pos).<ResourceHandler<MoteResource>>map(store -> store).orElse(EMPTY);
     }
 
     @Override
     public int size() {
-        return network().size();
+        return store().size();
     }
 
     @Override
     public MoteResource getResource(int index) {
-        return network().getResource(index);
+        return store().getResource(index);
     }
 
     @Override
     public long getAmountAsLong(int index) {
-        return network().getAmountAsLong(index);
+        return store().getAmountAsLong(index);
     }
 
     @Override
     public long getCapacityAsLong(int index, MoteResource resource) {
-        return network().getCapacityAsLong(index, resource);
+        return store().getCapacityAsLong(index, resource);
     }
 
     @Override
     public boolean isValid(int index, MoteResource resource) {
-        return network().isValid(index, resource);
+        return store().isValid(index, resource);
     }
 
     @Override
     public int insert(int index, MoteResource resource, int amount, TransactionContext transaction) {
-        return network().insert(index, resource, amount, transaction);
+        return store().insert(index, resource, amount, transaction);
     }
 
     @Override
     public int extract(int index, MoteResource resource, int amount, TransactionContext transaction) {
-        return network().extract(index, resource, amount, transaction);
+        return store().extract(index, resource, amount, transaction);
     }
 
-    /** @return the {@code voidworks:motes} of the Voidstone at {@code pos} */
+    /** @return the {@code voidworks:motes} of the Voidstone or Void Well at {@code pos} */
     public static ResourceHandler<MoteResource> at(ServerLevel level, BlockPos pos) {
         return new VoidstoneMotes(level, pos.immutable());
     }

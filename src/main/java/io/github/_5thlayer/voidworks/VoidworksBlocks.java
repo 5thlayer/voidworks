@@ -18,6 +18,8 @@ import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.network.VoidstoneMotes;
+import io.github._5thlayer.voidworks.well.VoidWellBlock;
+import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -37,8 +39,8 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Voidstone, the Void Displacers, the Mutation Chamber, the Unmaking Chamber, the Void Crucible and
- * their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
+ * Voidstone, the Void Displacers, the Mutation Chamber, the Unmaking Chamber, the Void Crucible, the
+ * Void Well and their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
  * good, a Displacer until it becomes Voidstone. Voidstone has no item; each Displacer's is its only
  * one. The Mutation blocks break with a pickaxe, as their crying obsidian does.
  */
@@ -128,6 +130,16 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("void_crucible",
                     () -> new BlockEntityType<>(VoidCrucibleBlockEntity::new, VOID_CRUCIBLE.get()));
 
+    /** Like the Mutation Chamber, it gives no light while Dormant; it breaks with a pickaxe, as its crying obsidian does, and cannot be pushed, so its motes stay where it is. */
+    public static final DeferredBlock<VoidWellBlock> VOID_WELL = BLOCKS.registerBlock("void_well", VoidWellBlock::new,
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops().pushReaction(PushReaction.BLOCK)
+                    .sound(SoundType.STONE).lightLevel(state -> state.getValue(Dormancy.DORMANT) ? 0 : 7));
+
+    public static final DeferredItem<BlockItem> VOID_WELL_ITEM = ITEMS.registerSimpleBlockItem(VOID_WELL);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<VoidWellBlockEntity>> VOID_WELL_ENTITY =
+            BLOCK_ENTITIES.register("void_well", () -> new BlockEntityType<>(VoidWellBlockEntity::new, VOID_WELL.get()));
+
     private VoidworksBlocks() {
     }
 
@@ -149,5 +161,10 @@ public final class VoidworksBlocks {
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,
                 VOIDSTONE.get());
+        // A Dormant Well is not in a network yet: it holds nothing, and pays its cost through Dormancy.
+        event.registerBlock(VoidworksCapabilities.MOTES,
+                (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server && !state.getValue(Dormancy.DORMANT)
+                        ? VoidstoneMotes.at(server, pos) : null,
+                VOID_WELL.get());
     }
 }

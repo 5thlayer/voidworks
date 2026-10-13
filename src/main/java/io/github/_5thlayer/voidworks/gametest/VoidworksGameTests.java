@@ -70,6 +70,7 @@ public final class VoidworksGameTests {
         var tests = new Registrar(event, environment);
         ButterflyTests.register(tests);
         CommandTests.register(tests);
+        ConductionTests.register(tests);
         CreativeTabTests.register(tests);
         DisplacerTests.register(tests);
         DormantTests.register(tests);

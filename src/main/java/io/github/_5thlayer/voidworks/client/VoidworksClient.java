@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.client;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
+import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
@@ -25,7 +26,7 @@ import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlers
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * The Module's client entry point: it draws the butterflies a {@link MoteFlight} shows and the
+ * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
@@ -64,6 +65,12 @@ public final class VoidworksClient {
             var minecraft = Minecraft.getInstance();
             if (minecraft.level != null && sprites != null) {
                 ButterflyParticle.show(minecraft.level, flight, sprites, minecraft.particleEngine::add);
+            }
+        });
+        event.register(MoteCrawl.TYPE, (crawl, context) -> {
+            var minecraft = Minecraft.getInstance();
+            if (minecraft.level != null && sprites != null) {
+                ButterflyParticle.crawl(minecraft.level, crawl, sprites, minecraft.particleEngine::add);
             }
         });
         event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));

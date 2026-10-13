@@ -16,8 +16,9 @@ import snownee.jade.api.StreamServerDataProvider;
 import snownee.jade.api.config.IPluginConfig;
 
 /**
- * What the server tells Jade about a Voidstone: its network's {@link NetworkReport}. Voidstone has no
- * block entity, so this reads the network at the block's position, where libworks-runtime's
+ * What the server tells Jade about a Voidstone or an awake Void Well: its network's {@link NetworkReport}.
+ * Voidstone has no block entity, and a Well's motes are its network's, so this reads the network at
+ * the block's position, where libworks-runtime's
  * {@code MachineReport} reads a block entity. This half names no client type, so a dedicated server
  * never loads Jade's drawing; {@link Client} adds the lines.
  */

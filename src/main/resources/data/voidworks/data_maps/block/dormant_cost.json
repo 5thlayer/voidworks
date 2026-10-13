@@ -11,6 +11,9 @@
     },
     "voidworks:unmaking_chamber": {
       "cost": 1600
+    },
+    "voidworks:void_well": {
+      "cost": 25600
     }
   }
 }

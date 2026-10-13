@@ -69,13 +69,14 @@ public final class VoidworksCommands {
                                                 .executes(context -> mote(context, IntegerArgumentType.getInteger(context, "count"))))))));
     }
 
-    /** Fills the network at a Voidstone. @return how many motes went in */
+    /** Fills the network at a Voidstone, from it outward. @return how many motes went in */
     private static int mote(CommandContext<CommandSourceStack> context, int count) throws CommandSyntaxException {
         var level = context.getSource().getLevel();
         var pos = BlockPosArgument.getLoadedBlockPos(context, level, "pos");
         int grade = IntegerArgumentType.getInteger(context, "grade");
+        var networks = VoidstoneNetworks.of(level);
         Optional<MoteNetwork> network = level.getBlockState(pos).is(VoidworksBlocks.VOIDSTONE.get())
-                ? VoidstoneNetworks.of(level).at(pos)
+                ? networks.at(pos)
                 : Optional.empty();
         if (network.isEmpty()) {
             context.getSource().sendFailure(Component.translatable("commands.voidworks.mote.not_voidstone", pos.toShortString()));
@@ -83,7 +84,7 @@ public final class VoidworksCommands {
         }
         int inserted;
         try (var transaction = Transaction.openRoot()) {
-            inserted = network.get().insert(MoteResource.of(grade), count, transaction);
+            inserted = networks.deposit(pos, MoteResource.of(grade), count, transaction);
             transaction.commit();
         }
         long holds = network.get().total();

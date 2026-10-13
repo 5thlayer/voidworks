@@ -129,15 +129,15 @@ record DimensionSite(GameTestHelper helper, ServerLevel level, BlockPos corner, 
 
     void insert(BlockPos pos, int grade, int count) {
         try (var transaction = Transaction.openRoot()) {
-            int inserted = VoidstoneNetworks.of(level).at(abs(pos)).orElseThrow().insert(MoteResource.of(grade), count, transaction);
+            int inserted = VoidstoneNetworks.of(level).deposit(abs(pos), MoteResource.of(grade), count, transaction);
             assertTrue(inserted == count, "the network at " + pos + " took " + inserted + " of " + count + " motes");
             transaction.commit();
         }
     }
 
+    /** The motes of the network at {@code pos}, in every store of it together. */
     Map<Integer, Integer> motes(BlockPos pos) {
-        var network = level.getCapability(VoidworksCapabilities.MOTES, abs(pos), null);
-        return network == null ? Map.of() : VoidSpender.countByGrade(network);
+        return DisplacerTests.networkMotes(level, abs(pos));
     }
 
     void assertVoidstone(BlockPos pos) {

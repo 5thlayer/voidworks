@@ -12,6 +12,7 @@ import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
@@ -112,9 +113,10 @@ final class VoidstoneTests {
         return network;
     }
 
+    /** Puts motes into the network at {@code pos}, from there to the nearest Voidstone with room. */
     static int insert(GameTestHelper helper, BlockPos pos, int grade, int count) {
         try (var transaction = Transaction.openRoot()) {
-            int inserted = network(helper, pos).insert(MoteResource.of(grade), count, transaction);
+            int inserted = VoidstoneNetworks.of(helper.getLevel()).deposit(helper.absolutePos(pos), MoteResource.of(grade), count, transaction);
             transaction.commit();
             return inserted;
         }
