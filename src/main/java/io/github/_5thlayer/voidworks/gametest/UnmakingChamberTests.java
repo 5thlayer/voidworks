@@ -13,16 +13,20 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.mutation.Breakdown;
+import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
 import io.github._5thlayer.voidworks.mutation.MutationItems;
 import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlockEntity;
 import io.github._5thlayer.voidworks.mutation.UnmakingRecipes;
 import io.github._5thlayer.voidworks.mutation.UnmakingReport;
+import io.netty.buffer.Unpooled;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -34,6 +38,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
@@ -73,6 +78,7 @@ final class UnmakingChamberTests {
         tests.test("unmaking_chamber_item_face_takes_only_items_with_a_breakdown_and_gives_from_every_output", 1, UnmakingChamberTests::itemFace);
         tests.test("unmaking_chamber_takes_items_from_a_hand_and_gives_the_outputs_to_an_empty_one", 1, UnmakingChamberTests::byHand);
         tests.test("unmaking_chamber_has_a_recipe", 1, UnmakingChamberTests::hasARecipe);
+        tests.test("unmaking_chamber_breakdowns_sent_to_clients_are_the_chambers", 1, UnmakingChamberTests::breakdownsSentAreTheChambers);
     }
 
     /** Ten motes of the sixteen it costs: it soaks them, and breaks nothing down. */
@@ -269,6 +275,26 @@ final class UnmakingChamberTests {
         state.useWithoutItem(level, player, hit);
         helper.assertTrue(player.getInventory().countItem(Items.OAK_PLANKS) == 8, "the empty hand was not given every output's planks");
         helper.assertTrue(chamber.input().getCount() == 2, "the input holds " + chamber.input());
+        helper.succeed();
+    }
+
+    /**
+     * What clients are sent for a recipe viewer (#52) is what the Chamber breaks down, item for item:
+     * the pack's sticks among them and its barred gold block not, and it comes through the payload's
+     * codec unchanged.
+     */
+    private static void breakdownsSentAreTheChambers(GameTestHelper helper) {
+        var all = UnmakingRecipes.all();
+        for (var item : BuiltInRegistries.ITEM) {
+            var chambers = item == Items.AIR ? Optional.<Breakdown<Item>>empty() : UnmakingRecipes.of(new ItemStack(item));
+            helper.assertTrue(chambers.equals(Optional.ofNullable(all.get(item))),
+                    "clients are sent " + all.get(item) + " for " + item + ", but the Chamber breaks it down as " + chambers);
+        }
+        helper.assertTrue(all.containsKey(Items.STICK) && !all.containsKey(Items.GOLD_BLOCK),
+                "clients are not sent the pack's sticks, or are sent its barred gold block");
+        var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), helper.getLevel().registryAccess(), ConnectionType.NEOFORGE);
+        BreakdownsPayload.STREAM_CODEC.encode(buffer, new BreakdownsPayload(all));
+        helper.assertTrue(BreakdownsPayload.STREAM_CODEC.decode(buffer).breakdowns().equals(all), "the breakdowns payload does not come through unchanged");
         helper.succeed();
     }
 

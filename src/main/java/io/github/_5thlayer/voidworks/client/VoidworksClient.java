@@ -8,6 +8,8 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
+import io.github._5thlayer.voidworks.mutation.KnownBreakdowns;
 import io.github._5thlayer.voidworks.pressure.KnownPressure;
 import io.github._5thlayer.voidworks.pressure.PressurePayload;
 import net.minecraft.client.Minecraft;
@@ -38,7 +40,10 @@ public final class VoidworksClient {
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         modBus.addListener(VoidworksClient::registerRenderers);
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
-        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> KnownPressure.forget());
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            KnownPressure.forget();
+            KnownBreakdowns.forget();
+        });
     }
 
     private static void registerParticles(RegisterParticleProvidersEvent event) {
@@ -62,5 +67,6 @@ public final class VoidworksClient {
             }
         });
         event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));
+        event.register(BreakdownsPayload.TYPE, (payload, context) -> KnownBreakdowns.receive(payload));
     }
 }

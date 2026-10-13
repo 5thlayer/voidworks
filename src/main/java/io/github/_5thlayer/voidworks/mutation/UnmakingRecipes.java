@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.mutation;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.google.gson.JsonElement;
@@ -76,6 +77,7 @@ public final class UnmakingRecipes {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(UnmakingRecipes::registerDataMap);
+        BreakdownsSync.register(modBus);
     }
 
     private static void registerDataMap(RegisterDataMapTypesEvent event) {
@@ -95,6 +97,16 @@ public final class UnmakingRecipes {
     /** @return whether an item of {@code resource} has a breakdown, so the Unmaking Chamber's input takes it */
     static boolean hasBreakdown(ItemResource resource) {
         return of(resource).isPresent();
+    }
+
+    /**
+     * @return every item with a breakdown on the current server and its breakdown, by the same rule
+     *         as {@link #of(ItemStack)}: what clients are sent for a recipe viewer ({@link BreakdownsPayload})
+     */
+    public static Map<Item, Breakdown<Item>> all() {
+        var entries = new LinkedHashMap<Item, Breakdown<Item>>();
+        BuiltInRegistries.ITEM.getDataMap(DATA_MAP).forEach((key, entry) -> entries.put(BuiltInRegistries.ITEM.getValueOrThrow(key), entry));
+        return recipes().all(entries);
     }
 
     private static Optional<Breakdown<Item>> of(Holder<Item> item) {

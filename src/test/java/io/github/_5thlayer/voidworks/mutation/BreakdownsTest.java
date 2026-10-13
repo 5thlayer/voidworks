@@ -109,6 +109,32 @@ class BreakdownsTest {
     }
 
     @Test
+    void everyBreakdownListsEachItemOneRecipeMakesWithItsBreakdown() {
+        var torch = recipe("torch", 4, List.of(plain("coal"), plain("stick")));
+        assertEquals(Map.of("iron_block", new Breakdown<>(1, Map.of("iron_ingot", 9)), "torch", new Breakdown<>(4, Map.of("coal", 1, "stick", 1))),
+                Breakdowns.of(List.of(IRON_BLOCK, torch)).all(Map.of()));
+    }
+
+    @Test
+    void everyBreakdownLeavesOutItemsWithNone() {
+        var stick = recipe("stick", 4, List.of(plain("oak_planks"), plain("oak_planks")));
+        var otherStick = recipe("stick", 4, List.of(plain("birch_planks"), plain("birch_planks")));
+        var fireworks = new Recipe<String>("firework_rocket", 3, Optional.empty());
+        assertEquals(Map.of(), Breakdowns.of(List.of(stick, otherStick, fireworks)).all(Map.of()));
+    }
+
+    @Test
+    void everyBreakdownTakesAPacksEntriesOverRecipesAndLeavesOutBarredItems() {
+        var torch = recipe("torch", 4, List.of(plain("coal"), plain("stick")));
+        var entries = Map.of(
+                "iron_block", new Breakdown<String>(1, Map.of()),
+                "torch", new Breakdown<>(2, Map.of("coal", 1)),
+                "stick", new Breakdown<>(4, Map.of("oak_planks", 2)));
+        assertEquals(Map.of("torch", new Breakdown<>(2, Map.of("coal", 1)), "stick", new Breakdown<>(4, Map.of("oak_planks", 2))),
+                Breakdowns.of(List.of(IRON_BLOCK, torch)).all(entries));
+    }
+
+    @Test
     void aBreakdownTakesAtLeastOneItemAndReturnsNoneNegative() {
         assertThrows(IllegalArgumentException.class, () -> new Breakdown<>(0, Map.of("coal", 1)));
         assertThrows(IllegalArgumentException.class, () -> new Breakdown<>(1, Map.of("coal", 0)));

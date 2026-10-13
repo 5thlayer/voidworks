@@ -3,7 +3,9 @@
 
 package io.github._5thlayer.voidworks.mutation;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,5 +83,18 @@ public final class Breakdowns<I> {
             return entry.filter(breakdown -> !breakdown.returns().isEmpty());
         }
         return byResult.getOrDefault(item, Optional.empty());
+    }
+
+    /**
+     * @param entries every pack entry, by the item it names
+     * @return every item with a breakdown and its breakdown, as {@link #of} gives it: the recipes' in
+     *         their order, then the entries' for items no recipe gives one; a recipe viewer's list
+     */
+    public Map<I, Breakdown<I>> all(Map<I, Breakdown<I>> entries) {
+        var items = new LinkedHashSet<I>(byResult.keySet());
+        items.addAll(entries.keySet());
+        var all = new LinkedHashMap<I, Breakdown<I>>();
+        items.forEach(item -> of(item, Optional.ofNullable(entries.get(item))).ifPresent(breakdown -> all.put(item, breakdown)));
+        return Collections.unmodifiableMap(all);
     }
 }
