@@ -109,6 +109,8 @@ final class UnmakingChamberTests {
         // Paper and gunpowder make plain rockets, but so does the rocket recipe that takes stars.
         assertBreakdown(helper, Items.FIREWORK_ROCKET, Optional.empty());
         assertBreakdown(helper, Items.FIREWORK_STAR, Optional.empty());
+        // A banner's shaped recipe is not its only one: banner copies make it too.
+        assertBreakdown(helper, Items.WHITE_BANNER, Optional.empty());
         assertBreakdown(helper, Items.STICK, Optional.of(new Breakdown<>(4, Map.of(Items.OAK_PLANKS, 2))));
         assertBreakdown(helper, Items.GOLD_BLOCK, Optional.empty());
         helper.succeed();

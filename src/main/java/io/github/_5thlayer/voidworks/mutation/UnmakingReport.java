@@ -29,7 +29,9 @@ import net.minecraft.world.item.ItemStack;
  * @param input what waits to break down, empty for nothing
  * @param breakdown its breakdown, empty for an empty input or an item with none
  * @param yield the chance each ingredient item comes back
+ * @param awake whether it has soaked its Dormant cost
  * @param worth what the stores touching it are worth there together, in void energy; empty while Dormant or with none touching it
+ * @param stall what stops it breaking down what it holds, empty when nothing does
  */
 public record UnmakingReport(ItemStack input, Optional<Shown> breakdown, double yield, boolean awake, Optional<Long> worth,
         Optional<UnmakingChamberBlockEntity.Stall> stall) {
