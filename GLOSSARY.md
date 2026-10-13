@@ -20,6 +20,10 @@ This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It re
 A mod or a pack that builds against or loads this Module.
 _Avoid_: client (collides with the game's client side), dependent, integration
 
+**Works tab**:
+The creative tab the suite's Modules share, registered by the libworks-runtime nested in the jar. Every Voidworks item shows there and in no other tab; Voidworks has no tab of its own (FactoryWorks ADR-0128).
+_Avoid_: Voidworks tab, creative tab (alone)
+
 ### Void
 
 **Void Mote**:

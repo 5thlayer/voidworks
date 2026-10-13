@@ -9,10 +9,8 @@ import io.github._5thlayer.voidworks.siphon.SiphonMotes;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -43,13 +41,6 @@ public final class VoidworksItems {
     public static void register(IEventBus modBus) {
         COMPONENTS.register(modBus);
         ITEMS.register(modBus);
-        modBus.addListener(VoidworksItems::addToCreativeTabs);
         NeoForge.EVENT_BUS.addListener(SiphonCharging::onPlayerTick);
-    }
-
-    private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
-            event.accept(VOID_SIPHON.get());
-        }
     }
 }

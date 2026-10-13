@@ -35,6 +35,7 @@ public final class Voidworks {
         VoidworksButterflies.register(modBus);
         VoidworksBlocks.register(modBus);
         VoidworksItems.register(modBus);
+        modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
         Dormancy.register(modBus);
         Families.register(modBus);
