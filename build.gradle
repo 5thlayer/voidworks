@@ -3,13 +3,13 @@
 // libworks convention plugin (libworks ADR 0003). Voidworks requires no other Module, so it
 // declares no upstreams, and its tags are the plugin's default, voidworks-v<version>.
 plugins {
-    id 'io.github.5thlayer.libworks.module' version '0.2.1'
+    id 'io.github.5thlayer.libworks.module' version '0.3.0'
 }
 
 libworks {
     // Nested by jar-in-jar, so players install nothing more; FML loads the newest nested copy in range,
     // which runs to the next minor. Its machine view shows a Displacer in Jade (#37).
-    runtime = '0.1.5'
+    runtime = '0.1.8'
 }
 
 repositories {
@@ -17,7 +17,10 @@ repositories {
     // there first.
     exclusiveContent {
         forRepository { mavenLocal() }
-        filter { includeModule 'io.github.5thlayer', 'libworks-runtime' }
+        filter {
+            includeModule 'io.github.5thlayer', 'libworks-runtime'
+            includeModule 'io.github.5thlayer', 'libworks-gametest'
+        }
     }
     // EMI for 26.1 is an unofficial port, published on CurseForge only.
     maven {
