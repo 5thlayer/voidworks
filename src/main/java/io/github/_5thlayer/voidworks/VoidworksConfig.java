@@ -37,6 +37,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_CAPACITY;
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_RATE;
+    private static final ModConfigSpec.LongValue FIRST_EGG_PRICE;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -103,6 +104,10 @@ public final class VoidworksConfig {
                         "Resonant and the Draconic.")
                 .defineList("siphonRate", SiphonTier.DEFAULT_RATES, () -> 1,
                         value -> value instanceof Integer motes && motes > 0);
+        FIRST_EGG_PRICE = builder
+                .comment("The void energy a player's first dragon egg soaks before it hatches. Each egg's price is fixed when it",
+                        "starts soaking, at this doubled for every dragon its owner has hatched or is soaking.")
+                .defineInRange("firstEggPrice", 25_600L, 1L, Long.MAX_VALUE);
         SPEC = builder.build();
     }
 
@@ -178,6 +183,11 @@ public final class VoidworksConfig {
     /** @return how many motes a Void Siphon of {@code tier} charges or empties each time, at most */
     public static int siphonRate(SiphonTier tier) {
         return tier.of(SIPHON_RATE.get());
+    }
+
+    /** @return the void energy a player's first dragon egg soaks before it hatches */
+    public static long firstEggPrice() {
+        return FIRST_EGG_PRICE.getAsLong();
     }
 
     /** @return whether the server config is loaded, which the client has only on a server */

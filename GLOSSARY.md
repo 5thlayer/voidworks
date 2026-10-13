@@ -131,8 +131,9 @@ it hatched, follows a player holding a Void Siphon, and grows faster for the mot
 
 **Drained Dragon Egg**:
 The egg a grown Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
-the founder of every line, both soak motes once a player places them touching Voidstone, and hatch
-once they have soaked enough; broken first, an egg loses what it soaked.
+the founder of every line, both soak motes once a player places them touching Voidstone, as a
+Dormant machine soaks its cost, and hatch once they have soaked enough; broken first, an egg loses
+what it soaked.
 _Avoid_: lesser egg
 
 ### Mutation

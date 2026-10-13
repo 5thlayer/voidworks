@@ -74,6 +74,7 @@ public final class VoidworksGameTests {
         CreativeTabTests.register(tests);
         DisplacerTests.register(tests);
         DormantTests.register(tests);
+        EggTests.register(tests);
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
         LoadTests.register(tests);

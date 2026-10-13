@@ -14,7 +14,7 @@ final class CreativeTabTests {
     private static final List<String> WORKS_TAB_ORDER = List.of(
             "overworld_void_displacer", "nether_void_displacer", "end_void_displacer",
             "mutation_chamber", "unmaking_chamber", "void_crucible", "void_well", "void_well_casing", "void_well_rim", "void_siphon",
-            "resonant_void_siphon", "draconic_void_siphon");
+            "resonant_void_siphon", "draconic_void_siphon", "drained_dragon_egg");
 
     private CreativeTabTests() {
     }

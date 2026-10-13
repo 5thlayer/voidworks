@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:dragon_egg",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "voidworks:soaking_dragon_egg",
+              "properties": {
+                "egg": "dragon_egg"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "voidworks:drained_dragon_egg",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "voidworks:soaking_dragon_egg",
+              "properties": {
+                "egg": "drained"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "random_sequence": "voidworks:blocks/soaking_dragon_egg"
+}

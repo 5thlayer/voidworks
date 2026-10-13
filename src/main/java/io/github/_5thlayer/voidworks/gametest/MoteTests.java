@@ -58,7 +58,8 @@ final class MoteTests {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_well_rim"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_siphon"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "resonant_void_siphon"),
-                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "draconic_void_siphon"));
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "draconic_void_siphon"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "drained_dragon_egg"));
         if (!items.equals(expected)) {
             helper.fail("Voidworks' only items should be " + expected + ", but found " + items);
             return;

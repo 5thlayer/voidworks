@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "egg=dragon_egg": {
+      "model": "minecraft:block/dragon_egg"
+    },
+    "egg=drained": {
+      "model": "voidworks:block/drained_dragon_egg"
+    }
+  }
+}

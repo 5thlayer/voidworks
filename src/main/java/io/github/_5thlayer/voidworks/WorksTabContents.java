@@ -31,5 +31,6 @@ final class WorksTabContents {
         event.accept(VoidworksItems.VOID_SIPHON.get());
         event.accept(VoidworksItems.RESONANT_VOID_SIPHON.get());
         event.accept(VoidworksItems.DRACONIC_VOID_SIPHON.get());
+        event.accept(VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get());
     }
 }

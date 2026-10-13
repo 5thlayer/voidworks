@@ -10,6 +10,8 @@ import io.github._5thlayer.voidworks.displacer.NetherDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.SoakingEggBlock;
+import io.github._5thlayer.voidworks.dragon.SoakingEggBlockEntity;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlock;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
 import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlock;
@@ -25,7 +27,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DragonEggBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.MapColor;
@@ -40,7 +44,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Voidstone, the Void Displacers, the Mutation Chamber, the Unmaking Chamber, the Void Crucible, the
- * Void Well and their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
+ * Void Well, the Drained Dragon Egg, the soaking egg and their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
  * good, a Displacer until it becomes Voidstone. Voidstone has no item; each Displacer's is its only
  * one. The Mutation blocks break with a pickaxe, as their crying obsidian does.
  */
@@ -153,6 +157,22 @@ public final class VoidworksBlocks {
                     .sound(SoundType.STONE));
 
     public static final DeferredItem<BlockItem> WELL_RIM_ITEM = ITEMS.registerSimpleBlockItem(WELL_RIM);
+
+    /** Laid by a grown Void Dragon: as the vanilla egg, it falls, and teleports when hit, until a player places it to soak. */
+    public static final DeferredBlock<DragonEggBlock> DRAINED_DRAGON_EGG = BLOCKS.registerBlock("drained_dragon_egg", DragonEggBlock::new,
+            properties -> properties.mapColor(MapColor.TERRACOTTA_WHITE).strength(3.0F, 9.0F).lightLevel(state -> 1).noOcclusion()
+                    .pushReaction(PushReaction.DESTROY));
+
+    public static final DeferredItem<BlockItem> DRAINED_DRAGON_EGG_ITEM =
+            ITEMS.registerSimpleBlockItem(DRAINED_DRAGON_EGG, properties -> properties.rarity(Rarity.EPIC));
+
+    /** Either egg soaking up motes ({@link SoakingEggBlock}), as hard as the vanilla egg and glowing brighter at each stage. It has no item. */
+    public static final DeferredBlock<SoakingEggBlock> SOAKING_EGG = BLOCKS.registerBlock("soaking_dragon_egg", SoakingEggBlock::new,
+            properties -> properties.mapColor(MapColor.COLOR_BLACK).strength(3.0F, 9.0F)
+                    .lightLevel(state -> 1 + 3 * state.getValue(SoakingEggBlock.STAGE)).noOcclusion().pushReaction(PushReaction.DESTROY));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SoakingEggBlockEntity>> SOAKING_EGG_ENTITY =
+            BLOCK_ENTITIES.register("soaking_dragon_egg", () -> new BlockEntityType<>(SoakingEggBlockEntity::new, SOAKING_EGG.get()));
 
     private VoidworksBlocks() {
     }

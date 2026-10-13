@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.client;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
+import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
@@ -27,7 +28,8 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
- * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), and keeps the Void Pressure
+ * result floating over a Void Crucible ({@link VoidCrucibleRenderer}) and the Void Dragon
+ * ({@link VoidDragonRenderer}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
@@ -58,6 +60,7 @@ public final class VoidworksClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(VoidworksBlocks.VOID_CRUCIBLE_ENTITY.get(), context -> new VoidCrucibleRenderer());
+        event.registerEntityRenderer(VoidworksEntities.VOID_DRAGON.get(), VoidDragonRenderer::new);
     }
 
     private static void registerPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
