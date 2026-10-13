@@ -8,6 +8,8 @@ Because void asks to be filled!
 
 **NeoForge, Minecraft 26.1.2 only.** Voidworks is early work: harvesting, Voidstone networks and upgrading are in, the Void Well, the Void Dragon and breaking items down are still to come. Please report anything odd on [GitHub](https://github.com/5thlayer/voidworks/issues).
 
+To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks Showcase](https://www.curseforge.com/minecraft/modpacks/factoryworks-showcase) modpack from CurseForge.
+
 ## What sets it apart
 
 - **Void never becomes ordinary items.** Unlike EMC or UU-matter, motes buy upgrades, not items from nothing. An upgrade needs the item a Family starts from.
