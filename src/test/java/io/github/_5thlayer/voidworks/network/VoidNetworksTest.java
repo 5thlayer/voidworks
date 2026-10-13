@@ -145,7 +145,7 @@ class VoidNetworksTest {
     }
 
     @Test
-    void motesReachTheEndOfALineOfVoidstoneThoughTooFewToEvenItOut() {
+    void motesTooFewToEvenOutALineOfVoidstoneStayShortOfItsEnd() {
         for (int x = 0; x < 5; x++) {
             networks.join(A.east(x));
         }
@@ -155,7 +155,59 @@ class VoidNetworksTest {
             networks.conduct(RATE);
         }
 
-        assertEquals(Map.of(3, 1), held(A.east(4)));
+        assertEquals(Map.of(), held(A.east(4)));
+    }
+
+    @Test
+    void motesTooFewToEvenOutALineOfVoidstoneAllReachWhereTheyAreWantedAtItsEnd() {
+        var end = A.east(4);
+        for (int x = 0; x < 5; x++) {
+            networks.join(A.east(x));
+        }
+        insert(A, 3, 10);
+
+        int drawn = 0;
+        for (int step = 0; step < 100; step++) {
+            // A spender at the end draws on it, taking all it holds.
+            networks.want(end);
+            networks.conduct(RATE);
+            drawn += held(end).getOrDefault(3, 0);
+            try (var transaction = Transaction.openRoot()) {
+                networks.store(end).orElseThrow().extract(MoteStore.slot(3), MoteResource.of(3), Integer.MAX_VALUE, transaction);
+                transaction.commit();
+            }
+        }
+
+        assertEquals(10, drawn);
+    }
+
+    @Test
+    void motesStopWhereTheyAreWanted() {
+        networks.join(A);
+        networks.join(A.east());
+        insert(A, 3, 1);
+        networks.want(A.east());
+
+        networks.conduct(RATE);
+        assertEquals(Map.of(3, 1), held(A.east()));
+        networks.want(A.east());
+        assertEquals(List.of(), networks.conduct(RATE));
+    }
+
+    @Test
+    void motesOnceWantedSettleWhenNoLongerAre() {
+        networks.join(A);
+        networks.join(A.east());
+        networks.join(A.east(2));
+        insert(A, 3, 1);
+        insert(A.east(), 3, 1);
+        networks.want(A.east(2));
+
+        for (int step = 0; step < VoidNetworks.WANTED_STEPS + 1; step++) {
+            networks.conduct(RATE);
+        }
+
+        assertEquals(List.of(), networks.conduct(RATE));
     }
 
     @Test
@@ -163,6 +215,19 @@ class VoidNetworksTest {
         networks.join(A);
         networks.join(A.east());
         insert(A, 3, 1);
+
+        assertEquals(List.of(), networks.conduct(RATE));
+    }
+
+    @Test
+    void motesTooFewToEvenOutASquareOfVoidstoneSettle() {
+        networks.join(A);
+        networks.join(A.east());
+        networks.join(A.south());
+        networks.join(A.east().south());
+        insert(A, 3, 1);
+        insert(A.east(), 3, 1);
+        insert(A.south(), 3, 1);
 
         assertEquals(List.of(), networks.conduct(RATE));
     }

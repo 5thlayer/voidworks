@@ -12,6 +12,8 @@ import java.util.Optional;
 import com.google.common.math.LongMath;
 import io.github._5thlayer.voidworks.VoidworksCapabilities;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
+import io.github._5thlayer.voidworks.network.VoidNetworks;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -75,6 +77,7 @@ public final class TouchingMotes {
      */
     public static boolean spend(ServerLevel level, BlockPos pos, long required) {
         var stores = distinct(at(level, pos));
+        want(level, stores);
         var taken = VoidSpender.spendTogether(stores.stream().map(Store::motes).toList(), level, pos, required);
         if (taken.isEmpty()) {
             return false;
@@ -84,6 +87,16 @@ public final class TouchingMotes {
             taken.get().get(i).forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
         }
         return true;
+    }
+
+    /**
+     * Marks each Voidstone or Void Well among {@code stores} as wanted ({@link VoidNetworks#want}), so
+     * its network's motes find their way to a machine drawing on them, however few. Only a real draw
+     * calls it, a soak or a spend; a look at what the stores are worth does not.
+     */
+    public static void want(ServerLevel level, List<Store> stores) {
+        var networks = VoidstoneNetworks.of(level);
+        stores.forEach(store -> networks.want(store.pos()));
     }
 
     /** @return for a player: what the stores touching it are worth there, or that none touches it */

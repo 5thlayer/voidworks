@@ -12,6 +12,7 @@ import io.github._5thlayer.voidworks.VoidworksItems;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
+import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.network.VoidstoneMotes;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import net.minecraft.core.BlockPos;
@@ -67,6 +68,10 @@ public final class SiphonCharging {
             }
             var siphon = VoidSiphonItem.moteStore(ItemAccess.forPlayerSlot(player, slot));
             var charging = VoidSiphonItem.mode(player.getInventory().getItem(slot)) == SiphonMode.CHARGE;
+            if (charging && VoidSpender.countByGrade(siphon).values().stream().mapToLong(Integer::longValue).sum() < item.capacity()) {
+                // A Siphon with room draws on the Voidstone it reaches; a full one wants nothing.
+                reach.forEach(VoidstoneNetworks.of(level)::want);
+            }
             int left = item.rate();
             for (int grade = VoidEnergy.MAX_GRADE; grade >= VoidEnergy.MIN_GRADE && left > 0; grade--) {
                 for (var pos : reach) {

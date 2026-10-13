@@ -38,10 +38,21 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  */
 public final class VoidNetworks {
 
+    /**
+     * How many steps of conduction a store stays wanted after a spender last drew on it: twice the
+     * steps between two draws of a Dormant machine or Chamber at the default intervals (20 ticks, a
+     * step every 10), so a store drawn on regularly never stops being wanted between draws.
+     */
+    static final int WANTED_STEPS = 4;
+
     private final IntSupplier perVoidstone;
     private final IntSupplier perWell;
     private final Map<BlockPos, MoteStore> stores = new HashMap<>();
     private final Map<MoteStore, MoteNetwork> networkOf = new IdentityHashMap<>();
+    /** The stores motes are wanted at, each with the last step of conduction it is wanted for; not saved. */
+    private final Map<MoteStore, Long> wanted = new IdentityHashMap<>();
+    /** Steps of conduction so far, counting from when the networks were loaded. */
+    private long step;
     private Runnable changed = () -> {
     };
 
@@ -221,6 +232,8 @@ public final class VoidNetworks {
      * @return what moved, store to store
      */
     public List<Flow> conduct(int rate) {
+        step++;
+        var toWanted = distancesToWanted();
         var flows = new ArrayList<Flow>();
         var arrived = new IdentityHashMap<MoteStore, long[]>();
         for (var from : List.copyOf(stores.values())) {
@@ -232,7 +245,7 @@ public final class VoidNetworks {
                     if (to == null || ready <= 0) {
                         continue;
                     }
-                    int moved = flow(from, to, slot, (int) Math.min(rate, ready));
+                    int moved = flow(from, to, slot, (int) Math.min(rate, ready), toWanted);
                     if (moved > 0) {
                         from.motes[slot] -= moved;
                         to.motes[slot] += moved;
@@ -251,29 +264,64 @@ public final class VoidNetworks {
     /**
      * @return the most motes of the grade in {@code slot}, up to {@code most}, that can move from
      *         {@code from} to {@code to} with {@code from}'s pressure still at least {@code to}'s; or
-     *         one mote into an empty {@code to}, when {@code from} is pushed from behind
+     *         one mote, when {@code to} is nearer where motes are wanted and the mote leaves
+     *         {@code to} no higher than {@code from} was
      */
-    private int flow(MoteStore from, MoteStore to, int slot, int most) {
+    private int flow(MoteStore from, MoteStore to, int slot, int most, Map<MoteStore, Integer> toWanted) {
         int even = evening(from, to, slot, most);
-        if (even == 0 && most > 0 && to.motes[slot] == 0 && to.room() > 0 && pushed(from, to, slot)
-                && from.pressure(slot, from.motes[slot]) >= to.pressure(slot, 1)) {
-            // Evening out alone leaves a step of one mote between neighbours, which would keep the
-            // last motes from ever reaching the end of a line of Voidstone. A mote pushed by another
-            // behind it steps on into an empty store; a lone one stays put, so none wanders forever.
+        if (even == 0 && most > 0 && to.room() > 0 && nearer(to, from, toWanted)
+                && from.pressure(slot, from.motes[slot]) >= to.pressure(slot, to.motes[slot] + 1)) {
+            // Evening out alone leaves steps of one mote between neighbours, and level ground where
+            // motes are few, so the last of them would never reach a machine at the end of a line of
+            // Voidstone. Where one is wanted, a mote steps down toward it; nearer each step, none
+            // goes round in circles, and with nothing wanted, motes on level ground stay put.
             return 1;
         }
         return even;
     }
 
-    /** @return whether a store touching {@code from}, other than {@code to}, holds motes of the grade in {@code slot} */
-    private boolean pushed(MoteStore from, MoteStore to, int slot) {
-        for (var direction : Direction.values()) {
-            var behind = stores.get(from.pos().relative(direction));
-            if (behind != null && behind != to && behind.motes[slot] > 0) {
-                return true;
+    /** @return whether {@code to} is strictly nearer a store motes are wanted at than {@code from} is */
+    private static boolean nearer(MoteStore to, MoteStore from, Map<MoteStore, Integer> toWanted) {
+        var distance = toWanted.get(to);
+        return distance != null && distance < toWanted.getOrDefault(from, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Marks the store at {@code pos} as one motes are wanted at: a spender beside it is drawing on
+     * it, so for the next {@link #WANTED_STEPS} steps of conduction motes too few to even out a
+     * network still find their way to it.
+     */
+    public void want(BlockPos pos) {
+        var store = stores.get(pos);
+        if (store != null) {
+            wanted.put(store, step + WANTED_STEPS);
+        }
+    }
+
+    /** @return each store's distance, in stores, to the nearest one motes are wanted at; none for a network wanting none */
+    private Map<MoteStore, Integer> distancesToWanted() {
+        if (wanted.isEmpty()) {
+            return Map.of();
+        }
+        wanted.values().removeIf(until -> until < step);
+        wanted.keySet().removeIf(store -> stores.get(store.pos()) != store);
+        var distances = new IdentityHashMap<MoteStore, Integer>();
+        var queue = new ArrayDeque<MoteStore>();
+        for (var store : wanted.keySet()) {
+            distances.put(store, 0);
+            queue.add(store);
+        }
+        while (!queue.isEmpty()) {
+            var store = queue.poll();
+            for (var direction : Direction.values()) {
+                var next = stores.get(store.pos().relative(direction));
+                if (next != null && !distances.containsKey(next)) {
+                    distances.put(next, distances.get(store) + 1);
+                    queue.add(next);
+                }
             }
         }
-        return false;
+        return distances;
     }
 
     /** @return the most motes, up to {@code most}, that leave {@code from}'s pressure at least {@code to}'s */
