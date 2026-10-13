@@ -83,6 +83,7 @@ public final class VoidworksGameTests {
         PressureTests.register(tests);
         SiphonTests.register(tests);
         SpendTests.register(tests);
+        UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
     }

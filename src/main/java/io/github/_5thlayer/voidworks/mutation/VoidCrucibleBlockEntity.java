@@ -147,6 +147,16 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
             }
         }
         showFloating(level);
+        showWorking(level);
+    }
+
+    /** Lights its look while it upgrades, and darkens it once it stops. */
+    private void showWorking(ServerLevel level) {
+        boolean working = working();
+        var state = getBlockState();
+        if (state.getValue(VoidCrucibleBlock.WORKING) != working) {
+            level.setBlock(worldPosition, state.setValue(VoidCrucibleBlock.WORKING, working), Block.UPDATE_ALL);
+        }
     }
 
     /** Sends its watchers the result it works on, or waits with, done, and whether it holds still, when either changes. */

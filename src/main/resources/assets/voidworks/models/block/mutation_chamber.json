@@ -2,7 +2,7 @@
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
     "top": "minecraft:block/crying_obsidian",
-    "bottom": "minecraft:block/smithing_table_bottom",
-    "side": "minecraft:block/smithing_table_side"
+    "bottom": "minecraft:block/obsidian",
+    "side": "voidworks:block/mutation_chamber_side"
   }
 }

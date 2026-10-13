@@ -12,6 +12,8 @@ import io.github._5thlayer.voidworks.displacer.OverworldDisplacerBlockEntity;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlock;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
+import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlock;
+import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlockEntity;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
@@ -35,10 +37,10 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Voidstone, the Void Displacers, the Mutation Chamber, the Void Crucible and their capabilities.
- * Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for good, a Displacer
- * until it becomes Voidstone. Voidstone has no item; each Displacer's is its only one. The Mutation
- * Chamber and the Void Crucible break with a pickaxe, as their crying obsidian does.
+ * Voidstone, the Void Displacers, the Mutation Chamber, the Unmaking Chamber, the Void Crucible and
+ * their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
+ * good, a Displacer until it becomes Voidstone. Voidstone has no item; each Displacer's is its only
+ * one. The Mutation blocks break with a pickaxe, as their crying obsidian does.
  */
 public final class VoidworksBlocks {
 
@@ -102,11 +104,23 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("mutation_chamber",
                     () -> new BlockEntityType<>(MutationChamberBlockEntity::new, MUTATION_CHAMBER.get()));
 
-    /** Never Dormant, it gives the awake Chamber's light from the start. */
+    /** Like the Mutation Chamber, it gives no light while Dormant. */
+    public static final DeferredBlock<UnmakingChamberBlock> UNMAKING_CHAMBER = BLOCKS.registerBlock("unmaking_chamber",
+            UnmakingChamberBlock::new,
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 1200.0F).requiresCorrectToolForDrops()
+                    .sound(SoundType.AMETHYST).lightLevel(state -> state.getValue(Dormancy.DORMANT) ? 0 : 7));
+
+    public static final DeferredItem<BlockItem> UNMAKING_CHAMBER_ITEM = ITEMS.registerSimpleBlockItem(UNMAKING_CHAMBER);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<UnmakingChamberBlockEntity>> UNMAKING_CHAMBER_ENTITY =
+            BLOCK_ENTITIES.register("unmaking_chamber",
+                    () -> new BlockEntityType<>(UnmakingChamberBlockEntity::new, UNMAKING_CHAMBER.get()));
+
+    /** Never Dormant, it gives the awake Chamber's light while it upgrades. */
     public static final DeferredBlock<VoidCrucibleBlock> VOID_CRUCIBLE = BLOCKS.registerBlock("void_crucible",
             VoidCrucibleBlock::new,
             properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 1200.0F).requiresCorrectToolForDrops()
-                    .sound(SoundType.AMETHYST).lightLevel(state -> 7));
+                    .sound(SoundType.AMETHYST).lightLevel(state -> state.getValue(VoidCrucibleBlock.WORKING) ? 7 : 0));
 
     public static final DeferredItem<BlockItem> VOID_CRUCIBLE_ITEM = ITEMS.registerSimpleBlockItem(VOID_CRUCIBLE);
 
@@ -130,6 +144,7 @@ public final class VoidworksBlocks {
         event.registerBlockEntity(Capabilities.Item.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.itemFace());
         event.registerBlockEntity(Capabilities.Fluid.BLOCK, NETHER_DISPLACER_ENTITY.get(), (displacer, side) -> displacer.fluidFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, MUTATION_CHAMBER_ENTITY.get(), (chamber, side) -> chamber.itemFace());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, UNMAKING_CHAMBER_ENTITY.get(), (chamber, side) -> chamber.itemFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, VOID_CRUCIBLE_ENTITY.get(), (crucible, side) -> crucible.itemFace());
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,

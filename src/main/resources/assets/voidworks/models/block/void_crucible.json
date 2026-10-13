@@ -1,8 +1,8 @@
 {
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "top": "minecraft:block/crying_obsidian",
-    "bottom": "minecraft:block/cauldron_bottom",
-    "side": "minecraft:block/cauldron_side"
+    "top": "voidworks:block/void_crucible_top",
+    "bottom": "minecraft:block/obsidian",
+    "side": "voidworks:block/void_crucible_side"
   }
 }

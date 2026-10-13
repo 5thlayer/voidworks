@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dormant=false": {
+      "model": "voidworks:block/unmaking_chamber"
+    },
+    "dormant=true": {
+      "model": "voidworks:block/unmaking_chamber_dormant"
+    }
+  }
+}

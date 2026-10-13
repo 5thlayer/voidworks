@@ -16,6 +16,9 @@ import io.github._5thlayer.voidworks.mutation.ChamberReport;
 import io.github._5thlayer.voidworks.mutation.CrucibleReport;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlock;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
+import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlock;
+import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlockEntity;
+import io.github._5thlayer.voidworks.mutation.UnmakingReport;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
@@ -36,8 +39,8 @@ import snownee.jade.api.WailaPlugin;
  * What a void block holds, in Jade, read on the server where networks and Dormancy live: a
  * Voidstone's network ({@link VoidstoneReport}); any Dormant machine's payment, a Consumer's too, by
  * {@link Dormancy#status}, with what the mote stores touching a Dormant one are worth; a Void
- * Displacer's {@link DisplacerReport}; a Mutation Chamber's {@link ChamberReport}; and a Void
- * Crucible's {@link CrucibleReport}. All but the
+ * Displacer's {@link DisplacerReport}; a Mutation Chamber's {@link ChamberReport}; an Unmaking
+ * Chamber's {@link UnmakingReport}; and a Void Crucible's {@link CrucibleReport}. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
@@ -55,6 +58,9 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     private static final MachineReport<MutationChamberBlockEntity, ChamberReport> CHAMBER =
             new MachineReport<>(id("chamber"), MutationChamberBlockEntity.class, VoidworksJadePlugin::chamber, ChamberReport.STREAM_CODEC);
+
+    private static final MachineReport<UnmakingChamberBlockEntity, UnmakingReport> UNMAKING = new MachineReport<>(id("unmaking"),
+            UnmakingChamberBlockEntity.class, VoidworksJadePlugin::unmaking, UnmakingReport.STREAM_CODEC);
 
     private static final MachineReport<VoidCrucibleBlockEntity, CrucibleReport> CRUCIBLE =
             new MachineReport<>(id("crucible"), VoidCrucibleBlockEntity.class, VoidworksJadePlugin::crucible, CrucibleReport.STREAM_CODEC);
@@ -82,6 +88,10 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return chamber.getLevel() instanceof ServerLevel level ? ChamberReport.of(chamber, level) : null;
     }
 
+    private static @Nullable UnmakingReport unmaking(UnmakingChamberBlockEntity chamber) {
+        return chamber.getLevel() instanceof ServerLevel level ? UnmakingReport.of(chamber, level) : null;
+    }
+
     private static @Nullable CrucibleReport crucible(VoidCrucibleBlockEntity crucible) {
         return crucible.getLevel() instanceof ServerLevel level ? CrucibleReport.of(crucible, level) : null;
     }
@@ -92,6 +102,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         registration.registerBlockDataProvider(DORMANT, BlockEntity.class);
         registration.registerBlockDataProvider(DISPLACER, DisplacerBlockEntity.class);
         registration.registerBlockDataProvider(CHAMBER, MutationChamberBlockEntity.class);
+        registration.registerBlockDataProvider(UNMAKING, UnmakingChamberBlockEntity.class);
         registration.registerBlockDataProvider(CRUCIBLE, VoidCrucibleBlockEntity.class);
     }
 
@@ -103,6 +114,8 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 DisplacerBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(CHAMBER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 MutationChamberBlock.class);
+        registration.registerBlockComponent(new MachineReport.Client<>(UNMAKING, (report, tooltip) -> report.lines().forEach(tooltip::add)),
+                UnmakingChamberBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(CRUCIBLE, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidCrucibleBlock.class);
     }

@@ -8,6 +8,9 @@
     },
     "voidworks:mutation_chamber": {
       "cost": 1600
+    },
+    "voidworks:unmaking_chamber": {
+      "cost": 1600
     }
   }
 }

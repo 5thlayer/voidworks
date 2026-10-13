@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks;
 
 import java.util.List;
 
+import io.github._5thlayer.voidworks.mutation.UnmakingYield;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -23,6 +24,9 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
     private static final ModConfigSpec.IntValue SOAK_INTERVAL;
     private static final ModConfigSpec.IntValue MUTATION_INTERVAL;
+    private static final ModConfigSpec.DoubleValue UNMAKING_YIELD_START;
+    private static final ModConfigSpec.DoubleValue UNMAKING_YIELD_CAP;
+    private static final ModConfigSpec.IntValue UNMAKING_YIELD_HALVING;
     private static final ModConfigSpec.IntValue CRUCIBLE_TICKS;
     private static final ModConfigSpec.IntValue CRUCIBLE_RADIUS;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
@@ -49,6 +53,16 @@ public final class VoidworksConfig {
         MUTATION_INTERVAL = builder
                 .comment("Ticks between a Mutation Chamber's upgrades, each one result for its Rung's count of items.")
                 .defineInRange("mutationInterval", 20, 1, 24000);
+        UNMAKING_YIELD_START = builder
+                .comment("The chance each ingredient item comes back from an Unmaking Chamber that has spent nothing on breakdowns.")
+                .defineInRange("unmakingYieldStart", 0.25, 0.0, 1.0);
+        UNMAKING_YIELD_CAP = builder
+                .comment("What an Unmaking Chamber's yield rises toward as it spends on breakdowns, and never reaches; below",
+                        "the start, the yield stays at the start.")
+                .defineInRange("unmakingYieldCap", 0.75, 0.0, 1.0);
+        UNMAKING_YIELD_HALVING = builder
+                .comment("The void energy an Unmaking Chamber spends on breakdowns to close half the gap from its yield to the cap.")
+                .defineInRange("unmakingYieldHalving", 25_600, 1, Integer.MAX_VALUE);
         CRUCIBLE_TICKS = builder
                 .comment("Ticks a Void Crucible takes per void energy of a Rung's cost, alone at a Void Pressure of 3, the End's",
                         "by default: each step of pressure above halves the time and each below doubles it.")
@@ -100,6 +114,12 @@ public final class VoidworksConfig {
     /** @return ticks between a Mutation Chamber's upgrades */
     public static int mutationInterval() {
         return MUTATION_INTERVAL.getAsInt();
+    }
+
+    /** @return an Unmaking Chamber's yield: where it starts, what it rises toward, and how fast */
+    public static UnmakingYield unmakingYield() {
+        double start = UNMAKING_YIELD_START.getAsDouble();
+        return new UnmakingYield(start, Math.max(start, UNMAKING_YIELD_CAP.getAsDouble()), UNMAKING_YIELD_HALVING.getAsInt());
     }
 
     /** @return ticks a lone Void Crucible takes per void energy of cost at a Void Pressure of 3 */

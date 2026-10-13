@@ -10,6 +10,7 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.mutation.CrucibleReport;
 import io.github._5thlayer.voidworks.mutation.CrucibleTime;
+import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
@@ -64,6 +65,7 @@ final class VoidCrucibleTests {
         tests.test("a_stalled_or_empty_void_crucible_beside_one_does_not_slow_it", TICKS, VoidCrucibleTests::idleNeighboursDoNotShare);
         tests.test("void_crucible_starts_again_when_emptied_or_given_another_item", TICKS, VoidCrucibleTests::startsAgain);
         tests.test("void_crucible_with_a_full_output_waits_done", TICKS, VoidCrucibleTests::fullOutputHoldsItDone);
+        tests.test("void_crucible_looks_lit_only_while_it_upgrades", TICKS, VoidCrucibleTests::litWhileWorking);
         tests.test("void_crucible_keeps_its_progress_across_a_save", TICKS, VoidCrucibleTests::keepsProgress);
         tests.test("void_crucible_shows_its_watchers_the_result_it_works_on", TICKS, VoidCrucibleTests::showsTheResult);
         tests.test("void_crucible_item_face_takes_only_upgradable_items_and_gives_only_the_output", 1, VoidCrucibleTests::itemFace);
@@ -344,6 +346,25 @@ final class VoidCrucibleTests {
     }
 
     // -- helpers --------------------------------------------------------------------------------
+
+    /** Empty it is dark; given snowballs, it lights; done on a full output, it is dark again. */
+    private static void litWhileWorking(GameTestHelper helper) {
+        var crucible = place(helper, CRUCIBLE);
+        crucible.inventory().set(VoidCrucibleBlockEntity.OUTPUT, ItemResource.of(Items.DIRT), 64);
+        helper.startSequence()
+                .thenExecuteAfter(2, () -> {
+                    helper.assertTrue(!lit(helper), "an empty Crucible looks lit");
+                    insert(crucible, Items.SNOWBALL, 2);
+                })
+                .thenExecuteAfter(2, () -> helper.assertTrue(lit(helper), "a Crucible upgrading snowballs does not look lit"))
+                .thenWaitUntil(() -> helper.assertTrue(crucible.progress() >= 1, "it is " + crucible.progress() + " done"))
+                .thenExecuteAfter(2, () -> helper.assertTrue(!lit(helper), "a Crucible waiting, done, on a full output looks lit"))
+                .thenSucceed();
+    }
+
+    private static boolean lit(GameTestHelper helper) {
+        return helper.getBlockState(CRUCIBLE).getValue(VoidCrucibleBlock.WORKING);
+    }
 
     private static VoidCrucibleBlockEntity place(GameTestHelper helper, BlockPos pos) {
         helper.setBlock(pos, VoidworksBlocks.VOID_CRUCIBLE.get());
