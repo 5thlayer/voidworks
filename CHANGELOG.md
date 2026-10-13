@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+- **Breaking:** Void Siphon tiers: the Resonant Void Siphon (`voidworks:resonant_void_siphon`) and the Draconic Void Siphon (`voidworks:draconic_void_siphon`). A Void Siphon smithed with an echo shard, no template, becomes Resonant, and a Resonant one smithed with dragon's breath becomes Draconic, each keeping its motes and toggle. A tier raises what a Siphon holds and how many motes it charges or empties on Voidstone each time; its harvest is the same at every tier. `siphonCapacity` and `siphonRate` in `voidworks-server.toml` are now lists by tier, bottom first (256, 1024, 4096 and 8, 16, 32), so a server that set either as a number has it reset to the defaults. `VoidSiphonItem` takes its `SiphonTier`, which `tier()`, `capacity()` and `rate()` read, and `VoidworksConfig.siphonCapacity(tier)` and `siphonRate(tier)` take one; every tier is a `VoidSiphonItem`. Their sprites are the Void Siphon's wand with its crystal recoloured, an echo shard's teals and dragon's breath's pinks, from Malcolm Riley's unused textures (CC BY 4.0, credited in `NOTICE`). (#22)
+
 ## 0.1.2
 
 - The Void Crucible has art of its own: a plain panel let into the Displacers' abyssium casing, under a top ringed in crystal glass that frames its floating result, the ring amethyst while it upgrades. Its block gains a `working` state, true only while it upgrades, and it gives light only then. (#48)

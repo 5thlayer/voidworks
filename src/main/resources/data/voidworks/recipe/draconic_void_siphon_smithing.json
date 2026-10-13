@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:dragon_breath",
+  "base": "voidworks:resonant_void_siphon",
+  "result": {
+    "id": "voidworks:draconic_void_siphon"
+  }
+}

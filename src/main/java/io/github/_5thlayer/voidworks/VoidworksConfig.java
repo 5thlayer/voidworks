@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks;
 import java.util.List;
 
 import io.github._5thlayer.voidworks.mutation.UnmakingYield;
+import io.github._5thlayer.voidworks.siphon.SiphonTier;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -30,9 +31,9 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue CRUCIBLE_TICKS;
     private static final ModConfigSpec.IntValue CRUCIBLE_RADIUS;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> DENSITY_MOTES;
-    private static final ModConfigSpec.IntValue SIPHON_CAPACITY;
+    private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_CAPACITY;
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
-    private static final ModConfigSpec.IntValue SIPHON_RATE;
+    private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_RATE;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -76,15 +77,19 @@ public final class VoidworksConfig {
                 .defineList("densityMotes", List.of(1, 4, 16, 64), () -> 1,
                         value -> value instanceof Integer motes && motes > 0);
         SIPHON_CAPACITY = builder
-                .comment("How many motes a Void Siphon holds, of every grade together: a small fraction of a Void Well, enough",
-                        "to start a base or pay a Dormant machine, never to supply one.")
-                .defineInRange("siphonCapacity", 256, 1, 1 << 20);
+                .comment("How many motes a Void Siphon holds, of every grade together, by tier: the Void Siphon, the Resonant",
+                        "and the Draconic. Even the top is a small fraction of a Void Well, enough to start a base or pay a",
+                        "Dormant machine, never to supply one.")
+                .defineList("siphonCapacity", SiphonTier.DEFAULT_CAPACITIES, () -> 1,
+                        value -> value instanceof Integer motes && motes > 0);
         SIPHON_INTERVAL = builder
                 .comment("Ticks between a Void Siphon's charges from, or emptyings into, the Voidstone its holder stands on.")
                 .defineInRange("siphonInterval", 10, 1, 24000);
         SIPHON_RATE = builder
-                .comment("How many motes a Void Siphon charges or empties each time, at most.")
-                .defineInRange("siphonRate", 8, 1, 1 << 20);
+                .comment("How many motes a Void Siphon charges or empties each time, at most, by tier: the Void Siphon, the",
+                        "Resonant and the Draconic.")
+                .defineList("siphonRate", SiphonTier.DEFAULT_RATES, () -> 1,
+                        value -> value instanceof Integer motes && motes > 0);
         SPEC = builder.build();
     }
 
@@ -132,9 +137,9 @@ public final class VoidworksConfig {
         return CRUCIBLE_RADIUS.getAsInt();
     }
 
-    /** @return how many motes a Void Siphon holds, of every grade together */
-    public static int siphonCapacity() {
-        return SIPHON_CAPACITY.getAsInt();
+    /** @return how many motes a Void Siphon of {@code tier} holds, of every grade together */
+    public static int siphonCapacity(SiphonTier tier) {
+        return tier.of(SIPHON_CAPACITY.get());
     }
 
     /** @return ticks between a Void Siphon's charges or emptyings on Voidstone */
@@ -142,9 +147,9 @@ public final class VoidworksConfig {
         return SIPHON_INTERVAL.getAsInt();
     }
 
-    /** @return how many motes a Void Siphon charges or empties each time, at most */
-    public static int siphonRate() {
-        return SIPHON_RATE.getAsInt();
+    /** @return how many motes a Void Siphon of {@code tier} charges or empties each time, at most */
+    public static int siphonRate(SiphonTier tier) {
+        return tier.of(SIPHON_RATE.get());
     }
 
     /** @return whether the server config is loaded, which the client has only on a server */

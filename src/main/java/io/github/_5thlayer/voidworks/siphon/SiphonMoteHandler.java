@@ -59,7 +59,7 @@ final class SiphonMoteHandler extends ItemAccessResourceHandler<MoteResource> {
 
     @Override
     public boolean isValid(int index, MoteResource resource) {
-        return itemAccess.getResource().is(VoidworksItems.VOID_SIPHON.get()) && resource.grade() == grade(index);
+        return itemAccess.getResource().getItem() instanceof VoidSiphonItem && resource.grade() == grade(index);
     }
 
     /** What the slot holds and the room the Siphon has left, which every grade shares. */

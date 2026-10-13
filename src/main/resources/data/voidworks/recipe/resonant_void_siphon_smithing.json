@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:echo_shard",
+  "base": "voidworks:void_siphon",
+  "result": {
+    "id": "voidworks:resonant_void_siphon"
+  }
+}

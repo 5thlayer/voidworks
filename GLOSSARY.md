@@ -85,6 +85,8 @@ _Avoid_: area, range, radius
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It
 holds motes and keeps them wherever it goes, as many as its tier allows, and void gear draws from it.
 Standing on Voidstone, it charges from the network or empties into it, as its holder sets it.
+Its tiers, the Void Siphon, the Resonant and the Draconic, hold more and charge faster, and it climbs
+them at a smithing table.
 _Avoid_: glove
 
 **Dormant**:

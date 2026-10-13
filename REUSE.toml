@@ -32,6 +32,8 @@ path = [
     "data/art/*.png",
     "data/art/*.png.mcmeta",
     "src/main/resources/assets/voidworks/textures/item/void_siphon.png",
+    "src/main/resources/assets/voidworks/textures/item/resonant_void_siphon.png",
+    "src/main/resources/assets/voidworks/textures/item/draconic_void_siphon.png",
     "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png",
     "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png.mcmeta",
     "src/main/resources/assets/voidworks/textures/block/end_void_displacer_*.png",

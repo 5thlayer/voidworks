@@ -5,7 +5,9 @@
 
 The Void Siphon's item sprite is its recipe drawn as one wand: the infernal rod's lower end stands
 for the blaze rod, the obsidian rod's upper end for the crying obsidian, and the bound crystal,
-shrunk onto the tip, for the ghast tear.
+shrunk onto the tip, for the ghast tear. Its higher tiers are the same wand with the crystal
+recoloured into what climbs it: the Resonant Siphon's into an echo shard's deep teals, the Draconic's
+into dragon's breath's pinks.
 
 The Overworld Void Displacer's faces are the abyssium block, a casing in crying obsidian's purple,
 with the lit brooding forge's void flame let into each side and its glowing eye into the top. Every
@@ -57,6 +59,11 @@ HANDLE = 14
 TIP_SIZE = 7
 TIP_AT = (9, 0)
 
+# The crystal's shades on the higher Siphon tiers, darkest to lightest: an echo shard's teals and
+# dragon's breath's pinks.
+RESONANT_CRYSTAL = [(0x05, 0x1E, 0x26), (0x0B, 0x6B, 0x78), (0x6F, 0xE6, 0xE0)]
+DRACONIC_CRYSTAL = [(0x3A, 0x06, 0x30), (0xB0, 0x2E, 0x8E), (0xFF, 0xB8, 0xF0)]
+
 # The boxes, (left, top, right, bottom), of the forge's flame on its side and of its eye on its
 # top, let into the abyssium casing.
 FLAME = (4, 3, 12, 13)
@@ -107,15 +114,17 @@ def save(image, path):
     print(f"wrote {path.relative_to(ROOT)}")
 
 
-def void_siphon():
+def void_siphon(name="void_siphon", crystal_shades=None):
     handle, shaft, crystal = sprite("part_rod_infernal"), sprite("part_rod_obsidian"), sprite("artifact_bound_crystal")
+    if crystal_shades:
+        crystal = recolour(crystal, crystal_shades)
     siphon = Image.new("RGBA", (16, 16))
     pixels, lower, upper = siphon.load(), handle.load(), shaft.load()
     for y in range(16):
         for x in range(16):
             pixels[x, y] = lower[x, y] if x + (15 - y) < HANDLE else upper[x, y]
     siphon.alpha_composite(crystal.resize((TIP_SIZE, TIP_SIZE), Image.NEAREST), TIP_AT)
-    save(siphon, TEXTURES / "item" / "void_siphon.png")
+    save(siphon, TEXTURES / "item" / f"{name}.png")
 
 
 def recolour(image, shades):
@@ -199,6 +208,8 @@ def unmaking_chamber(abyssium):
 
 def main():
     void_siphon()
+    void_siphon("resonant_void_siphon", RESONANT_CRYSTAL)
+    void_siphon("draconic_void_siphon", DRACONIC_CRYSTAL)
     abyssium = sprite("block_metal_abyssium")
     displacer_face(abyssium, "device_brooding_forge_side_on", FLAME, "overworld_void_displacer_side")
     displacer_face(abyssium, "device_brooding_forge_up_on", EYE, "overworld_void_displacer_top")

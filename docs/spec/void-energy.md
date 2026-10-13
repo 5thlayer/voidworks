@@ -160,6 +160,20 @@ moving Siphons still needs a player at both ends. A player may carry several. Ev
 holds a small fraction of a Void Well: carrying by hand starts a base or powers gear, and never
 supplies one.
 
+**Tiers.** The Siphon comes in three tiers, and a tier raises only what it holds and how fast it
+charges or empties on Voidstone; its harvest yield stays one Density step below a Displacer at
+every tier, so no tier closes a profitable loop. A Siphon climbs at a smithing table, with no
+template, keeping its motes and its toggle, as netherite keeps a tool's enchantments:
+
+| Tier | Climbs with | Capacity | Rate |
+|---|---|---|---|
+| Void Siphon | (crafted) | 256 | 8 |
+| Resonant Void Siphon | an echo shard, from the deep dark | 1024 | 16 |
+| Draconic Void Siphon | dragon's breath, after the dragon | 4096 | 32 |
+
+The capacities and rates are provisional, a list per tier in the server config. The Siphon has no
+durability.
+
 ## Moving motes
 
 - **Voidstone stores.** Each Voidstone adds to its network's capacity, about what its own harvest
@@ -310,8 +324,6 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 
 ## Open
 
-- **Void Siphon tiers** — what a tier raises (capacity, yield) and how a Siphon climbs, perhaps by
-  smithing with a void alloy as netherite does. Dragon's breath goes into a tier above the first.
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
 - **Tool and armour Families** — wooden → stone → copper → iron → golden → diamond, and what an
   upgrade carries over: enchantments, damage, names, trims.

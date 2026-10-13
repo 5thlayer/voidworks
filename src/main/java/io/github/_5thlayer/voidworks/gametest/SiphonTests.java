@@ -16,6 +16,7 @@ import io.github._5thlayer.voidworks.siphon.SiphonHarvest;
 import io.github._5thlayer.voidworks.siphon.SiphonHarvest.Outcome;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.SiphonMotes;
+import io.github._5thlayer.voidworks.siphon.SiphonTier;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,6 +29,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
@@ -63,6 +66,10 @@ final class SiphonTests {
         tests.test("a_siphon_off_voidstone_neither_charges_nor_empties", 1, SiphonTests::offVoidstone);
         tests.test("an_emptying_siphon_used_on_a_dormant_machine_pays_its_cost", 200, SiphonTests::paysADormantMachine);
         tests.test("a_siphon_is_crafted_from_a_ghast_tear_crying_obsidian_and_a_blaze_rod", 1, SiphonTests::hasARecipe);
+        tests.test("a_siphon_smithed_with_an_echo_shard_becomes_resonant_keeping_its_motes_and_toggle", 1, SiphonTests::smithsToResonant);
+        tests.test("a_resonant_siphon_smithed_with_dragons_breath_becomes_draconic_keeping_its_motes_and_toggle", 1, SiphonTests::smithsToDraconic);
+        tests.test("a_resonant_siphon_holds_more_than_a_siphon", 1, SiphonTests::resonantHoldsMore);
+        tests.test("a_draconic_siphon_on_voidstone_charges_at_its_own_rate", 1, SiphonTests::draconicChargesFaster);
     }
 
     /** Used for real, aimed straight down at the stone floor beneath the player. */
@@ -142,7 +149,7 @@ final class SiphonTests {
 
     private static void fullRefuses(GameTestHelper helper) {
         var player = player(helper, new ItemStack(Items.COPPER_BLOCK));
-        var full = SiphonMotes.EMPTY.with(grade(helper), VoidworksConfig.siphonCapacity());
+        var full = SiphonMotes.EMPTY.with(grade(helper), VoidworksConfig.siphonCapacity(SiphonTier.BASE));
         player.getMainHandItem().set(VoidworksItems.SIPHON_MOTES.get(), full);
         var outcome = harvest(helper, player, FLOOR, HarvestKind.OVERWORLD);
         helper.assertTrue(outcome == Outcome.FULL, "a full Siphon's harvest came to " + outcome);
@@ -167,7 +174,7 @@ final class SiphonTests {
 
     /** Five of grade 4 and five of grade 3 in the network: one exchange takes the 4s, then the 3s, up to the rate. */
     private static void charges(GameTestHelper helper) {
-        int rate = VoidworksConfig.siphonRate();
+        int rate = VoidworksConfig.siphonRate(SiphonTier.BASE);
         helper.assertTrue(rate > 5 && rate < 10, "this test needs a rate between 5 and 10 motes, not " + rate);
         helper.setBlock(FLOOR, VoidworksBlocks.VOIDSTONE.get());
         VoidstoneTests.insert(helper, FLOOR, 4, 5);
@@ -182,7 +189,7 @@ final class SiphonTests {
     }
 
     private static void empties(GameTestHelper helper) {
-        int rate = VoidworksConfig.siphonRate();
+        int rate = VoidworksConfig.siphonRate(SiphonTier.BASE);
         helper.setBlock(FLOOR, VoidworksBlocks.VOIDSTONE.get());
         var player = player(helper, ItemStack.EMPTY);
         var siphon = player.getMainHandItem();
@@ -231,6 +238,61 @@ final class SiphonTests {
         helper.succeed();
     }
 
+    private static void smithsToResonant(GameTestHelper helper) {
+        var siphon = new ItemStack(VoidworksItems.VOID_SIPHON.get());
+        siphon.set(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY.with(3, 40).with(4, 2));
+        siphon.set(VoidworksItems.SIPHON_MODE.get(), SiphonMode.EMPTY);
+        var smithed = smith(helper, siphon, new ItemStack(Items.ECHO_SHARD));
+        helper.assertTrue(smithed.is(VoidworksItems.RESONANT_VOID_SIPHON.get()), "an echo shard smithed it into " + smithed);
+        helper.assertTrue(VoidSiphonItem.heldMotes(smithed).byGrade().equals(Map.of(3, 40, 4, 2)), "the motes did not carry over: " + VoidSiphonItem.heldMotes(smithed));
+        helper.assertTrue(VoidSiphonItem.mode(smithed) == SiphonMode.EMPTY, "the toggle did not carry over");
+        helper.succeed();
+    }
+
+    private static void smithsToDraconic(GameTestHelper helper) {
+        var siphon = new ItemStack(VoidworksItems.RESONANT_VOID_SIPHON.get());
+        siphon.set(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY.with(5, 9));
+        siphon.set(VoidworksItems.SIPHON_MODE.get(), SiphonMode.EMPTY);
+        var smithed = smith(helper, siphon, new ItemStack(Items.DRAGON_BREATH));
+        helper.assertTrue(smithed.is(VoidworksItems.DRACONIC_VOID_SIPHON.get()), "dragon's breath smithed it into " + smithed);
+        helper.assertTrue(VoidSiphonItem.heldMotes(smithed).byGrade().equals(Map.of(5, 9)), "the motes did not carry over: " + VoidSiphonItem.heldMotes(smithed));
+        helper.assertTrue(VoidSiphonItem.mode(smithed) == SiphonMode.EMPTY, "the toggle did not carry over");
+        helper.assertTrue(smith(helper, new ItemStack(VoidworksItems.VOID_SIPHON.get()), new ItemStack(Items.DRAGON_BREATH)).isEmpty(),
+                "dragon's breath skipped the Resonant tier");
+        helper.succeed();
+    }
+
+    /** A Resonant Siphon holding a full Siphon's motes still harvests; at its own capacity it is full. */
+    private static void resonantHoldsMore(GameTestHelper helper) {
+        var player = player(helper, new ItemStack(Items.COPPER_BLOCK, 2));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksItems.RESONANT_VOID_SIPHON.get()));
+        player.getMainHandItem().set(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY.with(grade(helper), VoidworksConfig.siphonCapacity(SiphonTier.BASE)));
+        var outcome = harvest(helper, player, FLOOR, HarvestKind.OVERWORLD);
+        helper.assertTrue(outcome == Outcome.HARVESTED, "a Resonant Siphon holding a Siphon's capacity came to " + outcome);
+        player.getMainHandItem().set(VoidworksItems.SIPHON_MOTES.get(), SiphonMotes.EMPTY.with(grade(helper), VoidworksConfig.siphonCapacity(SiphonTier.RESONANT)));
+        helper.setBlock(FLOOR, Blocks.STONE);
+        outcome = harvest(helper, player, FLOOR, HarvestKind.OVERWORLD);
+        helper.assertTrue(outcome == Outcome.FULL, "a Resonant Siphon at its capacity came to " + outcome);
+        helper.succeed();
+    }
+
+    private static void draconicChargesFaster(GameTestHelper helper) {
+        int rate = VoidworksConfig.siphonRate(SiphonTier.DRACONIC);
+        helper.assertTrue(rate > VoidworksConfig.siphonRate(SiphonTier.BASE), "the Draconic rate " + rate + " is no faster than the Siphon's");
+        // enough Voidstone to hold more than the rate
+        for (int x = 0; x * VoidworksConfig.voidstoneCapacity() <= rate; x++) {
+            helper.setBlock(FLOOR.east(x), VoidworksBlocks.VOIDSTONE.get());
+        }
+        int inserted = VoidstoneTests.insert(helper, FLOOR, 3, rate + 5);
+        helper.assertTrue(inserted > rate, "the network took only " + inserted + " motes");
+        var player = player(helper, ItemStack.EMPTY);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksItems.DRACONIC_VOID_SIPHON.get()));
+        int moved = SiphonCharging.exchange(helper.getLevel(), player);
+        helper.assertTrue(moved == rate, "it moved " + moved + " motes, not the Draconic rate's " + rate);
+        assertMotes(helper, player, Map.of(3, rate));
+        helper.succeed();
+    }
+
     // -- helpers --------------------------------------------------------------------------------
 
     /** A survival player standing on the floor's middle, a Void Siphon in the main hand and {@code fed} in the off hand. */
@@ -241,6 +303,15 @@ final class SiphonTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksItems.VOID_SIPHON.get()));
         player.setItemInHand(InteractionHand.OFF_HAND, fed);
         return player;
+    }
+
+    /** What the smithing table makes of {@code base} and {@code addition} with no template, or nothing. */
+    private static ItemStack smith(GameTestHelper helper, ItemStack base, ItemStack addition) {
+        var input = new SmithingRecipeInput(ItemStack.EMPTY, base, addition);
+        var level = helper.getLevel();
+        return level.getServer().getRecipeManager().getRecipeFor(RecipeType.SMITHING, input, level)
+                .map(recipe -> recipe.value().assemble(input))
+                .orElse(ItemStack.EMPTY);
     }
 
     /** Harvests at the top face of {@code aimed}, relative to the test, as a Siphon of harvest kind {@code kind}. */

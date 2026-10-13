@@ -16,6 +16,8 @@
   "config.jade.plugin_voidworks.dormant": "Dormant payment",
   "config.jade.plugin_voidworks.unmaking": "Unmaking Chamber state",
   "config.jade.plugin_voidworks.voidstone": "Voidstone network",
+  "item.voidworks.draconic_void_siphon": "Draconic Void Siphon",
+  "item.voidworks.resonant_void_siphon": "Resonant Void Siphon",
   "item.voidworks.void_siphon": "Void Siphon",
   "voidworks.dormant.awake": "Awake",
   "voidworks.dormant.status": "Dormant: %s of %s void energy paid",

@@ -26,5 +26,7 @@ final class WorksTabContents {
         event.accept(VoidworksBlocks.UNMAKING_CHAMBER_ITEM.get());
         event.accept(VoidworksBlocks.VOID_CRUCIBLE_ITEM.get());
         event.accept(VoidworksItems.VOID_SIPHON.get());
+        event.accept(VoidworksItems.RESONANT_VOID_SIPHON.get());
+        event.accept(VoidworksItems.DRACONIC_VOID_SIPHON.get());
     }
 }

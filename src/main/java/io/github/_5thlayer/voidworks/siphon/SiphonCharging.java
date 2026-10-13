@@ -21,7 +21,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 /**
  * A player standing on Voidstone charges or empties every Void Siphon they carry, each as its toggle
- * says: up to {@link VoidworksConfig#siphonRate()} motes per Siphon every
+ * says: up to its tier's {@link VoidworksConfig#siphonRate rate} of motes per Siphon every
  * {@link VoidworksConfig#siphonInterval()} ticks, the highest grade first, as many as the receiver
  * has room for, and without loss. The motes fly between the Voidstone and the player.
  */
@@ -54,12 +54,12 @@ public final class SiphonCharging {
         int moved = 0;
         for (int slot = 0; slot < inventory.size(); slot++) {
             var stack = inventory.getResource(slot);
-            if (!stack.is(VoidworksItems.VOID_SIPHON.get())) {
+            if (!(stack.getItem() instanceof VoidSiphonItem item)) {
                 continue;
             }
             var siphon = VoidSiphonItem.moteStore(ItemAccess.forPlayerSlot(player, slot));
             var charging = VoidSiphonItem.mode(player.getInventory().getItem(slot)) == SiphonMode.CHARGE;
-            int left = VoidworksConfig.siphonRate();
+            int left = item.rate();
             for (int grade = VoidEnergy.MAX_GRADE; grade >= VoidEnergy.MIN_GRADE && left > 0; grade--) {
                 int count = charging ? move(network, siphon, grade, left) : move(siphon, network, grade, left);
                 if (count > 0) {
