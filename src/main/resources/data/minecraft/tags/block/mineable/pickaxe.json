@@ -3,6 +3,8 @@
     "voidworks:mutation_chamber",
     "voidworks:unmaking_chamber",
     "voidworks:void_crucible",
-    "voidworks:void_well"
+    "voidworks:void_well",
+    "voidworks:void_well_casing",
+    "voidworks:void_well_rim"
   ]
 }

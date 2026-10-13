@@ -99,6 +99,11 @@ public final class VoidSiphonItem extends Item {
         if (!(level.getBlockEntity(pos) instanceof Dormancy.Holder machine)) {
             return InteractionResult.PASS;
         }
+        var refusal = machine.refusesPayment();
+        if (refusal.isPresent()) {
+            player.sendOverlayMessage(refusal.get());
+            return InteractionResult.SUCCESS;
+        }
         var slot = context.getHand() == InteractionHand.MAIN_HAND
                 ? ItemAccess.forPlayerSlot(player, player.getInventory().getSelectedSlot())
                 : ItemAccess.forPlayerSlot(player, Inventory.SLOT_OFFHAND);

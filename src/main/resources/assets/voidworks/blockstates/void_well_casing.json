@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "voidworks:block/void_well_casing"
+    }
+  }
+}

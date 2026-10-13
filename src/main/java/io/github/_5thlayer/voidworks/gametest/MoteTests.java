@@ -54,6 +54,8 @@ final class MoteTests {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "unmaking_chamber"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_crucible"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_well"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_well_casing"),
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_well_rim"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_siphon"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "resonant_void_siphon"),
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "draconic_void_siphon"));

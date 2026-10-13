@@ -195,11 +195,17 @@ durability.
 
 ### The Void Well
 
-One block: a large store of motes, the Void Dragon's stop and its healing point. It comes with the
-Dragon, after the dragon: its recipe is shulker shells from the End cities, an ender chest and
-crying obsidian, placed Dormant. Before it, Voidstone bodies are a base's storage. Its pressure stays
-low until it is nearly full, so with no fill target it is a reservoir that soaks up surplus and
-gives it back. With a fill target, a Void Dragon delivers to it until the target is met.
+A built well, 5 by 5 by 5: a large store of motes, the Void Dragon's stop and its healing point. A
+3×3 floor of Well casing, a 5×5 ring of casing walls three courses high standing around it, the
+shaft inside them open, and a raised rim of Well rim around the top. Its core sits in the middle of
+one wall, in its middle course, facing out, so Voidstone and a Void Siphon reach it; the core is the
+store, and the rest is structure. It comes with the Dragon, after the dragon: the core's recipe is
+shulker shells from the End cities, an ender chest and crying obsidian, placed Dormant, and it soaks
+its cost only once the well around it is whole. A Well that is no longer whole stops: it leaves its
+network, keeping its motes, until it is whole again. A broken core loses them. Before it, Voidstone
+bodies are a base's storage. Its pressure stays low until it is nearly full, so with no fill target
+it is a reservoir that soaks up surplus and gives it back. With a fill target, a Void Dragon
+delivers to it until the target is met.
 
 ### The Void Dragon
 

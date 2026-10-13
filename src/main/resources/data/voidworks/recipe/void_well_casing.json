@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "O": "minecraft:obsidian",
+    "P": "minecraft:purpur_block",
+    "E": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "OPO",
+    "PEP",
+    "OPO"
+  ],
+  "result": {
+    "id": "voidworks:void_well_casing",
+    "count": 8
+  }
+}

@@ -130,7 +130,7 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("void_crucible",
                     () -> new BlockEntityType<>(VoidCrucibleBlockEntity::new, VOID_CRUCIBLE.get()));
 
-    /** Like the Mutation Chamber, it gives no light while Dormant; it breaks with a pickaxe, as its crying obsidian does, and cannot be pushed, so its motes stay where it is. */
+    /** The Void Well's core. Like the Mutation Chamber, it gives no light while Dormant; it breaks with a pickaxe, as its crying obsidian does, and cannot be pushed, so its motes stay where it is. */
     public static final DeferredBlock<VoidWellBlock> VOID_WELL = BLOCKS.registerBlock("void_well", VoidWellBlock::new,
             properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops().pushReaction(PushReaction.BLOCK)
                     .sound(SoundType.STONE).lightLevel(state -> state.getValue(Dormancy.DORMANT) ? 0 : 7));
@@ -139,6 +139,20 @@ public final class VoidworksBlocks {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<VoidWellBlockEntity>> VOID_WELL_ENTITY =
             BLOCK_ENTITIES.register("void_well", () -> new BlockEntityType<>(VoidWellBlockEntity::new, VOID_WELL.get()));
+
+    /** The Void Well's floor and walls ({@link io.github._5thlayer.voidworks.well.WellStructure}), as hard as obsidian. */
+    public static final DeferredBlock<Block> WELL_CASING = BLOCKS.registerSimpleBlock("void_well_casing",
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops()
+                    .sound(SoundType.STONE));
+
+    public static final DeferredItem<BlockItem> WELL_CASING_ITEM = ITEMS.registerSimpleBlockItem(WELL_CASING);
+
+    /** The Void Well's raised rim, around the top of its walls. */
+    public static final DeferredBlock<Block> WELL_RIM = BLOCKS.registerSimpleBlock("void_well_rim",
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops()
+                    .sound(SoundType.STONE));
+
+    public static final DeferredItem<BlockItem> WELL_RIM_ITEM = ITEMS.registerSimpleBlockItem(WELL_RIM);
 
     private VoidworksBlocks() {
     }

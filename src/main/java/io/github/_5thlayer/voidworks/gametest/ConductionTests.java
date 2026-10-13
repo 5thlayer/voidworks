@@ -7,6 +7,7 @@ import java.util.Map;
 
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
+import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.command.Showcase;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
@@ -14,7 +15,9 @@ import io.github._5thlayer.voidworks.energy.VoidSpender;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
+import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -35,8 +38,9 @@ final class ConductionTests {
     private static final int ROW = 5;
     private static final BlockPos MACHINE = WEST.east(ROW);
 
-    private static final BlockPos WELL = new BlockPos(4, 1, 4);
-    private static final BlockPos BESIDE_WELL = WELL.east();
+    /** The Well's core, in the middle of its north wall's middle course, its floor on the platform. */
+    private static final BlockPos WELL = new BlockPos(4, 3, 2);
+    private static final BlockPos BESIDE_WELL = WELL.north();
     /** The Well's shipped cost, in void energy. */
     private static final long WELL_COST = 25_600;
     /** Grades above the pressure that pay the Well's cost in as many motes as one Voidstone holds. */
@@ -54,6 +58,9 @@ final class ConductionTests {
         tests.test("a_void_well_placed_dormant_soaks_its_cost_then_joins_its_network_and_soaks_up_its_motes", TICKS,
                 ConductionTests::wellSoaksUp);
         tests.test("a_broken_void_well_loses_its_motes", TICKS, ConductionTests::brokenWellLosesItsMotes);
+        tests.test("a_void_well_core_with_no_well_around_it_soaks_nothing", TICKS, ConductionTests::coreAloneSoaksNothing);
+        tests.test("a_void_well_no_longer_whole_leaves_its_network_keeping_its_motes_until_it_is_whole_again", TICKS,
+                ConductionTests::unwholeWellKeepsItsMotes);
         tests.test("the_void_well_has_a_recipe", 1, ConductionTests::hasARecipe);
         tests.test("the_showcase_s_motes_crawl_to_its_chamber_and_wake_it", SHOWCASE_TICKS, ConductionTests::showcaseWakesItsChamber);
     }
@@ -125,16 +132,64 @@ final class ConductionTests {
                 "the showcase's Chamber is still Dormant, paid " + chamber.dormancy().paid()));
     }
 
+    private static void coreAloneSoaksNothing(GameTestHelper helper) {
+        var well = placeWell(helper, false);
+        helper.startSequence()
+                .thenIdle(3 * VoidworksConfig.soakInterval())
+                .thenExecute(() -> {
+                    helper.assertTrue(well.dormancy().paid() == 0, "a core with no well around it was paid " + well.dormancy().paid());
+                    helper.assertTrue(!well.whole(helper.getLevel()), "a core alone counts as a whole well");
+                })
+                .thenSucceed();
+    }
+
+    /** A wall casing taken out: the Well leaves with its motes; put back, it rejoins with them. */
+    private static void unwholeWellKeepsItsMotes(GameTestHelper helper) {
+        var well = placeWell(helper);
+        int grade = DisplacerTests.pressure(helper, WELL) + 1;
+        var wall = WELL.east();
+        var held = new int[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant"))
+                .thenExecute(() -> VoidstoneTests.insert(helper, BESIDE_WELL, grade, 10))
+                .thenWaitUntil(() -> helper.assertTrue(held(helper, WELL).getOrDefault(grade, 0) == 9, "the Well holds " + held(helper, WELL)))
+                .thenExecute(() -> {
+                    held[0] = held(helper, WELL).get(grade);
+                    helper.setBlock(wall, Blocks.AIR);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(WELL)).isEmpty(),
+                        "the Well is no longer whole but still in a network"))
+                .thenExecute(() -> helper.setBlock(wall, VoidworksBlocks.WELL_CASING.get()))
+                .thenWaitUntil(() -> helper.assertTrue(held(helper, WELL).getOrDefault(grade, 0) == held[0],
+                        "the whole Well again holds " + held(helper, WELL) + ", not the " + held[0] + " it kept"))
+                .thenSucceed();
+    }
+
     private static void hasARecipe(GameTestHelper helper) {
         var key = ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "void_well"));
         helper.assertTrue(helper.getLevel().getServer().getRecipeManager().byKey(key).isPresent(), "there is no recipe " + key.identifier());
         helper.succeed();
     }
 
-    /** A Dormant Well beside a Voidstone holding exactly its cost, in motes {@link #WELL_STEPS} above the pressure. */
     private static VoidWellBlockEntity placeWell(GameTestHelper helper) {
+        return placeWell(helper, true);
+    }
+
+    /**
+     * A Dormant Well's core facing north beside a Voidstone holding exactly its cost, in motes
+     * {@link #WELL_STEPS} above the pressure, and the well around it when {@code whole}.
+     */
+    private static VoidWellBlockEntity placeWell(GameTestHelper helper, boolean whole) {
+        if (whole) {
+            WellStructure.layout(helper.absolutePos(WELL), Direction.NORTH).forEach((pos, part) -> helper.getLevel().setBlockAndUpdate(pos,
+                    switch (part) {
+                        case CASING -> VoidworksBlocks.WELL_CASING.get().defaultBlockState();
+                        case RIM -> VoidworksBlocks.WELL_RIM.get().defaultBlockState();
+                        case OPEN, NONE -> Blocks.AIR.defaultBlockState();
+                    }));
+        }
         helper.setBlock(BESIDE_WELL, VoidworksBlocks.VOIDSTONE.get());
-        helper.setBlock(WELL, VoidworksBlocks.VOID_WELL.get());
+        helper.setBlock(WELL, VoidworksBlocks.VOID_WELL.get().defaultBlockState().setValue(VoidWellBlock.FACING, Direction.NORTH));
         var well = helper.getBlockEntity(WELL, VoidWellBlockEntity.class);
         helper.assertTrue(well.dormancy().cost() == WELL_COST, "the Well's cost is " + well.dormancy().cost() + ", not the shipped " + WELL_COST);
         helper.assertTrue(helper.getBlockState(WELL).getValue(Dormancy.DORMANT), "a newly placed Well does not look Dormant");

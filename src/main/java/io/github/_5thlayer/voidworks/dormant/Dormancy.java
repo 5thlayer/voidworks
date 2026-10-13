@@ -3,6 +3,8 @@
 
 package io.github._5thlayer.voidworks.dormant;
 
+import java.util.Optional;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.Voidworks;
@@ -71,6 +73,15 @@ public final class Dormancy {
 
         /** @return its Dormancy, the same one each time */
         Dormancy dormancy();
+
+        /**
+         * @return why it takes no payment now, such as a Void Well whose well is not whole, which a
+         *         player paying it with a Void Siphon is told; empty when it takes one, as most
+         *         machines always do
+         */
+        default Optional<Component> refusesPayment() {
+            return Optional.empty();
+        }
     }
 
     /** Each Dormant machine's cost, keyed by its block. */

@@ -371,6 +371,22 @@ class VoidNetworksTest {
     }
 
     @Test
+    void aWithdrawnStoreHandsBackItsMotesAndRejoinsWithThem() {
+        networks.join(A);
+        networks.join(A.east(), StoreKind.WELL);
+        insert(A.east(), 3, 40);
+        insert(A.east(), 5, 2);
+
+        var held = networks.withdraw(A.east());
+
+        assertEquals(Map.of(3, 40L, 5, 2L), held);
+        assertTrue(networks.store(A.east()).isEmpty());
+        networks.rejoin(A.east(), StoreKind.WELL, held);
+        assertEquals(Map.of(3, 40, 5, 2), held(A.east()));
+        assertSame(networks.at(A).orElseThrow(), networks.at(A.east()).orElseThrow());
+    }
+
+    @Test
     void anAbortedInsertLeavesTheStoreAsItWas() {
         networks.join(A);
         try (var transaction = Transaction.openRoot()) {

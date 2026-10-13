@@ -1,10 +1,34 @@
 {
   "variants": {
-    "dormant=false": {
+    "dormant=false,facing=north": {
       "model": "voidworks:block/void_well"
     },
-    "dormant=true": {
+    "dormant=true,facing=north": {
       "model": "voidworks:block/void_well_dormant"
+    },
+    "dormant=false,facing=east": {
+      "model": "voidworks:block/void_well",
+      "y": 90
+    },
+    "dormant=true,facing=east": {
+      "model": "voidworks:block/void_well_dormant",
+      "y": 90
+    },
+    "dormant=false,facing=south": {
+      "model": "voidworks:block/void_well",
+      "y": 180
+    },
+    "dormant=true,facing=south": {
+      "model": "voidworks:block/void_well_dormant",
+      "y": 180
+    },
+    "dormant=false,facing=west": {
+      "model": "voidworks:block/void_well",
+      "y": 270
+    },
+    "dormant=true,facing=west": {
+      "model": "voidworks:block/void_well_dormant",
+      "y": 270
     }
   }
 }

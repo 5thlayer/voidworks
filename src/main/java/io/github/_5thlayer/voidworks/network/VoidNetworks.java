@@ -13,6 +13,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.IntSupplier;
 
 import com.mojang.datafixers.util.Either;
@@ -145,6 +147,41 @@ public final class VoidNetworks {
         var network = networkOf.remove(store);
         network.stores.remove(store);
         split(network);
+        changed.run();
+    }
+
+    /**
+     * Takes the store at {@code pos} out of its network as {@link #leave} does, but hands back the
+     * motes it held instead of losing them, for a store that stops and may start again, such as a
+     * Void Well no longer whole.
+     *
+     * @return what it held, grade to count; nothing when there is no store there
+     */
+    public SortedMap<Integer, Long> withdraw(BlockPos pos) {
+        var held = new TreeMap<Integer, Long>();
+        var store = stores.get(pos);
+        if (store != null) {
+            for (int slot = 0; slot < MoteStore.SLOTS; slot++) {
+                if (store.motes[slot] > 0) {
+                    held.put(MoteStore.grade(slot), store.motes[slot]);
+                }
+            }
+            leave(pos);
+        }
+        return held;
+    }
+
+    /**
+     * Puts a store of {@code kind} at {@code pos} into a network, as {@link #join(BlockPos, StoreKind)}
+     * does, holding {@code motes}, what {@link #withdraw} handed back; what it has no room for is lost.
+     */
+    public void rejoin(BlockPos pos, StoreKind kind, Map<Integer, Long> motes) {
+        join(pos, kind);
+        var store = stores.get(pos.immutable());
+        motes.forEach((grade, count) -> {
+            int slot = MoteStore.slot(grade);
+            store.motes[slot] += Math.min(count, store.room());
+        });
         changed.run();
     }
 
