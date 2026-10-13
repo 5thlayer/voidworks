@@ -3,7 +3,6 @@
 
 package io.github._5thlayer.voidworks.compat.emi;
 
-import java.util.List;
 import java.util.Set;
 
 import dev.emi.emi.api.recipe.BasicEmiRecipe;
@@ -25,7 +24,8 @@ import net.minecraft.world.item.Item;
 /**
  * One upgrade step as EMI draws it: every item that takes it, as alternatives, × the Rung's count,
  * an arrow, then the one result; beneath, the Mutation Chamber's cost and chance, or the Void
- * Crucible's time alone at the End, which never fails.
+ * Crucible's time alone at the End, which never fails. How Void Pressure and nearby Crucibles
+ * move that time is the mod's to teach, not EMI's, so it shows the time alone.
  */
 final class UpgradeEmiRecipe extends BasicEmiRecipe {
 
@@ -75,10 +75,8 @@ final class UpgradeEmiRecipe extends BasicEmiRecipe {
                 if (VoidworksConfig.loaded()) {
                     double ticks = new CrucibleTime(VoidworksConfig.crucibleTicks()).ticks(upgrade.cost(), CrucibleTime.END_PRESSURE, 1);
                     var time = StringUtil.formatTickDuration((int) Math.min(Math.ceil(ticks), Integer.MAX_VALUE), 20.0F);
-                    widgets.addText(Component.translatable("voidworks.emi.crucible.time", time), 0, 22, GREY, false);
+                    widgets.addText(Component.literal(time), 0, 22, GREY, false);
                 }
-                widgets.addTooltipText(List.of(Component.translatable("voidworks.emi.crucible.pressure"),
-                        Component.translatable("voidworks.emi.crucible.sharing")), 0, 20, 112, 12);
             }
         }
     }
