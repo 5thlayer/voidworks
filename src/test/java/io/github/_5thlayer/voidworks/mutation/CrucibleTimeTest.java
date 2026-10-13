@@ -4,11 +4,14 @@
 package io.github._5thlayer.voidworks.mutation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
+import net.minecraft.core.Vec3i;
 import org.junit.jupiter.api.Test;
 
-/** How long a Void Crucible takes over one result: from the Rung's cost, the Void Pressure and the Crucibles sharing its rate. */
+/** How long a Void Crucible takes over one result: from the Rung's cost, the Void Pressure and the Crucibles near enough to share its rate. */
 class CrucibleTimeTest {
 
     /** The spec's provisional ticks per void energy at the End's pressure. */
@@ -46,6 +49,26 @@ class CrucibleTimeTest {
     void aFreeRungStillTakesATick() {
         assertEquals(1, TIME.ticks(0, 3, 1));
         assertEquals(1, TIME.ticks(1, 9, 1));
+    }
+
+    @Test
+    void aCrucibleIsNearWithinTheRadiusOnEveryAxis() {
+        assertTrue(CrucibleTime.near(new Vec3i(3, 0, 0), 8));
+        assertTrue(CrucibleTime.near(new Vec3i(-8, 0, 0), 8));
+        assertTrue(CrucibleTime.near(new Vec3i(0, 8, 0), 8), "straight above");
+        assertTrue(CrucibleTime.near(new Vec3i(8, -8, 8), 8), "a corner of the cube, though further than 8 in a straight line");
+    }
+
+    @Test
+    void aCrucibleBeyondTheRadiusOnAnyAxisIsNotNear() {
+        assertFalse(CrucibleTime.near(new Vec3i(9, 0, 0), 8));
+        assertFalse(CrucibleTime.near(new Vec3i(0, -9, 0), 8));
+        assertFalse(CrucibleTime.near(new Vec3i(1, 1, 9), 8));
+    }
+
+    @Test
+    void aRadiusOfNothingLeavesEachCrucibleAlone() {
+        assertFalse(CrucibleTime.near(new Vec3i(1, 0, 0), 0));
     }
 
     @Test

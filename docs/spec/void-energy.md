@@ -243,10 +243,12 @@ output, so hoppers and belts feed and empty it, and a hand puts items in and tak
   to the End while motes leave it. It is a cauldron, amethyst shards and crying obsidian, and is never
   Dormant. It takes each Rung's count, and a Rung's void energy cost sets how long it takes there, so a
   steep Rung is slow in the Crucible too; each step of Void Pressure halves the time, and it never
-  fails. Working Crucibles within a few blocks of each other share one rate, so a wall of them
-  upgrades no faster than one. Upgrade only, no breakdown. It works on one result at a time, which
-  floats above it while it does, and what it has done belongs to that item: emptied or given another,
-  it starts again, and it waits, done, while its output is full. Progresses only while its chunk is
+  fails. Its time is set at the End's shipped Void Pressure, so a pack that moves the pressures moves
+  the Crucible's speed with them. Working Crucibles within a few blocks of each other on every axis, a
+  cube a player counts out on the grid, share one rate, so a wall of them upgrades no faster than one.
+  Upgrade only, no breakdown. It works on one result at a time, which floats above it while it does,
+  and what it has done belongs to that item: emptied or given another, it starts again, and it waits,
+  done, while its output is full, its result held still above it. Progresses only while its chunk is
   loaded.
 
 ### Families

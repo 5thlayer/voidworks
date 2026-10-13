@@ -22,9 +22,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The result a Void Crucible works on, floating above it, turning and bobbing, lit as the block
- * above it is, while it works and while it waits with it, done
- * ({@link VoidCrucibleBlockEntity#floating}).
+ * The result a Void Crucible works on, floating above it, lit as the block above it is
+ * ({@link VoidCrucibleBlockEntity#floating}): turning and bobbing while it works, and held still at
+ * its middle height, facing the way it last faced, while it waits with it, done.
  */
 final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBlockEntity, VoidCrucibleRenderer.RenderState> {
 
@@ -60,7 +60,9 @@ final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBloc
         Minecraft.getInstance().getItemModelResolver().updateForTopItem(item, floating, ItemDisplayContext.FIXED, level, null, 0);
         state.item = item;
         // A small time that loops, as a float holding the whole game time would lose the partial tick.
-        state.time = level.getGameTime() % CYCLE_TICKS + partialTicks;
+        // While still, the time only keeps the way it faced as it went still; it holds at its middle height.
+        state.still = crucible.floatingStill();
+        state.time = state.still ? crucible.wentStillAt() % CYCLE_TICKS : level.getGameTime() % CYCLE_TICKS + partialTicks;
         state.light = LevelRenderer.getLightCoords(level, crucible.getBlockPos().above());
     }
 
@@ -70,7 +72,7 @@ final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBloc
             return;
         }
         poseStack.pushPose();
-        poseStack.translate(0.5, HEIGHT + BOB * Mth.sin(state.time * Mth.TWO_PI / BOB_TICKS), 0.5);
+        poseStack.translate(0.5, state.still ? HEIGHT : HEIGHT + BOB * Mth.sin(state.time * Mth.TWO_PI / BOB_TICKS), 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(state.time * TURN % 360));
         poseStack.scale(SCALE, SCALE, SCALE);
         state.item.submit(poseStack, collector, state.light, OverlayTexture.NO_OVERLAY, 0);
@@ -85,6 +87,7 @@ final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBloc
 
     static final class RenderState extends BlockEntityRenderState {
         private @Nullable ItemStackRenderState item;
+        private boolean still;
         private float time;
         private int light;
     }

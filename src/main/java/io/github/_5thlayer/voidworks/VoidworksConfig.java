@@ -55,7 +55,7 @@ public final class VoidworksConfig {
                 .defineInRange("crucibleTicks", 30, 1, 24000);
         CRUCIBLE_RADIUS = builder
                 .comment("How near, in blocks, working Void Crucibles share one rate: each one's time is multiplied by the",
-                        "working Crucibles within this distance of it, itself included.")
+                        "working Crucibles within this distance of it on every axis, a cube, itself included.")
                 .defineInRange("crucibleRadius", 8, 0, 64);
         DENSITY_MOTES = builder
                 .comment("How many motes a fed block yields, by its Density from 1 to 4: steeply rising, about 4^(Density - 1).")

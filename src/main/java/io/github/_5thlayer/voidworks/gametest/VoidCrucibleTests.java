@@ -207,7 +207,7 @@ final class VoidCrucibleTests {
     }
 
     /**
-     * The result floats above it while it works on it, and while it waits with it, done; nothing
+     * The result floats above it while it works on it, and holds still while it waits with it, done; nothing
      * floats over an empty input, one with too few, or one with no upgrade. What floats is in what
      * its watchers are sent.
      */
@@ -223,17 +223,28 @@ final class VoidCrucibleTests {
                 .thenExecute(() -> insert(crucible, Items.SNOWBALL, 2))
                 .thenExecuteAfter(1, () -> {
                     assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a working Crucible");
-                    var sent = crucible.getUpdateTag(helper.getLevel().registryAccess());
-                    var watched = new VoidCrucibleBlockEntity(crucible.getBlockPos(), crucible.getBlockState());
-                    watched.handleUpdateTag(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), sent));
-                    helper.assertTrue(ItemStack.matches(watched.floating(), new ItemStack(Items.SNOW_BLOCK)),
-                            "a watcher is sent " + watched.floating() + " floating, not a snow block");
+                    helper.assertTrue(!crucible.floatingStill(), "a working Crucible holds its result still");
+                    assertWatcherSees(helper, crucible, new ItemStack(Items.SNOW_BLOCK), false);
                 })
                 .thenIdle(soloTicks(helper) + SLACK)
-                .thenExecute(() -> assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a Crucible waiting, done,"))
+                .thenExecute(() -> {
+                    assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a Crucible waiting, done,");
+                    helper.assertTrue(crucible.floatingStill(), "a Crucible waiting, done, does not hold its result still");
+                    assertWatcherSees(helper, crucible, new ItemStack(Items.SNOW_BLOCK), true);
+                })
                 .thenExecute(() -> crucible.inventory().set(VoidCrucibleBlockEntity.INPUT, ItemResource.EMPTY, 0))
                 .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "an emptied Crucible"))
                 .thenSucceed();
+    }
+
+    /** Reads what {@code crucible} sends its watchers into a Crucible of their own, and checks it floats {@code expected}, still or moving. */
+    private static void assertWatcherSees(GameTestHelper helper, VoidCrucibleBlockEntity crucible, ItemStack expected, boolean still) {
+        var sent = crucible.getUpdateTag(helper.getLevel().registryAccess());
+        var watched = new VoidCrucibleBlockEntity(crucible.getBlockPos(), crucible.getBlockState());
+        watched.handleUpdateTag(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), sent));
+        helper.assertTrue(watched.floatingStill() == still && ItemStack.matches(watched.floating(), expected),
+                "a watcher is sent " + watched.floating() + (watched.floatingStill() ? " still" : " moving") + ", not " + expected
+                        + (still ? " still" : " moving"));
     }
 
     private static void assertFloating(GameTestHelper helper, VoidCrucibleBlockEntity crucible, ItemStack expected, String which) {

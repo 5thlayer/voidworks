@@ -62,6 +62,7 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     private static final String PROGRESS_KEY = "progress";
     private static final String WORKING_ON_KEY = "working_on";
     private static final String FLOATING_KEY = "floating";
+    private static final String STILL_KEY = "still";
 
     private final MutationItems items = new MutationItems(1, Families::hasUpgrade, this::setChanged);
     private final ItemStacksResourceHandler inventory = items.inventory();
@@ -71,6 +72,10 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     private double progress;
     /** The result it works on, or waits with, done, for its watchers to see floating above it; empty for none. */
     private ItemStack floating = ItemStack.EMPTY;
+    /** Whether the floating result holds still: it is done and waits on its output. */
+    private boolean still;
+    /** A watcher's own, never sent: the game time it saw the result go still, so it holds the way it last faced. */
+    private long wentStillAt;
 
     public VoidCrucibleBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.VOID_CRUCIBLE_ENTITY.get(), pos, state);
@@ -89,6 +94,19 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     /** @return the result it works on, or waits with, done, which floats above it; empty for none */
     public ItemStack floating() {
         return floating;
+    }
+
+    /** @return whether the floating result holds still, as it does while it is done and waits on its output */
+    public boolean floatingStill() {
+        return still;
+    }
+
+    /**
+     * @return on a watcher, for drawing, the game time it saw the floating result go still, or the
+     *         chunk arrive with it still; 0 on the server
+     */
+    public long wentStillAt() {
+        return wentStillAt;
     }
 
     /** @return how much of one result is done, from 0 to 1 */
@@ -120,11 +138,13 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         showFloating(level);
     }
 
-    /** Sends its watchers the result it works on, or waits with, done, when that changes. */
+    /** Sends its watchers the result it works on, or waits with, done, and whether it holds still, when either changes. */
     private void showFloating(ServerLevel level) {
         var shown = showsResult() ? next().map(upgrade -> new ItemStack(upgrade.result())).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
-        if (!ItemStack.matches(shown, floating)) {
+        boolean holdsStill = !shown.isEmpty() && stall().equals(Optional.of(Stall.OUTPUT_FULL));
+        if (!ItemStack.matches(shown, floating) || holdsStill != still) {
             floating = shown;
+            still = holdsStill;
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
@@ -173,8 +193,9 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     }
 
     /**
-     * @return the working Crucibles within {@link VoidworksConfig#crucibleRadius()} blocks of it,
-     *         itself included, so at least 1; those in chunks not loaded do not work
+     * @return the working Crucibles within {@link VoidworksConfig#crucibleRadius()} blocks of it on
+     *         every axis ({@link CrucibleTime#near}), itself included, so at least 1; those in chunks
+     *         not loaded do not work
      */
     public int sharing(ServerLevel level) {
         int radius = VoidworksConfig.crucibleRadius();
@@ -189,7 +210,7 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
                 }
                 for (var entity : chunk.getBlockEntities().values()) {
                     if (entity != this && entity instanceof VoidCrucibleBlockEntity other && !other.isRemoved()
-                            && other.worldPosition.distSqr(worldPosition) <= (double) radius * radius && other.working()) {
+                            && CrucibleTime.near(other.worldPosition.subtract(worldPosition), radius) && other.working()) {
                         count++;
                     }
                 }
@@ -233,13 +254,14 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
 
     // -- persistence ----------------------------------------------------------------------------
 
-    /** Only what its watchers draw: the result floating above it, never saved, which it works out again each tick. */
+    /** Only what its watchers draw: the result floating above it and whether it holds still, never saved, which it works out again each tick. */
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
         if (!floating.isEmpty()) {
             output.store(FLOATING_KEY, ItemStack.CODEC, floating);
         }
+        output.putBoolean(STILL_KEY, still);
         return output.buildResult();
     }
 
@@ -251,17 +273,22 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     /** A watcher reads only what {@link #getUpdateTag} sends, as the chunk arrives. */
     @Override
     public void handleUpdateTag(ValueInput input) {
-        readFloating(input);
+        readDrawn(input);
     }
 
     /** A watcher reads only what {@link #getUpdateTag} sends, as it changes. */
     @Override
     public void onDataPacket(Connection connection, ValueInput input) {
-        readFloating(input);
+        readDrawn(input);
     }
 
-    private void readFloating(ValueInput input) {
+    private void readDrawn(ValueInput input) {
         floating = input.read(FLOATING_KEY, ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        boolean wasStill = still;
+        still = input.getBooleanOr(STILL_KEY, false);
+        if (still && !wasStill && level != null) {
+            wentStillAt = level.getGameTime();
+        }
     }
 
     @Override
