@@ -1,18 +1,18 @@
 ![Voidworks](https://raw.githubusercontent.com/5thlayer/voidworks/main/publish/voidworks-cover.png)
 
-Voidworks lets you harvest **void** from the Minecraft dimensions. Each dimension gives up its void its own way: you feed dense blocks to a Void Displacer, or to a Void Siphon by hand, and every harvest yields void-infused **motes** and leaves indestructible **Voidstone** behind. Motes fly off as butterflies into the Voidstone network, which stores them, and you spend them to **upgrade items** up their Family: copper ingots into iron, iron into gold.
+Voidworks lets you harvest **void** from the Minecraft dimensions. Each dimension gives up its void its own way: you feed dense blocks to a Void Displacer, or to a Void Siphon by hand, and every harvest yields void-infused **motes** and leaves indestructible **Voidstone** behind. Motes fly off as butterflies into the Voidstone network, which stores them, and you spend them to **upgrade items** up their Family, copper ingots into iron, iron into gold, or to **break items down** into their ingredients.
 
 ## Why?
 
 Because void asks to be filled!
 
-**NeoForge, Minecraft 26.1.2 only.** Voidworks is early work: harvesting, Voidstone networks and upgrading are in, the Void Well, the Void Dragon and breaking items down are still to come. Please report anything odd on [GitHub](https://github.com/5thlayer/voidworks/issues).
+**NeoForge, Minecraft 26.1.2 only.** Voidworks is early work: harvesting, Voidstone networks, upgrading and breaking items down are in, the Void Well and the Void Dragon are still to come. Please report anything odd on [GitHub](https://github.com/5thlayer/voidworks/issues).
 
 To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks Showcase](https://www.curseforge.com/minecraft/modpacks/factoryworks-showcase) modpack from CurseForge.
 
 ## What sets it apart
 
-- **Void never becomes ordinary items.** Unlike EMC or UU-matter, motes buy upgrades, not items from nothing. An upgrade needs the item a Family starts from.
+- **Void never becomes ordinary items.** Unlike EMC or UU-matter, motes buy upgrades and breakdowns, not items from nothing. An upgrade needs the item a Family starts from, and a breakdown never returns more than went in.
 - **Harvesting consumes the world.** Every harvested position becomes Voidstone and every Displacer ends as Voidstone, so void is bounded by the world you are willing to spend.
 - **Void runs downhill.** A mote is worth more the higher the Void Pressure where it was harvested, and the lower the Pressure where it is spent. The End is the reservoir and the Nether the turbine, and moving motes between them is the logistics game.
 
@@ -26,6 +26,7 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 - **The Mutation Chamber.** Upgrades items up their Family for motes, with a chance per upgrade. It has no screen: hoppers and belts feed and empty it.
 - **The Unmaking Chamber.** Breaks an item down into its crafting recipe's ingredients for motes, each coming back by chance at a yield that rises as it works.
 - **The Void Crucible.** Upgrades for free, slowly. It is fastest in the End and slowest in the Nether, and Crucibles working near each other share one rate.
+- **The Unmaking Chamber.** Breaks an item down into the ingredients of its crafting recipe for motes. Each ingredient comes back by chance, from 25% at first rising toward 75% the more the Chamber has spent.
 - **Jade support.** Jade shows a network's motes and what they are worth where you stand, a machine's upgrade, progress and what stalls it, and how much of a Dormant machine's cost is paid. Voidworks runs without Jade.
 
 ## For pack authors
@@ -33,6 +34,7 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 - **Density** is item tags, `#voidworks:density/1` to `#voidworks:density/4`.
 - **The displacement table**, the `voidworks:displacement` data map on blocks, decides what an Overworld Displacer gives back for a terrain block at each Density. Voidworks ships no entries, so it gives the terrain block itself.
 - **Families** are the `voidworks:family` datapack registry: the ladders an upgrade climbs, each Rung with its count, cost and chance. Voidworks ships metals, raw metals, gems, dusts and mob drops, with a tag per Rung that takes in the `c:` tags, so other mods' items join by tag.
+- **Breakdowns** come from crafting recipes; the `voidworks:breakdown` data map on items fills one in for an item with several recipes or none, or bars one.
 - **Void Pressure** and each dimension's harvest kind are the `voidworks:void_pressure` data map, and Dormant costs the `voidworks:dormant_cost` data map.
 - **Numbers** such as a Displacer's harvests, Voidstone's capacity and the Crucible's speed are in `voidworks-server.toml`. They are provisional while Voidworks is below 1.0.
 
