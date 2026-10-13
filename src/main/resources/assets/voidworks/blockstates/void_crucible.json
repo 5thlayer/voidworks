@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "working=false": {
       "model": "voidworks:block/void_crucible"
+    },
+    "working=true": {
+      "model": "voidworks:block/void_crucible_working"
     }
   }
 }

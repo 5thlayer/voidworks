@@ -34,6 +34,11 @@ The Mutation Chamber's sides are the workbench's crafting grid, standing for the
 recoloured into the abyssium's purples and let into the casing inside its frame as the Unmaking
 Chamber's clutch is. Awake, the grid's cells glow amethyst; Dormant, they stay the casing's own.
 
+The Void Crucible's sides are the urn's base, a plain framed panel, let into the casing the same
+way, so it reads as the quiet one beside the Chambers' lit faces. Its top is the casing ringed by
+the crystal glass's rim, which frames the result floating above it: the rim in the casing's own
+purples while it is idle, and amethyst while it upgrades.
+
 Run from the repository root; it needs Pillow.
 """
 
@@ -169,6 +174,16 @@ def mutation_chamber(abyssium):
     save(awake, TEXTURES / "block" / "mutation_chamber_side.png")
 
 
+def void_crucible(abyssium):
+    save(let_into(abyssium, "device_urn_bottom"), TEXTURES / "block" / "void_crucible_side.png")
+    rim = sprite("glass_crystal_2")
+    shades = sorted({pixel[:3] for pixel in abyssium.get_flattened_data() if pixel[3]}, key=sum)
+    for shade, name in ((shades, "void_crucible_top"), ([(0, 0, 0), AMETHYST], "void_crucible_top_working")):
+        top = abyssium.copy()
+        top.alpha_composite(recolour(rim, shade))
+        save(top, TEXTURES / "block" / f"{name}.png")
+
+
 def unmaking_chamber(abyssium):
     dormant = let_into(abyssium, "device_gearbox_clutch_off")
     save(dormant, TEXTURES / "block" / "unmaking_chamber_side_dormant.png")
@@ -199,6 +214,7 @@ def main():
     voidstone()
     mutation_chamber(abyssium)
     unmaking_chamber(abyssium)
+    void_crucible(abyssium)
 
 
 if __name__ == "__main__":

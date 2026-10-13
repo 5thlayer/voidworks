@@ -116,11 +116,11 @@ public final class VoidworksBlocks {
             BLOCK_ENTITIES.register("unmaking_chamber",
                     () -> new BlockEntityType<>(UnmakingChamberBlockEntity::new, UNMAKING_CHAMBER.get()));
 
-    /** Never Dormant, it gives the awake Chamber's light from the start. */
+    /** Never Dormant, it gives the awake Chamber's light while it upgrades. */
     public static final DeferredBlock<VoidCrucibleBlock> VOID_CRUCIBLE = BLOCKS.registerBlock("void_crucible",
             VoidCrucibleBlock::new,
             properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 1200.0F).requiresCorrectToolForDrops()
-                    .sound(SoundType.AMETHYST).lightLevel(state -> 7));
+                    .sound(SoundType.AMETHYST).lightLevel(state -> state.getValue(VoidCrucibleBlock.WORKING) ? 7 : 0));
 
     public static final DeferredItem<BlockItem> VOID_CRUCIBLE_ITEM = ITEMS.registerSimpleBlockItem(VOID_CRUCIBLE);
 
