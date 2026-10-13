@@ -28,9 +28,7 @@ import org.jspecify.annotations.Nullable;
  */
 final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBlockEntity, VoidCrucibleRenderer.RenderState> {
 
-    /** Where the item's centre floats, in block units above the Crucible's base. */
-    private static final double HEIGHT = 1.3;
-    /** How far it bobs above and below {@link #HEIGHT}, in block units. */
+    /** How far it bobs above and below {@link VoidCrucibleBlockEntity#FLOAT_HEIGHT}, in block units. */
     private static final double BOB = 0.06;
     /** Ticks per bob, up and back down. */
     private static final float BOB_TICKS = 40;
@@ -72,7 +70,7 @@ final class VoidCrucibleRenderer implements BlockEntityRenderer<VoidCrucibleBloc
             return;
         }
         poseStack.pushPose();
-        poseStack.translate(0.5, state.still ? HEIGHT : HEIGHT + BOB * Mth.sin(state.time * Mth.TWO_PI / BOB_TICKS), 0.5);
+        poseStack.translate(0.5, state.still ? VoidCrucibleBlockEntity.FLOAT_HEIGHT : VoidCrucibleBlockEntity.FLOAT_HEIGHT + BOB * Mth.sin(state.time * Mth.TWO_PI / BOB_TICKS), 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(state.time * TURN % 360));
         poseStack.scale(SCALE, SCALE, SCALE);
         state.item.submit(poseStack, collector, state.light, OverlayTexture.NO_OVERLAY, 0);
