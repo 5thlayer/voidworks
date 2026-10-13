@@ -65,6 +65,7 @@ final class VoidCrucibleTests {
         tests.test("void_crucible_starts_again_when_emptied_or_given_another_item", TICKS, VoidCrucibleTests::startsAgain);
         tests.test("void_crucible_with_a_full_output_waits_done", TICKS, VoidCrucibleTests::fullOutputHoldsItDone);
         tests.test("void_crucible_keeps_its_progress_across_a_save", TICKS, VoidCrucibleTests::keepsProgress);
+        tests.test("void_crucible_shows_its_watchers_the_result_it_works_on", TICKS, VoidCrucibleTests::showsTheResult);
         tests.test("void_crucible_item_face_takes_only_upgradable_items_and_gives_only_the_output", 1, VoidCrucibleTests::itemFace);
         tests.test("void_crucible_takes_items_from_a_hand_and_gives_the_result_to_an_empty_one", 1, VoidCrucibleTests::byHand);
         tests.test("void_crucible_broken_drops_itself_and_what_it_holds", 20, VoidCrucibleTests::breakingDrops);
@@ -203,6 +204,40 @@ final class VoidCrucibleTests {
                 .thenIdle(ticks / 2 + SLACK)
                 .thenExecute(() -> assertHolds(helper, crucible(helper, CRUCIBLE), Items.SNOWBALL, 0, new ItemStack(Items.SNOW_BLOCK)))
                 .thenSucceed();
+    }
+
+    /**
+     * The result floats above it while it works on it, and while it waits with it, done; nothing
+     * floats over an empty input, one with too few, or one with no upgrade. What floats is in what
+     * its watchers are sent.
+     */
+    private static void showsTheResult(GameTestHelper helper) {
+        var crucible = place(helper, CRUCIBLE);
+        crucible.inventory().set(VoidCrucibleBlockEntity.OUTPUT, ItemResource.of(Items.DIRT), 64);
+        helper.startSequence()
+                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "an empty Crucible"))
+                .thenExecute(() -> insert(crucible, Items.SNOWBALL, 1))
+                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible with too few snowballs"))
+                .thenExecute(() -> insert(crucible, Items.STICK, 4))
+                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "a Crucible holding sticks"))
+                .thenExecute(() -> insert(crucible, Items.SNOWBALL, 2))
+                .thenExecuteAfter(1, () -> {
+                    assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a working Crucible");
+                    var sent = crucible.getUpdateTag(helper.getLevel().registryAccess());
+                    var watched = new VoidCrucibleBlockEntity(crucible.getBlockPos(), crucible.getBlockState());
+                    watched.handleUpdateTag(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), sent));
+                    helper.assertTrue(ItemStack.matches(watched.floating(), new ItemStack(Items.SNOW_BLOCK)),
+                            "a watcher is sent " + watched.floating() + " floating, not a snow block");
+                })
+                .thenIdle(soloTicks(helper) + SLACK)
+                .thenExecute(() -> assertFloating(helper, crucible, new ItemStack(Items.SNOW_BLOCK), "a Crucible waiting, done,"))
+                .thenExecute(() -> crucible.inventory().set(VoidCrucibleBlockEntity.INPUT, ItemResource.EMPTY, 0))
+                .thenExecuteAfter(1, () -> assertFloating(helper, crucible, ItemStack.EMPTY, "an emptied Crucible"))
+                .thenSucceed();
+    }
+
+    private static void assertFloating(GameTestHelper helper, VoidCrucibleBlockEntity crucible, ItemStack expected, String which) {
+        helper.assertTrue(ItemStack.matches(crucible.floating(), expected), which + " shows " + crucible.floating() + " floating, not " + expected);
     }
 
     private static void itemFace(GameTestHelper helper) {

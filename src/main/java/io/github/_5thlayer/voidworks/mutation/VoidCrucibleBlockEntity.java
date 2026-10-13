@@ -9,20 +9,30 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The Void Crucible: never Dormant and spending no motes, it upgrades what its input holds to the
@@ -33,7 +43,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  *
  * <p>What it has done belongs to what its input holds: emptied, or given another item, it starts
  * again. It waits, done, while its output cannot take the result. It progresses only on its own
- * server ticks, so only while its chunk is loaded, and keeps its progress across a save.
+ * server ticks, so only while its chunk is loaded, and keeps its progress across a save. The result
+ * it works on, or waits with, done, floats above it ({@link #floating}), the one thing its watchers
+ * are sent.
  *
  * <p>It holds what every Mutation block does ({@link MutationItems}), with one output: its item face
  * takes into the input only items with an upgrade.
@@ -50,6 +62,7 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
 
     private static final String PROGRESS_KEY = "progress";
     private static final String WORKING_ON_KEY = "working_on";
+    private static final String FLOATING_KEY = "floating";
 
     private final MutationItems items = new MutationItems(1, VoidCrucibleBlockEntity::hasUpgrade, this::setChanged);
     private final ItemStacksResourceHandler inventory = items.inventory();
@@ -57,6 +70,8 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     private ItemResource workingOn = ItemResource.EMPTY;
     /** How much of one result is done, from 0 to 1. */
     private double progress;
+    /** The result it works on, or waits with, done, for its watchers to see floating above it; empty for none. */
+    private ItemStack floating = ItemStack.EMPTY;
 
     public VoidCrucibleBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.VOID_CRUCIBLE_ENTITY.get(), pos, state);
@@ -87,6 +102,11 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         return items.held(OUTPUT);
     }
 
+    /** @return the result it works on, or waits with, done, which floats above it; empty for none */
+    public ItemStack floating() {
+        return floating;
+    }
+
     /** @return how much of one result is done, from 0 to 1 */
     public double progress() {
         return progress;
@@ -112,15 +132,24 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
             progress = 0;
             setChanged();
         }
-        if (!working()) {
-            return;
+        if (working()) {
+            if (progress < DONE) {
+                progress = Math.min(1, progress + 1 / ticks(level, next().orElseThrow()));
+                setChanged();
+            }
+            if (progress >= DONE) {
+                finish(level, next().orElseThrow());
+            }
         }
-        if (progress < DONE) {
-            progress = Math.min(1, progress + 1 / ticks(level, next().orElseThrow()));
-            setChanged();
-        }
-        if (progress >= DONE) {
-            finish(level, next().orElseThrow());
+        showFloating(level);
+    }
+
+    /** Sends its watchers the result it works on, or waits with, done, when that changes. */
+    private void showFloating(ServerLevel level) {
+        var shown = showsResult() ? next().map(upgrade -> new ItemStack(upgrade.result())).orElse(ItemStack.EMPTY) : ItemStack.EMPTY;
+        if (!ItemStack.matches(shown, floating)) {
+            floating = shown;
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 
@@ -151,6 +180,15 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
         }
         // Less a hair, so a whole number of ticks left is not rounded up by the sum's error.
         return (long) Math.ceil((1 - progress) * ticks(level, next.get()) - 1e-6);
+    }
+
+    /** @return whether its result floats above it: it is upgrading, or done and waiting on its output */
+    private boolean showsResult() {
+        if (inventory.getResource(INPUT).isEmpty()) {
+            return false;
+        }
+        var stall = stall();
+        return stall.isEmpty() || stall.equals(Optional.of(Stall.OUTPUT_FULL));
     }
 
     /** @return whether it is upgrading: it holds enough of an item with an upgrade, and is not waiting, done, on its output */
@@ -222,6 +260,37 @@ public final class VoidCrucibleBlockEntity extends BlockEntity implements Mutati
     }
 
     // -- persistence ----------------------------------------------------------------------------
+
+    /** Only what its watchers draw: the result floating above it, never saved, which it works out again each tick. */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
+        if (!floating.isEmpty()) {
+            output.store(FLOATING_KEY, ItemStack.CODEC, floating);
+        }
+        return output.buildResult();
+    }
+
+    @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** A watcher reads only what {@link #getUpdateTag} sends, as the chunk arrives. */
+    @Override
+    public void handleUpdateTag(ValueInput input) {
+        readFloating(input);
+    }
+
+    /** A watcher reads only what {@link #getUpdateTag} sends, as it changes. */
+    @Override
+    public void onDataPacket(Connection connection, ValueInput input) {
+        readFloating(input);
+    }
+
+    private void readFloating(ValueInput input) {
+        floating = input.read(FLOATING_KEY, ItemStack.CODEC).orElse(ItemStack.EMPTY);
+    }
 
     @Override
     protected void saveAdditional(ValueOutput output) {
