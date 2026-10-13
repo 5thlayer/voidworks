@@ -30,7 +30,7 @@ A release that must reach a Consumer in another checkout, a Module or a pack tha
 
 ### Issue tracker
 
-Issues and specs live in this repo's GitHub Issues, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live in this repo's GitHub Issues, managed with the `gh` CLI; specs live in `docs/spec/`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -41,3 +41,7 @@ The five canonical triage roles, used verbatim as label strings. See `docs/agent
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 The design is `docs/spec/void-energy.md`: read it before building any part of the mechanic.
+
+### After a grilling
+
+When a grilling settles a design, write the outcome into `docs/spec/`, `GLOSSARY.md` and ADRs, then end by naming the user's next command: `/to-tickets <issue>` for a multi-session build, `/implement <issue>` for a single one.
