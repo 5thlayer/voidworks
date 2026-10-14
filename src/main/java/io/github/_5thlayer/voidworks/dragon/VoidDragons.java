@@ -44,7 +44,7 @@ public final class VoidDragons {
     }
 
     /** Replaces the dragon with {@code dragon}'s id by {@code dragon}, as it is now; a dragon it does not have stays gone. */
-    void update(VoidDragonRecord dragon) {
+    public void update(VoidDragonRecord dragon) {
         if (dragons.replace(dragon.id(), dragon) != null) {
             onChange.run();
         }

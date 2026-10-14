@@ -63,6 +63,14 @@ final class PresenceTests {
     /** How many motes the Well below its target is short of it: less than a load, so one trip meets it. */
     private static final int SHORT = 100;
 
+    /**
+     * The heights of each test's Nether Well. Two tests side by side may put theirs at neighbouring
+     * places in Nether blocks, where they would join one network and conduct; a dive's time counts no
+     * height.
+     */
+    private static final int STOPS_Y = 64;
+    private static final int EMERGES_Y = 96;
+
     /** Waking the Well, then a stop to load, a dive and a stop to unload, at the default numbers, with room to spare. */
     private static final int TICKS = 1_200;
 
@@ -87,7 +95,7 @@ final class PresenceTests {
         var server = helper.getLevel().getServer();
         var nether = server.getLevel(Level.NETHER);
         var here = Place.of(helper.getLevel(), helper.absolutePos(WELL));
-        var under = under(helper, nether);
+        var under = under(helper, nether, STOPS_Y);
         long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
         var dragonId = new AtomicReference<UUID>();
         var shown = new AtomicReference<VoidDragon>();
@@ -161,7 +169,7 @@ final class PresenceTests {
         var well = wakeWell(helper, owner);
         var server = helper.getLevel().getServer();
         var nether = server.getLevel(Level.NETHER);
-        var under = under(helper, nether);
+        var under = under(helper, nether, EMERGES_Y);
         long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
         var shaft = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH);
         var dragonId = new AtomicReference<UUID>();
@@ -248,10 +256,10 @@ final class PresenceTests {
         return VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(WELL)).filter(store -> store.kind() == StoreKind.WELL);
     }
 
-    /** @return a place in the Nether under the test's Well, the same place in Overworld blocks */
-    private static Place under(GameTestHelper helper, ServerLevel nether) {
+    /** @return a place in the Nether under the test's Well, the same place in Overworld blocks, at height {@code y} */
+    private static Place under(GameTestHelper helper, ServerLevel nether, int y) {
         var pos = helper.absolutePos(WELL);
-        return Place.of(nether, new BlockPos(Math.floorDiv(pos.getX(), 8), 64, Math.floorDiv(pos.getZ(), 8)));
+        return Place.of(nether, new BlockPos(Math.floorDiv(pos.getX(), 8), y, Math.floorDiv(pos.getZ(), 8)));
     }
 
     private static VoidDragonRecord record(GameTestHelper helper, UUID id) {

@@ -20,6 +20,7 @@ import io.github._5thlayer.voidworks.well.SavedVoidWells;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
@@ -53,8 +54,21 @@ public final class DragonRouting {
             var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
-        new Routing(new ServerWells(server), dive, VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks())
+        new Routing(new ServerWells(server), dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks())
                 .step(SavedVoidDragons.of(server), server.overworld().getGameTime());
+    }
+
+    /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */
+    private static Harm harm(MinecraftServer server) {
+        int end = wellPressure(server, Level.END);
+        return new Harm(dimension -> Math.max(0, end - wellPressure(server, ResourceKey.create(Registries.DIMENSION, dimension))),
+                VoidworksConfig.dragonWeakenTicks(), VoidworksConfig.dragonHealMotes());
+    }
+
+    /** @return the Void Pressure where a Well in {@code dimension} stands, loaded or not */
+    private static int wellPressure(MinecraftServer server, ResourceKey<Level> dimension) {
+        // A core is set in a wall's middle course, with casing beneath it, so never over the open void.
+        return VoidPressure.dimension(server.registryAccess(), dimension).pressure(() -> false);
     }
 
     /** The server's Wells: an owner's, listed with their targets, each whole and awake while its network holds its store. */
@@ -75,9 +89,7 @@ public final class DragonRouting {
                             motes.put(store.getResource(index).grade(), store.getAmountAsLong(index));
                         }
                     }
-                    // A core is set in a wall's middle course, with casing beneath it, so never over the open void.
-                    int pressure = VoidPressure.dimension(level).pressure(() -> false);
-                    wells.add(new Well(entry.place(), entry.target().motes(store.capacity()), pressure, store.capacity(), motes));
+                    wells.add(new Well(entry.place(), entry.target().motes(store.capacity()), wellPressure(server, level.dimension()), store.capacity(), motes));
                 });
             }
             return wells;

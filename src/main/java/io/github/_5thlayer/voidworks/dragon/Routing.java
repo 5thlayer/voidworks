@@ -24,6 +24,10 @@ import java.util.UUID;
  * or no longer short when it arrives sends the load on to another of the owner's Wells that needs it,
  * else to the one with most room; with room nowhere, the dragon holds its load where it is until there
  * is. It rests at the Well it last stopped at.
+ *
+ * <p>Diving, it weakens by the worse of its two ends' pressure ({@link Harm}), as it goes; a dive is a
+ * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
+ * dives from a Well it heals from that Well's motes, as far as they go.
  */
 public final class Routing {
 
@@ -32,6 +36,7 @@ public final class Routing {
 
     private final Wells wells;
     private final Dive dive;
+    private final Harm harm;
     private final long load;
     private final int stopTicks;
 
@@ -39,9 +44,10 @@ public final class Routing {
      * @param load the most motes a dragon carries
      * @param stopTicks how long a dragon stops at a Well to load or unload
      */
-    public Routing(Wells wells, Dive dive, long load, int stopTicks) {
+    public Routing(Wells wells, Dive dive, Harm harm, long load, int stopTicks) {
         this.wells = wells;
         this.dive = dive;
+        this.harm = harm;
         this.load = load;
         this.stopTicks = stopTicks;
     }
@@ -64,12 +70,16 @@ public final class Routing {
     private VoidDragonRecord next(VoidDragons dragons, VoidDragonRecord dragon, long now) {
         if (dragon.trip().isPresent()) {
             var trip = dragon.trip().get();
+            var divingTo = trip.divingTo();
+            if (divingTo.isPresent() && trip.toCover() > 0 && trip.countedTo() < now) {
+                return dived(dragon, trip, divingTo.get(), now);
+            }
             if (trip.until() > now) {
                 return dragon;
             }
             return switch (trip.leg()) {
                 case TO_SOURCE -> load(dragons, dragon, trip, now);
-                case LOADING -> dragon.on(Optional.of(trip.then(Trip.Leg.TO_DESTINATION, now + dive.ticks(dragon.rest(), trip.destination()))));
+                case LOADING -> setOff(dragon, trip.then(Trip.Leg.TO_DESTINATION, now), now);
                 case TO_DESTINATION -> unload(dragons, dragon, trip, now);
                 case UNLOADING -> dragon.on(Optional.empty());
             };
@@ -90,8 +100,8 @@ public final class Routing {
                     .max(Comparator.comparingDouble(Wells.Well::fill));
             if (source.isPresent()) {
                 long claimed = Math.min(load, Math.min(need(dragons, destination, dragon.id()), deliverable(dragons, source.get(), destination, dragon.id())));
-                return dragon.on(Optional.of(new Trip(Optional.of(source.get().place()), destination.place(), claimed, false,
-                        Trip.Leg.TO_SOURCE, now + dive.ticks(dragon.rest(), source.get().place()))));
+                return setOff(dragon, Trip.planned(Optional.of(source.get().place()), destination.place(), claimed, false,
+                        Trip.Leg.TO_SOURCE), now);
             }
         }
         return dragon;
@@ -168,18 +178,62 @@ public final class Routing {
                 .filter(well -> need(dragons, well, dragon.id()) > 0);
         if (needing.isPresent()) {
             long claimed = Math.min(dragon.carried(), need(dragons, needing.get(), dragon.id()));
-            return dragon.on(Optional.of(new Trip(Optional.empty(), needing.get().place(), claimed, false,
-                    Trip.Leg.TO_DESTINATION, now + dive.ticks(dragon.rest(), needing.get().place()))));
+            return setOff(dragon, Trip.planned(Optional.empty(), needing.get().place(), claimed, false,
+                    Trip.Leg.TO_DESTINATION), now);
         }
         var roomiest = owned.stream()
                 .max(Comparator.comparingLong(well -> room(dragons, well, dragon.id())))
                 .filter(well -> room(dragons, well, dragon.id()) > 0);
         if (roomiest.isPresent()) {
             long claimed = Math.min(dragon.carried(), room(dragons, roomiest.get(), dragon.id()));
-            return dragon.on(Optional.of(new Trip(Optional.empty(), roomiest.get().place(), claimed, true,
-                    Trip.Leg.TO_DESTINATION, now + dive.ticks(dragon.rest(), roomiest.get().place()))));
+            return setOff(dragon, Trip.planned(Optional.empty(), roomiest.get().place(), claimed, true,
+                    Trip.Leg.TO_DESTINATION), now);
         }
         return dragon;
+    }
+
+    /**
+     * Sets off on {@code trip}, a dive from where it is, at game time {@code now}: from a Well it heals
+     * first, then dives at the speed its health gives it.
+     *
+     * @return {@code dragon} on its way
+     */
+    private VoidDragonRecord setOff(VoidDragonRecord dragon, Trip trip, long now) {
+        var to = trip.divingTo().orElseThrow();
+        var healed = to.equals(dragon.rest()) ? dragon : healed(dragon);
+        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, healed.speed())));
+    }
+
+    /**
+     * @return {@code dragon} on its dive on {@code trip} to {@code to}, counted on to game time {@code now}
+     *         or to when it arrives, if sooner: the ground it covered at the speed it had, and the health
+     *         it lost on the way
+     */
+    private VoidDragonRecord dived(VoidDragonRecord dragon, Trip trip, Place to, long now) {
+        long divedTo = trip.divedTo(now, dragon.speed());
+        var weakened = dragon.weakened(harm.weakening(dragon.rest().dimension(), to.dimension(), trip.countedTo(), divedTo));
+        return weakened.on(Optional.of(trip.covered(divedTo, dragon.speed(), weakened.speed())));
+    }
+
+    /**
+     * @return {@code dragon} healed from the Well where it is, if there is one, a point of health for
+     *         each {@link Harm#motesPerPoint} motes, lowest grade first, as far as they go
+     */
+    private VoidDragonRecord healed(VoidDragonRecord dragon) {
+        var place = dragon.rest();
+        var well = well(dragon.owner(), place);
+        if (well.isEmpty()) {
+            return dragon;
+        }
+        long owed = Math.min(VoidDragonRecord.FULL_HEALTH - dragon.health(), well.get().total() / harm.motesPerPoint()) * harm.motesPerPoint();
+        long paid = 0;
+        for (var held : well.get().motes().entrySet()) {
+            if (paid == owed) {
+                break;
+            }
+            paid += wells.take(place, held.getKey(), Math.min(owed - paid, held.getValue()));
+        }
+        return dragon.healed(Math.toIntExact(paid / harm.motesPerPoint()));
     }
 
     private Optional<Wells.Well> well(UUID owner, Place place) {

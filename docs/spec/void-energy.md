@@ -277,12 +277,13 @@ Dragonling or a Void Dragon.
   grades worth something there, and the rest goes on to the claimed destination.
 - **Calling.** The owner standing in a Well's shaft calls a dragon: the next of theirs to finish its
   stop comes to that Well, carrying what it carries, and waits while the owner stays in the shaft.
-- **Harm.** Outside the End, out of the void and not resting, it weakens at a rate set by how far
-  the local Void Pressure is below the End's, so it suffers most in the Nether, where motes pay
-  most; it does not weaken while it dives. Hurt, it flies more slowly, down to a quarter of its
-  speed; it cannot die. It heals at every Well it stops at, from that Well's store, a fixed number of
-  motes per point of health, lowest grade first and not by the spend rule; an empty Well heals
-  nothing.
+- **Harm.** It weakens as it dives, at a rate set by how far the Void Pressure at the worse of the
+  dive's two ends is below the End's, so a trip to or from the Nether, where motes pay most, costs it
+  most, and one between End Wells nothing. Stopped at a Well or resting, it does not weaken. Hurt, it
+  flies more slowly, down to a quarter of its speed, and a dive slows as it weakens during it, so a
+  long dive to or from the Nether takes longer still; it cannot die. It never dives from a Well before
+  that Well has healed it, from its store, a fixed number of motes per point of health, lowest grade
+  first and not by the spend rule, as far as the motes go; an empty Well heals nothing.
 - **Look.** The vanilla Ender Dragon's model, built from the player's own game at runtime, wears a
   texture of our own on its layout: the Void Dragon about half the Ender Dragon's size, the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, so until the art the placeholder is

@@ -24,7 +24,8 @@ import org.junit.jupiter.api.Test;
  * the owner's Well of highest network pressure that has something worth delivering there, a reservoir
  * or a Well above its target; it carries only grades worth something at the destination, highest
  * first, up to its load; its trip is claimed, so dragons sharing a Well never overshoot it; and a load
- * its destination no longer takes goes on elsewhere, or waits.
+ * its destination no longer takes goes on elsewhere, or waits. Diving it weakens, hurt it flies more
+ * slowly, and it heals from a Well's motes as it leaves it.
  */
 class RoutingTest {
 
@@ -39,15 +40,20 @@ class RoutingTest {
     private static final int STOP = 100;
     /** A dive of 200 ticks and a second per 64 blocks, the Nether's counting eight. */
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
+    /** No harm anywhere, so a trip's motes go only where it carries them. */
+    private static final Harm HARMLESS = new Harm(dimension -> 0, 50, 16);
+    /** The End's pressure 3: the Overworld a step below it, the Nether two; a point a step every 50 ticks. */
+    private static final Harm HARM = new Harm(dimension -> dimension.equals(NETHER) ? 2 : dimension.equals(OVERWORLD) ? 1 : 0, 50, 16);
 
     private static final Place END_WELL = new Place(END, new BlockPos(0, 64, 0));
     private static final Place NETHER_WELL = new Place(NETHER, new BlockPos(80, 64, 0));
     private static final Place OVERWORLD_WELL = new Place(OVERWORLD, new BlockPos(0, 64, 640));
     private static final Place OTHER_WELL = new Place(OVERWORLD, new BlockPos(64, 64, 640));
+    private static final Place OTHER_END_WELL = new Place(END, new BlockPos(0, 64, 64));
 
     private final FakeWells wells = new FakeWells();
     private final VoidDragons dragons = new VoidDragons();
-    private final Routing routing = new Routing(wells, DIVE, LOAD, STOP);
+    private Routing routing = new Routing(wells, DIVE, HARMLESS, LOAD, STOP);
     private long now;
 
     @Test
@@ -215,6 +221,147 @@ class RoutingTest {
         assertEquals(NETHER_WELL, rested.rest());
         assertTrue(rested.trip().isEmpty(), "the dragon is still on a trip");
         assertTrue(rested.load().isEmpty(), "the dragon still carries a load");
+    }
+
+    @Test
+    void aDragonWeakensOnlyWhileItDivesAtTheWorseOfItsEndsRate() {
+        harming();
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of(4, 300L));
+        wells.add(ALICE, END_WELL, OptionalLong.of(50), 3, Map.of());
+        wells.add(BOB, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(4, 300L));
+        wells.add(BOB, OTHER_END_WELL, OptionalLong.of(50), 3, Map.of());
+        var fromTheNether = dragons.add(ALICE, NETHER_WELL);
+        var fromTheOverworld = dragons.add(BOB, OVERWORLD_WELL);
+        // Each loads for 100 ticks, costing nothing, then dives to the End, weakening as it goes:
+        // by the Nether's 2 or the Overworld's 1 each 50 ticks.
+        runFor(301);
+        var halfway = dragons.get(fromTheNether.id()).orElseThrow();
+        assertEquals(Optional.of(Trip.Leg.TO_DESTINATION), halfway.trip().map(Trip::leg));
+        assertEquals(VoidDragonRecord.FULL_HEALTH - 8, halfway.health());
+        runFor(20_000);
+        assertEquals(Map.of(4, 50L), wells.motes(END_WELL));
+        assertEquals(Map.of(4, 50L), wells.motes(OTHER_END_WELL));
+        // 640 Overworld blocks, 400 ticks; 576, 380 ticks; then they unload and rest, costing nothing.
+        assertEquals(VoidDragonRecord.FULL_HEALTH - 16, dragons.get(fromTheNether.id()).orElseThrow().health());
+        assertEquals(VoidDragonRecord.FULL_HEALTH - 7, dragons.get(fromTheOverworld.id()).orElseThrow().health());
+    }
+
+    @Test
+    void aRestingDragonNeitherWeakensNorHeals() {
+        harming();
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of(4, 300L));
+        var dragon = hurt(dragons.add(ALICE, NETHER_WELL), 50);
+        runFor(20_000);
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().health());
+        assertEquals(Map.of(4, 300L), wells.motes(NETHER_WELL));
+    }
+
+    @Test
+    void aHurtDragonsTripsTakeLonger() {
+        harming();
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(50), 3, Map.of());
+        var dragon = carrying(ALICE, END_WELL, 50, Map.of(4, 50L));
+        // At full health the dive of 64 blocks takes 220 ticks; at half health, twice that. Between End
+        // Wells it never weakens, so it keeps its speed.
+        runFor(440);
+        assertEquals(Map.of(), wells.motes(OTHER_END_WELL));
+        runFor(1);
+        assertEquals(Map.of(4, 50L), wells.motes(OTHER_END_WELL));
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().health());
+    }
+
+    @Test
+    void aDragonWeakeningDuringADiveSlowsForTheRestOfIt() {
+        harming();
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(50), 1, Map.of());
+        var dragon = carrying(ALICE, END_WELL, 27, Map.of(4, 50L));
+        // 400 ticks at full speed: 50 at 27% of it, then at 25 health the rest at a quarter, 1546 more,
+        // where at the speed it set off at it would have taken 1482.
+        runFor(1_596);
+        assertEquals(Map.of(), wells.motes(NETHER_WELL));
+        runFor(1);
+        assertEquals(Map.of(4, 50L), wells.motes(NETHER_WELL));
+    }
+
+    @Test
+    void aDragonsHealthNeverDropsBelowOneAndItKeepsWorking() {
+        harming();
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(100), 1, Map.of());
+        var dragon = carrying(ALICE, END_WELL, 3, Map.of(4, 50L));
+        // A dive of 1600 ticks at a quarter of its speed would cost it 64 of its 3 health.
+        runFor(2_000);
+        var weakest = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Map.of(4, 50L), wells.motes(NETHER_WELL));
+        assertEquals(1, weakest.health());
+        // Enough to heal it fully at 16 motes a point as it leaves, with 50 over for the Nether.
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 2_000L));
+        runFor(20_000);
+        assertEquals(Map.of(4, 100L), wells.motes(NETHER_WELL));
+    }
+
+    @Test
+    void leavingAWellADragonHealsFromItsMotesLowestGradeFirst() {
+        harming();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(2, 300L, 5, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(50), 1, Map.of());
+        var dragon = hurt(dragons.add(ALICE, END_WELL), 70);
+        runFor(1);
+        // It loads 50 of grade 5, highest first, and heals only as it leaves.
+        var loading = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(70, loading.health());
+        assertEquals(Map.of(5, 50L), loading.load());
+        runFor(STOP);
+        // 30 points at 16 motes each, 480: all 300 of grade 2 and 180 of grade 5.
+        var leaving = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Optional.of(Trip.Leg.TO_DESTINATION), leaving.trip().map(Trip::leg));
+        assertEquals(VoidDragonRecord.FULL_HEALTH, leaving.health());
+        assertEquals(Map.of(5, 770L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aWellHealsADragonOnlyAsFarAsItsMotesGo() {
+        harming();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(2, 40L, 4, 100L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(50), 1, Map.of());
+        var dragon = hurt(dragons.add(ALICE, END_WELL), 50);
+        runFor(1 + STOP);
+        // It loads 50 of grade 4; the 90 left heal 5 points, 80 of them, grade 2 first.
+        var leaving = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(55, leaving.health());
+        assertEquals(Map.of(4, 50L), leaving.load());
+        assertEquals(Map.of(4, 10L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void anEmptyWellHealsNothing() {
+        harming();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(50), 3, Map.of());
+        var dragon = carrying(ALICE, END_WELL, 50, Map.of(4, 50L));
+        runFor(20_000);
+        var rested = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Map.of(4, 50L), wells.motes(OTHER_END_WELL));
+        assertEquals(OTHER_END_WELL, rested.rest());
+        assertEquals(50, rested.health());
+    }
+
+    /** Runs the rest of the test with {@link #HARM}. */
+    private void harming() {
+        routing = new Routing(wells, DIVE, HARM, LOAD, STOP);
+    }
+
+    /** @return {@code dragon}, now of {@code health} */
+    private VoidDragonRecord hurt(VoidDragonRecord dragon, int health) {
+        var hurt = dragon.weakened(dragon.health() - health);
+        dragons.update(hurt);
+        return hurt;
+    }
+
+    /** @return a new dragon of {@code owner}'s of {@code health}, resting at {@code rest} with {@code load} and no trip */
+    private VoidDragonRecord carrying(UUID owner, Place rest, int health, Map<Integer, Long> load) {
+        var dragon = hurt(dragons.add(owner, rest), health).carrying(new TreeMap<>(load));
+        dragons.update(dragon);
+        return dragon;
     }
 
     /** Runs routing a step a tick for {@code ticks} ticks. */

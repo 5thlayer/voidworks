@@ -58,6 +58,6 @@ class ShowingTest {
     }
 
     private static Optional<Trip> trip(Trip.Leg leg, long until) {
-        return Optional.of(new Trip(Optional.of(HERE), THERE, 100, false, leg, until));
+        return Optional.of(new Trip(Optional.of(HERE), THERE, 100, false, leg, until, until, 0));
     }
 }

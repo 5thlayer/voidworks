@@ -44,6 +44,8 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGON_STOP_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_BLOCKS_PER_SECOND;
+    private static final ModConfigSpec.IntValue DRAGON_WEAKEN_TICKS;
+    private static final ModConfigSpec.IntValue DRAGON_HEAL_MOTES;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -133,6 +135,16 @@ public final class VoidworksConfig {
                 .comment("How many blocks apart two Void Wells are, in Overworld blocks, for each second a dive between them",
                         "takes beyond the fixed time: a Nether block counts eight, an End block one.")
                 .defineInRange("dragonDiveBlocksPerSecond", 64, 1, 1 << 20);
+        DRAGON_WEAKEN_TICKS = builder
+                .comment("Ticks in which a Void Dragon diving between Void Wells loses a point of its health for each step the",
+                        "Void Pressure at the worse of the dive's two ends is below the End's: twice as fast to or from the Nether",
+                        "as in the Overworld, and not at all between End Wells. Hurt, it flies more slowly, down to a quarter of its",
+                        "speed; its health never drops below 1.")
+                .defineInRange("dragonWeakenTicks", 200, 1, Integer.MAX_VALUE);
+        DRAGON_HEAL_MOTES = builder
+                .comment("Motes a Void Dragon takes from a Void Well before it dives from it, lowest grade first, to heal a point",
+                        "of health.")
+                .defineInRange("dragonHealMotes", 16, 1, 1 << 20);
         SPEC = builder.build();
     }
 
@@ -257,5 +269,15 @@ public final class VoidworksConfig {
     /** @return Overworld blocks apart for each second a dive takes beyond its fixed time */
     public static int dragonDiveBlocksPerSecond() {
         return DRAGON_DIVE_BLOCKS_PER_SECOND.getAsInt();
+    }
+
+    /** @return ticks in which a diving Void Dragon loses a point of health for each step of pressure below the End's */
+    public static int dragonWeakenTicks() {
+        return DRAGON_WEAKEN_TICKS.getAsInt();
+    }
+
+    /** @return motes a Void Dragon takes from a Well before it dives from it to heal a point of health */
+    public static int dragonHealMotes() {
+        return DRAGON_HEAL_MOTES.getAsInt();
     }
 }

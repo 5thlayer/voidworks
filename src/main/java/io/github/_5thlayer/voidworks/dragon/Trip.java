@@ -19,9 +19,11 @@ import net.minecraft.util.StringRepresentable;
  * @param claimed the motes on their way to the destination: planned until it loads, then its load, and none once unloaded
  * @param stow whether it carries a load nowhere needs to the Well with most room, where it unloads as much as fits
  * @param leg what it is doing now
- * @param until the game time the leg ends
+ * @param until the game time the leg ends; on a dive, when it arrives if it keeps its speed now
+ * @param countedTo on a dive, the game time up to which the ground it has covered and the health it has lost are counted
+ * @param toCover on a dive, the ground still to cover, in ticks at a whole dragon's speed times {@link VoidDragonRecord#WHOLE_SPEED}
  */
-public record Trip(Optional<Place> source, Place destination, long claimed, boolean stow, Leg leg, long until) {
+public record Trip(Optional<Place> source, Place destination, long claimed, boolean stow, Leg leg, long until, long countedTo, long toCover) {
 
     public static final Codec<Trip> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Place.CODEC.optionalFieldOf("source").forGetter(Trip::source),
@@ -29,17 +31,50 @@ public record Trip(Optional<Place> source, Place destination, long claimed, bool
             Codec.LONG.fieldOf("claimed").forGetter(Trip::claimed),
             Codec.BOOL.optionalFieldOf("stow", false).forGetter(Trip::stow),
             Leg.CODEC.fieldOf("leg").forGetter(Trip::leg),
-            Codec.LONG.fieldOf("until").forGetter(Trip::until)
-    ).apply(instance, Trip::new));
+            Codec.LONG.fieldOf("until").forGetter(Trip::until),
+            // A dive saved before dragons weakened on it arrives when it was to, weakening for none of it.
+            Codec.LONG.optionalFieldOf("counted_to").forGetter(trip -> Optional.of(trip.countedTo())),
+            Codec.LONG.optionalFieldOf("to_cover", 0L).forGetter(Trip::toCover)
+    ).apply(instance, (source, destination, claimed, stow, leg, until, countedTo, toCover) ->
+            new Trip(source, destination, claimed, stow, leg, until, countedTo.orElse(until), toCover)));
+
+    /** @return a trip planned on {@code leg}, a dive not yet set off, which {@link Routing} times as it sets off */
+    static Trip planned(Optional<Place> source, Place destination, long claimed, boolean stow, Leg leg) {
+        return new Trip(source, destination, claimed, stow, leg, 0, 0, 0);
+    }
 
     /** @return this trip on its next {@code leg}, until {@code until} */
     Trip then(Leg leg, long until) {
-        return new Trip(source, destination, claimed, stow, leg, until);
+        return new Trip(source, destination, claimed, stow, leg, until, countedTo, toCover);
     }
 
     /** @return this trip with {@code claimed} motes on their way */
     Trip claiming(long claimed) {
-        return new Trip(source, destination, claimed, stow, leg, until);
+        return new Trip(source, destination, claimed, stow, leg, until, countedTo, toCover);
+    }
+
+    /** @return this trip's dive counted up to game time {@code now}, {@code toCover} still to cover at {@code speed} */
+    Trip diving(long now, long toCover, int speed) {
+        return new Trip(source, destination, claimed, stow, leg, now + Math.ceilDiv(toCover, speed), now, toCover);
+    }
+
+    /** @return the game time a dragon diving at {@code speed} has dived to by {@code now}: then, or when it arrives, if sooner */
+    long divedTo(long now, int speed) {
+        return Math.min(now, countedTo + Math.ceilDiv(toCover, speed));
+    }
+
+    /** @return this trip's dive counted on to game time {@code to}, covered at {@code speed}, the rest to cover at {@code speedAfter} */
+    Trip covered(long to, int speed, int speedAfter) {
+        return diving(to, Math.max(0, toCover - (to - countedTo) * speed), speedAfter);
+    }
+
+    /** @return where the dragon is diving to on this leg; empty while it is stopped */
+    Optional<Place> divingTo() {
+        return switch (leg) {
+            case TO_SOURCE -> source;
+            case TO_DESTINATION -> Optional.of(destination);
+            case LOADING, UNLOADING -> Optional.empty();
+        };
     }
 
     /** What a dragon on a trip is doing. */

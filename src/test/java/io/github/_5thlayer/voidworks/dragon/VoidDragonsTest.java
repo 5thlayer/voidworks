@@ -62,12 +62,22 @@ class VoidDragonsTest {
     @Test
     void aSaveAndReloadKeepsALoadAndAClaimedTrip() {
         var dragon = dragons.add(ALICE, HERE);
-        var trip = new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234);
+        var trip = new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234, 1_000, 23_400);
         var carrying = dragon.carrying(new TreeMap<>(Map.of(5, 40L, 3, 30L))).on(Optional.of(trip));
         dragons.update(carrying);
         var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
         assertEquals(carrying, read.get(dragon.id()).orElseThrow());
+    }
+
+    @Test
+    void aSaveAndReloadKeepsAHurtDragonsHealth() {
+        var dragon = dragons.add(ALICE, HERE);
+        var hurt = dragon.weakened(63);
+        dragons.update(hurt);
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(37, read.get(dragon.id()).orElseThrow().health());
     }
 
     @Test
@@ -80,6 +90,18 @@ class VoidDragonsTest {
         assertTrue(read.load().isEmpty());
         assertTrue(read.trip().isEmpty());
         assertEquals(HERE, read.rest());
+    }
+
+    @Test
+    void aDiveSavedBeforeDragonsWeakenedArrivesWhenItWasTo() {
+        var saved = JsonParser.parseString("""
+                {"destination": {"dimension": "minecraft:the_end", "pos": [-5, 70, 9]}, "claimed": 70,
+                 "leg": "to_destination", "until": 1234}
+                """);
+        var read = Trip.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(1_234, read.until());
+        assertEquals(1_234, read.countedTo());
+        assertEquals(0, read.toCover());
     }
 
     @Test

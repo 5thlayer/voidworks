@@ -30,6 +30,12 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Sort
     /** A Void Dragon's health while it is whole. Provisional, like every number. */
     public static final int FULL_HEALTH = 100;
 
+    /** A whole dragon's speed: speeds count in hundredths of it. */
+    public static final int WHOLE_SPEED = 100;
+
+    /** The speed a dragon at its weakest flies at, a quarter of a whole dragon's. */
+    private static final int SLOWEST = WHOLE_SPEED / 4;
+
     private static final Codec<Map<Integer, Long>> LOAD_CODEC = Codec.unboundedMap(Codec.STRING.xmap(Integer::parseInt, String::valueOf), Codec.LONG);
 
     public static final Codec<VoidDragonRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -53,6 +59,21 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Sort
     /** @return how many motes it carries, of every grade together */
     public long carried() {
         return load.values().stream().mapToLong(Long::longValue).sum();
+    }
+
+    /** @return its speed, of {@link #WHOLE_SPEED}: its health's share of {@link #FULL_HEALTH}, down to a quarter */
+    public int speed() {
+        return Math.max(SLOWEST, WHOLE_SPEED * health / FULL_HEALTH);
+    }
+
+    /** @return this dragon {@code points} of health weaker, though never below 1: it cannot die */
+    public VoidDragonRecord weakened(int points) {
+        return new VoidDragonRecord(id, owner, Math.max(1, health - points), rest, load, trip);
+    }
+
+    /** @return this dragon {@code points} of health stronger, though never above {@link #FULL_HEALTH} */
+    VoidDragonRecord healed(int points) {
+        return new VoidDragonRecord(id, owner, Math.min(FULL_HEALTH, health + points), rest, load, trip);
     }
 
     VoidDragonRecord resting(Place rest) {

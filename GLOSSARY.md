@@ -44,7 +44,7 @@ _Avoid_: voiding (for destroying items), void as "needs no power"
 The ambient void level of a place, a small integer: a base per dimension, highest in the End, then
 the Overworld, lowest in the Nether, and one step higher where the End is open to the void below. It sets the grade of motes harvested
 there, the value of motes spent there, how fast a Void Crucible works there, and how fast a Void
-Dragon weakens there. Motes stored nearby never change it.
+Dragon diving to or from there weakens. Motes stored nearby never change it.
 _Avoid_: network pressure (the motes' own, which only steers flow)
 
 **Harvest kind**:
@@ -117,13 +117,14 @@ _Avoid_: tamer, master
 
 **Void Dragon**:
 A dragon raised on void that carries motes between Void Wells, diving through the void between
-them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens outside the
-End, and never dies.
+them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens on dives
+outside the End, heals at its Wells, and never dies.
 _Avoid_: Ender Dragon (the boss), tamed dragon
 
 **Dive**:
-A Void Dragon's passage through the void between two Void Wells, in any dimensions. It takes a
-travel time set by distance, and nothing in the world sees the dragon, or its rider, while it lasts.
+A Void Dragon's passage through the void between two Void Wells, in any dimensions. It is a
+distance the dragon covers at its speed, slower as it weakens on the way, and nothing in the world
+sees the dragon, or its rider, while it lasts.
 _Avoid_: teleport, flight
 
 **Trip**:
