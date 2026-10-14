@@ -23,6 +23,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.energy.MoteResource;
+import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ExtraCodecs;
@@ -52,6 +53,9 @@ public final class VoidNetworks {
      */
     static final int WANTED_STEPS = 4;
 
+    /** A Void Pressure below every grade, so motes of every grade are worth something wanted at it. */
+    static final int EVERY_GRADE = VoidEnergy.MIN_GRADE - 1;
+
     private final IntSupplier perVoidstone;
     private final IntSupplier perWell;
     private final Map<BlockPos, MoteStore> stores = new HashMap<>();
@@ -59,7 +63,7 @@ public final class VoidNetworks {
     private final Map<BlockPos, List<MoteStore>> parts = new HashMap<>();
     private final Map<MoteStore, MoteNetwork> networkOf = new IdentityHashMap<>();
     /** The stores motes are wanted at, each with the last step of conduction it is wanted for; not saved. */
-    private final Map<MoteStore, Long> wanted = new IdentityHashMap<>();
+    private final Map<MoteStore, Wanted> wanted = new IdentityHashMap<>();
     /** Steps of conduction so far, counting from when the networks were loaded. */
     private long step;
     private Runnable changed = () -> {
@@ -349,12 +353,18 @@ public final class VoidNetworks {
      * @return the most motes of the grade in {@code slot}, up to {@code most}, that can move from
      *         {@code from} to {@code to} with {@code from}'s pressure still at least {@code to}'s; or
      *         one mote, when {@code to} is nearer where motes are wanted and the mote leaves
-     *         {@code to} no higher than {@code from} was
+     *         {@code to} no higher than {@code from} was, or when a Void Well gives it ({@link #wellGives});
+     *         none when a Well would soak it up on its way ({@link #onTheirWay})
      */
-    private int flow(MoteStore from, MoteStore to, int slot, int most, Map<MoteStore, Integer> toWanted) {
+    private int flow(MoteStore from, MoteStore to, int slot, int most, Map<MoteStore, Toward> toWanted) {
+        if (to.kind() == StoreKind.WELL && onTheirWay(from, to, slot, toWanted)) {
+            // Motes on their way to where they are wanted are no surplus for a Well to soak up, or
+            // one it gave would be evened straight back into it.
+            return 0;
+        }
         int even = evening(from, to, slot, most);
-        if (even == 0 && most > 0 && to.room() > 0 && nearer(to, from, toWanted)
-                && from.pressure(slot, from.motes[slot]) >= to.pressure(slot, to.motes[slot] + 1)) {
+        if (even == 0 && most > 0 && to.room() > 0 && (wellGives(from, to, slot, toWanted)
+                || nearer(to, from, toWanted) && from.pressure(slot, from.motes[slot]) >= to.pressure(slot, to.motes[slot] + 1))) {
             // Evening out alone leaves steps of one mote between neighbours, and level ground where
             // motes are few, so the last of them would never reach a machine at the end of a line of
             // Voidstone. Where one is wanted, a mote steps down toward it; nearer each step, none
@@ -364,47 +374,90 @@ public final class VoidNetworks {
         return even;
     }
 
-    /** @return whether {@code to} is strictly nearer a store motes are wanted at than {@code from} is */
-    private static boolean nearer(MoteStore to, MoteStore from, Map<MoteStore, Integer> toWanted) {
-        var distance = toWanted.get(to);
-        return distance != null && distance < toWanted.getOrDefault(from, Integer.MAX_VALUE);
+    /**
+     * @return whether the Void Well {@code from} gives a mote of the grade in {@code slot} to
+     *         {@code to}, nearer where motes are wanted, whatever the Well's pressure: a Well's pressure
+     *         stays below even one mote in a Voidstone until it is nearly full, so it soaks up a
+     *         network's surplus and gives it back to whatever draws (ADR 0006). It gives only grades
+     *         worth something where they are wanted, so motes no spender there can spend never crowd
+     *         out those it can.
+     */
+    private static boolean wellGives(MoteStore from, MoteStore to, int slot, Map<MoteStore, Toward> toWanted) {
+        return from.kind() == StoreKind.WELL && onTheirWay(to, from, slot, toWanted);
     }
 
     /**
-     * Marks the store at {@code pos} as one motes are wanted at: a spender beside it is drawing on
-     * it, so for the next {@link #WANTED_STEPS} steps of conduction motes too few to even out a
-     * network still find their way to it.
+     * @return whether motes of the grade in {@code slot} at {@code at} are on their way to where
+     *         they are wanted, rather than toward {@code from}: {@code at} is nearer a store they are
+     *         wanted at, and they are worth something there
+     */
+    private static boolean onTheirWay(MoteStore at, MoteStore from, int slot, Map<MoteStore, Toward> toWanted) {
+        return nearer(at, from, toWanted) && MoteStore.grade(slot) > toWanted.get(at).pressure();
+    }
+
+    /** @return whether {@code to} is strictly nearer a store motes are wanted at than {@code from} is */
+    private static boolean nearer(MoteStore to, MoteStore from, Map<MoteStore, Toward> toWanted) {
+        var toward = toWanted.get(to);
+        var away = toWanted.get(from);
+        return toward != null && (away == null || toward.distance() < away.distance());
+    }
+
+    /**
+     * Marks the store at {@code pos} as one motes of every grade are wanted at, as
+     * {@link #want(BlockPos, int)} does for a spender at the lowest Void Pressure.
      */
     public void want(BlockPos pos) {
+        want(pos, EVERY_GRADE);
+    }
+
+    /**
+     * Marks the store at {@code pos} as one motes are wanted at: a spender beside it, at Void Pressure
+     * {@code pressure}, is drawing on it, so for the next {@link #WANTED_STEPS} steps of conduction
+     * motes too few to even out a network still find their way to it, and a Void Well gives it, and
+     * no longer soaks up on their way, motes of the grades worth something at {@code pressure}.
+     */
+    public void want(BlockPos pos, int pressure) {
         var store = stores.get(pos);
         if (store != null) {
-            wanted.put(store, step + WANTED_STEPS);
+            wanted.put(store, new Wanted(step + WANTED_STEPS, pressure));
         }
     }
 
-    /** @return each store's distance, in stores, to the nearest one motes are wanted at; none for a network wanting none */
-    private Map<MoteStore, Integer> distancesToWanted() {
+    /**
+     * @return for each store, its distance, in stores, to the nearest one motes are wanted at, and the
+     *         Void Pressure they are wanted at there; none for a network wanting none
+     */
+    private Map<MoteStore, Toward> distancesToWanted() {
         if (wanted.isEmpty()) {
             return Map.of();
         }
-        wanted.values().removeIf(until -> until < step);
+        wanted.values().removeIf(want -> want.until() < step);
         wanted.keySet().removeIf(store -> stores.get(store.pos()) != store);
-        var distances = new IdentityHashMap<MoteStore, Integer>();
+        var distances = new IdentityHashMap<MoteStore, Toward>();
         var queue = new ArrayDeque<MoteStore>();
-        for (var store : wanted.keySet()) {
-            distances.put(store, 0);
+        wanted.forEach((store, want) -> {
+            distances.put(store, new Toward(0, want.pressure()));
             queue.add(store);
-        }
+        });
         while (!queue.isEmpty()) {
             var store = queue.poll();
+            var toward = distances.get(store);
             for (var face : faces(store)) {
                 if (!distances.containsKey(face.store())) {
-                    distances.put(face.store(), distances.get(store) + 1);
+                    distances.put(face.store(), new Toward(toward.distance() + 1, toward.pressure()));
                     queue.add(face.store());
                 }
             }
         }
         return distances;
+    }
+
+    /** A store motes are wanted at until the step {@code until}, by a spender at Void Pressure {@code pressure}. */
+    private record Wanted(long until, int pressure) {
+    }
+
+    /** How far a store is from the nearest store motes are wanted at, and the Void Pressure they are wanted at there. */
+    private record Toward(int distance, int pressure) {
     }
 
     /** @return the most motes, up to {@code most}, that leave {@code from}'s pressure at least {@code to}'s */

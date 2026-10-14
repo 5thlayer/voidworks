@@ -220,11 +220,7 @@ class VoidNetworksTest {
             // A spender at the end draws on it, taking all it holds.
             networks.want(end);
             networks.conduct(RATE);
-            drawn += held(end).getOrDefault(3, 0);
-            try (var transaction = Transaction.openRoot()) {
-                networks.store(end).orElseThrow().extract(MoteStore.slot(3), MoteResource.of(3), Integer.MAX_VALUE, transaction);
-                transaction.commit();
-            }
+            drawn += takeAll(end, 3);
         }
 
         assertEquals(10, drawn);
@@ -349,6 +345,93 @@ class VoidNetworksTest {
         insert(A.east(), 3, PER_WELL / 2);
         networks.conduct(RATE);
         assertEquals(Map.of(3, RATE), held(A));
+    }
+
+    @Test
+    void aWellFarFromFullGivesNothingBackWhenNothingIsWanted() {
+        networks.join(A, StoreKind.WELL);
+        for (int x = 1; x < 5; x++) {
+            networks.join(A.east(x));
+        }
+        insert(A, 3, PER_WELL / 2);
+
+        for (int step = 0; step < 20; step++) {
+            networks.conduct(RATE);
+        }
+
+        assertEquals(Map.of(3, PER_WELL / 2), held(A));
+    }
+
+    @Test
+    void aWellFarFromFullGivesAMoteAStepToWhereMotesAreWanted() {
+        var end = A.east(4);
+        networks.join(A, StoreKind.WELL);
+        for (int x = 1; x < 5; x++) {
+            networks.join(A.east(x));
+        }
+        insert(A, 3, PER_WELL / 2);
+
+        int steps = 40;
+        int drawn = 0;
+        for (int step = 0; step < steps; step++) {
+            // A spender at the end draws on it, taking all it holds.
+            networks.want(end);
+            networks.conduct(RATE);
+            drawn += takeAll(end, 3);
+        }
+
+        // A mote leaves the Well each step, one store a step, so the first reaches the end on the
+        // fourth: the first three steps bring none.
+        assertEquals(steps - 3, drawn);
+        assertEquals(Map.of(3, PER_WELL / 2 - steps), held(A));
+    }
+
+    @Test
+    void motesOnTheirWayToWhereTheyAreWantedAreNotSoakedUpByAWell() {
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        networks.join(A.east(2));
+        insert(A.east(), 3, PER_VOIDSTONE);
+
+        networks.want(A.east(2));
+        networks.conduct(RATE);
+
+        assertEquals(Map.of(), held(A));
+        assertEquals(Map.of(3, RATE), held(A.east(2)));
+    }
+
+    @Test
+    void aWellGivesOnlyGradesWorthSomethingWhereMotesAreWanted() {
+        var end = A.east(2);
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        networks.join(end);
+        insert(A, 2, PER_WELL / 4);
+        insert(A, 3, PER_WELL / 4);
+
+        int drawn = 0;
+        for (int step = 0; step < 10; step++) {
+            // A spender at the end, at Void Pressure 2, draws on it: grade 2 is worth nothing to it.
+            networks.want(end, 2);
+            networks.conduct(RATE);
+            drawn += takeAll(end, 3);
+        }
+
+        assertEquals(10 - 1, drawn);
+        assertEquals(PER_WELL / 4, held(A).get(2));
+    }
+
+    @Test
+    void motesWorthNothingWhereMotesAreWantedAreStillSoakedUpByAWell() {
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        networks.join(A.east(2));
+        insert(A.east(), 2, PER_VOIDSTONE);
+
+        networks.want(A.east(2), 2);
+        networks.conduct(RATE);
+
+        assertEquals(Map.of(2, RATE), held(A));
     }
 
     @Test
@@ -567,6 +650,15 @@ class VoidNetworksTest {
 
     private Map<Integer, Integer> held(BlockPos pos) {
         return VoidSpender.countByGrade(networks.store(pos).orElseThrow());
+    }
+
+    /** Takes every mote of {@code grade} out of the store at {@code pos}, as a spender there drawing on it all. */
+    private int takeAll(BlockPos pos, int grade) {
+        try (var transaction = Transaction.openRoot()) {
+            int taken = networks.store(pos).orElseThrow().extract(MoteStore.slot(grade), MoteResource.of(grade), Integer.MAX_VALUE, transaction);
+            transaction.commit();
+            return taken;
+        }
     }
 
     private int insert(BlockPos pos, int grade, int count) {
