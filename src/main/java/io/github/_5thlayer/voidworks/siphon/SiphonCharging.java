@@ -33,19 +33,30 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  * has room for, and without loss. It reaches the Voidstone stood on first, then the Voidstone and
  * Void Wells touching it, so a tier's rate is not held to what one Voidstone holds; conduction
  * brings the rest of the network to them. The motes fly between the Voidstone and the player.
+ * Then, wherever the player is, each Siphon set to charge charges the FE items they wear or hold
+ * ({@link FeCharging}), so on Voidstone a charging Siphon fills itself and those FE items at once.
  */
 public final class SiphonCharging {
 
     private SiphonCharging() {
     }
 
-    /** Charges or empties once every {@link VoidworksConfig#siphonInterval()} ticks of a player on a server. */
+    /** Takes a Siphon step once every {@link VoidworksConfig#siphonInterval()} ticks of a player on a server. */
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         var player = event.getEntity();
         if (player.level() instanceof ServerLevel level && !player.isSpectator()
                 && player.tickCount % VoidworksConfig.siphonInterval() == 0) {
-            exchange(level, player);
+            step(level, player);
         }
+    }
+
+    /**
+     * One Siphon step of {@code player}'s: each Siphon they carry charges from or empties into the
+     * Voidstone they stand on, then each set to charge charges the FE items they wear or hold.
+     */
+    public static void step(ServerLevel level, Player player) {
+        exchange(level, player);
+        FeCharging.charge(level, player);
     }
 
     /**

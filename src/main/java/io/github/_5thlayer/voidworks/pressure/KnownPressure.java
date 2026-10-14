@@ -38,6 +38,11 @@ public final class KnownPressure {
         viewer = player;
     }
 
+    /** @return the client's player, whom a tooltip shows what motes are worth to, or null when there is none */
+    public static @Nullable Player viewer() {
+        return viewer.get();
+    }
+
     /**
      * @return the Void Pressure at the client's player's feet, where a Void Siphon spends, or empty
      *         when there is no player or the server has sent no entry for the player's dimension
