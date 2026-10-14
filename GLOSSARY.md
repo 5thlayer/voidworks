@@ -36,7 +36,8 @@ _Avoid_: mote item, stack of motes
 
 **Void energy**:
 What a mote releases when it is spent: the more its grade exceeds the Void Pressure where it is
-spent, the more it releases, doubling with each step. Nothing stores void energy; everything stores motes. It is not FE.
+spent, the more it releases, doubling with each step. Nothing stores void energy; everything stores motes. It is not FE,
+but a Void Siphon converts what it releases into FE in the FE items it charges.
 Bare "void" means this mechanic; removing items is "destroying" or "trashing" them.
 _Avoid_: voiding (for destroying items), void as "needs no power"
 
@@ -83,11 +84,18 @@ _Avoid_: area, range, radius
 
 **Void Siphon**:
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It
-holds motes and keeps them wherever it goes, as many as its tier allows, and void gear draws from it.
-Standing on Voidstone, it charges from the network or empties into it, as its holder sets it.
+holds motes and keeps them wherever it goes, as many as its tier allows, and spends them to charge FE items.
+Standing on Voidstone, it charges from the network or empties into it, as its holder sets it; set to
+charge, it also charges the FE items its holder wears and holds, wherever they are.
 Its tiers, the Void Siphon, the Resonant and the Draconic, hold more and charge faster, and it climbs
 them at a smithing table.
 _Avoid_: glove
+
+**FE item**:
+Any item, another mod's, that holds FE and takes it through NeoForge's item energy capability, such
+as Gearworks' Gear. A Void Siphon set to charge charges it while it is worn or held, never in the rest
+of the inventory; Voidworks makes no gear of its own.
+_Avoid_: void gear, equipment (belt equipment in the suite), Gear (Gearworks' suit alone)
 
 **Dormant**:
 A void machine placed but not yet paid for: it soaks its cost in motes where it stands, from any

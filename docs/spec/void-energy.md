@@ -6,7 +6,9 @@ Resolved in two grilling sessions on 2026-10-06, the second on void logistics, a
 on Families, from the original
 idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlayer/factoryworks/blob/main/docs/ideas/mutation_system.md), which stays as written,
 and a sixth on 2026-10-13 on the Void Dragon, which made it server state rather than an entity
-([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)).
+([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)), and a seventh on
+2026-10-14 that made the Void Siphon charge other mods' FE items in place of void gear of our own
+([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)).
 Factorio fidelity was not a constraint.
 
 The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
@@ -19,7 +21,9 @@ leave the End-centred endgame out. It requires nothing a player installs but Min
 (libworks-runtime, which shows it in Jade, is nested in its jar): its inputs are
 vanilla, Mutation reads the recipe manager, and its outputs go through NeoForge's item and fluid
 faces. If the Displacer or the Void Well become multiblocks, it may require Groundworks, as Beltworks
-and Wireworks do.
+and Wireworks do. It charges other mods' FE items through NeoForge's item energy capability alone,
+so Gearworks, whose Gear it was tuned against, is only a mod its dev client runs, never a
+dependency, and its game tests charge an FE item of their own.
 
 ## Progression
 
@@ -74,16 +78,16 @@ Dormant.
   each further step doubles it: one step releases a provisional base amount, two steps twice that,
   three steps four times. A machine refuses a mote whose grade is not above it, and spends the
   lowest grade still worth something first.
-- Local means where the spender stands: a machine's own block, the player's feet for gear and the
-  Void Siphon, the egg's block for hatching. The open void's extra step counts for spending too, so
+- Local means where the spender stands: a machine's own block, the player's feet for the Void Siphon
+  and the FE items it charges, the egg's block for hatching. The open void's extra step counts for spending too, so
   a machine built over it refuses all but the top grade.
 - So the End is the reservoir and the Nether the turbine: one mote does the most work in the
   Nether, and moving motes downhill is why void logistics exists. A base runs on its own harvest
   at the lowest value, and the cheap Nether and Overworld motes pay for a start before the End
   pays off; carrying them downhill is what multiplies them.
-- Every spend follows this rule — Mutation, gear, zone upgrades, Displacer recipes, hatching,
+- Every spend follows this rule — Mutation, charging FE items, zone upgrades, Displacer recipes, hatching,
   void-only materials — except healing the Void Dragon, which happens only at a Void Well.
-- What motes buy: power for endgame gear, Mutation, and void-only materials (a void alloy and the
+- What motes buy: FE for other mods' gear, through a Void Siphon, Mutation, and void-only materials (a void alloy and the
   like). They never create ordinary items; Mutation is the only path from motes to those.
 
 ## Harvesting
@@ -158,7 +162,7 @@ hand; a block of Density 0 is refused. It yields one Density step below a Displa
 The Siphon holds motes, as many as its tier allows, and keeps them wherever it goes: dropped,
 stored, or carried through a portal. Only a player charges or empties it, by harvesting, by
 standing on Voidstone (its toggle, flipped by sneak-use, sets whether it charges from the network
-or empties into it), or by gear spending from it; no block takes a Siphon, so item logistics
+or empties into it), or by charging FE items; no block takes a Siphon, so item logistics
 moving Siphons still needs a player at both ends. A player may carry several. Even the top tier
 holds a small fraction of a Void Well: carrying by hand starts a base or powers gear, and never
 supplies one.
@@ -176,6 +180,26 @@ template, keeping its motes and its toggle, as netherite keeps a tool's enchantm
 
 The capacities and rates are provisional, a list per tier in the server config. The Siphon has no
 durability.
+
+**Charging FE items.** Voidworks makes no gear of its own
+([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)): a Siphon
+set to charge spends its motes into the FE items its holder wears or holds, any mod's item that
+takes FE through NeoForge's item energy capability, such as Gearworks' Gear. It does so wherever the
+holder is, once every Siphon interval, by the spend rule at the player's feet, in a dimension with
+no harvest kind too, and the void energy released becomes FE at a fixed rate. So on Voidstone a
+Siphon set to charge fills itself and the gear at once, and one set to empty keeps its motes for a
+Dormant machine or a Dragonling. Only the four armour slots and both hands are charged; an FE item
+elsewhere in the inventory is not, so a Siphon never fills batteries to carry to a base.
+
+- Siphons spend in inventory order, the hotbar first, and their FE fills chest, legs, feet, head,
+  main hand, then off hand, each item taking what it accepts.
+- A Siphon spends a mote only when the items have room for all the FE it releases, so no FE is lost
+  to a whole mote at the top of a battery.
+- A tier's rate caps it: at most that many motes into FE items per interval.
+- While its holder wears or holds an FE item, the Siphon's tooltip shows about how much FE its motes
+  would charge there; with none, it shows nothing of FE.
+
+FE comes only from a Siphon: no block turns motes into FE.
 
 ## Moving motes
 
@@ -413,13 +437,16 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
   closing half the gap), the Void Crucible's speed and how near Crucibles share it, mote speed, Void Well capacity,
-  the Void Siphon's capacity per tier, and the network pressure cap, and the Void Dragon's (provisional:
+  the Void Siphon's capacity per tier, the FE a void energy charges (provisional: 10, tuned against
+  Gearworks' Gear, whose battery upgrade holds 100,000; a server config value), and the network pressure cap, and the Void Dragon's (provisional:
   the first egg 25,600 void energy, doubling per dragon; Dragonling growth 40 minutes, 1 minute off
   per 1,000 void energy fed; a load of 8,192 motes; about 5 seconds a stop; a dive of 10 seconds and
   1 second per 64 blocks; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
   motes; an egg laid each 65,536 motes carried).
 - **Void Dragon life stages** — young, adult, senior and old, trading speed for load, and death in
   old age ([#54](https://github.com/5thlayer/voidworks/issues/54)).
+- **FE from a network** — a Voidstone network or a Void Well turning motes into FE for any mod's
+  cables: base power, which balancing void energy against FE generation makes a design of its own.
 - **Teams** — after the first major version: players sharing Wells and dragons as a team, beyond
   owners sharing a network's motes.
 - **Planned routes** — after the first major version: a player directing a dragon's travel beyond
