@@ -33,8 +33,11 @@ import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
  * file is {@code data/<namespace>/data_maps/dimension/void_pressure.json} in the datapack that
  * ships the entries, such as
  * {@code {"values": {"minecraft:the_end": {"base": 3, "harvest_kind": "end"}}}}. It is read on the
- * server; the dimension registry never reaches a client, so each player is sent their own
- * dimension's entry ({@link PressureSync}), for showing what motes are worth where they stand.
+ * server, by Voidworks itself from those files ({@link PressureEntries}), and not from the registry:
+ * a new world's map is loaded before its dimensions are registered, so the registry's copy of it is
+ * empty there until the next reload. Ask {@link #dimension}, never the registry's data map. The
+ * dimension registry never reaches a client, so each player is sent their own dimension's entry
+ * ({@link PressureSync}), for showing what motes are worth where they stand.
  */
 public final class VoidPressure {
 
@@ -58,6 +61,7 @@ public final class VoidPressure {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(VoidPressure::registerDataMap);
+        PressureEntries.register();
         PressureSync.register(modBus);
     }
 
@@ -94,10 +98,10 @@ public final class VoidPressure {
      * harvest kind.
      */
     public static DimensionPressure dimension(RegistryAccess registries, ResourceKey<Level> dimension) {
-        var entries = registries.lookupOrThrow(Registries.LEVEL_STEM).getDataMap(DATA_MAP);
+        var stems = registries.lookupOrThrow(Registries.LEVEL_STEM);
         return DimensionPressure.resolve(
-                Optional.ofNullable(entries.get(stem(dimension))),
-                Optional.ofNullable(entries.get(LevelStem.OVERWORLD)));
+                Optional.ofNullable(PressureEntries.get(stems, stem(dimension))),
+                Optional.ofNullable(PressureEntries.get(stems, LevelStem.OVERWORLD)));
     }
 
     private static ResourceKey<LevelStem> stem(ResourceKey<Level> dimension) {
