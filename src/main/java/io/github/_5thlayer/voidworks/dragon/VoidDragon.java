@@ -31,6 +31,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -65,8 +66,11 @@ import org.jspecify.annotations.Nullable;
  *       growing. One no player owns never grows.</li>
  *   <li>Grown, a Void Dragon is server state, not an entity (ADR 0005): growing up adds its
  *       {@link VoidDragonRecord}, and this creature is then only the record's <b>presence</b>,
- *       {@link DragonPresences}' to show, about half the Ender Dragon's size, which flies about
- *       where its dragon rests, holds no state of its own and is never saved.</li>
+ *       {@link DragonPresences}' to show, about half the Ender Dragon's size, which holds no state of
+ *       its own and is never saved. It follows what its record shows ({@link Showing}): it emerges
+ *       from a Well's shaft as its dragon stops there, flies close about the Well while it loads or
+ *       unloads and wider while it rests, and dives into the shaft and is gone as its dragon sets
+ *       off.</li>
  * </ul>
  *
  * <p>Nothing hurts either, but a command's kill and the void below the world, which nothing is
@@ -84,6 +88,18 @@ public final class VoidDragon extends PathfinderMob {
 
     /** How far, in blocks, a grown dragon's presence flies about where its dragon rests. */
     public static final int RESTING_RADIUS = 16;
+
+    /** How far, in blocks, a presence flies about the Well its dragon loads or unloads at. */
+    public static final int WORKING_RADIUS = 6;
+
+    /** How fast, in blocks a tick, a presence rises out of a Well's shaft as it emerges. */
+    private static final double EMERGE_SPEED = 0.25;
+
+    /** How fast, in blocks a tick, a presence goes down into a Well's shaft as it dives. */
+    private static final double DIVE_SPEED = 0.6;
+
+    /** The most ticks a presence takes to emerge or dive, should something keep it from getting there. */
+    private static final int MOST_PASSAGE_TICKS = 100;
 
     /** How much bigger a presence is than a Dragonling: half the Ender Dragon's size to a fifth. */
     public static final float GROWN_SCALE = 2.5F;
@@ -110,6 +126,16 @@ public final class VoidDragon extends PathfinderMob {
     private long ticksToGrow;
     /** A presence's dragon; null for a Dragonling. */
     private @Nullable UUID dragon;
+    /** Where a presence's dragon is, which it shows; null for a Dragonling. */
+    private @Nullable Place shownAt;
+    /** Where a presence flies about: over its dragon's Well, or where its dragon rests elsewhere. */
+    private BlockPos over = BlockPos.ZERO;
+    /** Where a presence emerges from and dives to: down a Well's shaft, or below where its dragon rests elsewhere. */
+    private BlockPos under = BlockPos.ZERO;
+    /** What a presence shows of its dragon now. */
+    private Showing showing = Showing.RESTING;
+    /** How long a presence has been emerging or diving. */
+    private int passageTicks;
 
     public VoidDragon(EntityType<? extends VoidDragon> type, Level level) {
         super(type, level);
@@ -126,9 +152,13 @@ public final class VoidDragon extends PathfinderMob {
                 .add(Attributes.TEMPT_RANGE, 16.0);
     }
 
-    /** It flies, up and down too, as an Allay does, at the speed its flight gives it. */
+    /** It flies, up and down too, as an Allay does, at the speed its flight gives it; a presence emerging or diving goes straight through anything in its way. */
     @Override
     public void travel(Vec3 input) {
+        if (passing()) {
+            move(MoverType.SELF, getDeltaMovement());
+            return;
+        }
         travelFlying(input, getSpeed());
     }
 
@@ -163,12 +193,110 @@ public final class VoidDragon extends PathfinderMob {
         ticksToGrow = VoidworksConfig.dragonlingGrowTicks();
     }
 
-    /** Makes it the presence of {@code record}, holding nothing of its own, flying about where its dragon rests. */
-    void showPresenceOf(VoidDragonRecord record) {
+    /**
+     * Makes it the presence of {@code record}, holding nothing that is saved or that the record reads, where its dragon is: emerging
+     * from {@code under}, or already flying about {@code over}.
+     *
+     * @param showing what the record shows, never {@link Showing#DIVING}
+     * @param over where it flies about: over its dragon's Well, in the open air, or where its dragon rests elsewhere
+     * @param under where it emerges from, and dives to
+     */
+    void showPresenceOf(VoidDragonRecord record, Showing showing, BlockPos over, BlockPos under) {
         dragon = record.id();
         owner = record.owner();
+        shownAt = record.rest();
+        this.over = over;
+        this.under = under;
         entityData.set(DATA_GROWN, true);
-        setHomeTo(record.rest().pos(), RESTING_RADIUS);
+        var at = Vec3.atBottomCenterOf(showing == Showing.EMERGING ? under : over);
+        snapTo(at.x, at.y, at.z, getRandom().nextFloat() * 360.0F, 0.0F);
+        if (showing == Showing.EMERGING) {
+            pass(Showing.EMERGING);
+        } else {
+            follow(showing);
+        }
+    }
+
+    /** @return whether it is the presence of a dragon at {@code place} */
+    boolean shows(Place place) {
+        return place.equals(shownAt);
+    }
+
+    /**
+     * Follows what its dragon's record shows now: it flies close about the Well while its dragon is at
+     * work there, wider while it rests, and dives away as its dragon dives. Emerging, it carries on
+     * until it is out, and diving, until it is gone.
+     */
+    void follow(Showing next) {
+        if (showing == Showing.DIVING || next == Showing.DIVING) {
+            if (showing != Showing.DIVING) {
+                pass(Showing.DIVING);
+            }
+            return;
+        }
+        if (showing != Showing.EMERGING) {
+            settle(next == Showing.RESTING ? Showing.RESTING : Showing.WORKING);
+        }
+    }
+
+    /** @return what it shows of its dragon now: for a presence that has stopped following it, {@link Showing#DIVING} */
+    public Showing showing() {
+        return showing;
+    }
+
+    /** @return whether it is emerging or diving, flying straight through anything in its way */
+    private boolean passing() {
+        return showing == Showing.EMERGING || showing == Showing.DIVING;
+    }
+
+    /** It flies about {@link #over}, close while its dragon is at work and wider while it rests. */
+    private void settle(Showing showing) {
+        this.showing = showing;
+        setHomeTo(over, showing == Showing.WORKING ? WORKING_RADIUS : RESTING_RADIUS);
+    }
+
+    /** It starts to emerge from {@link #under} or to dive to it, flying straight, with its goals set aside until it is through. */
+    private void pass(Showing passage) {
+        showing = passage;
+        passageTicks = 0;
+        noPhysics = true;
+        getNavigation().stop();
+        moveControl.setWait();
+        goalSelector.disableControlFlag(Goal.Flag.MOVE);
+        goalSelector.disableControlFlag(Goal.Flag.LOOK);
+        if (level() instanceof ServerLevel level) {
+            if (passage == Showing.EMERGING) {
+                burst(level);
+            } else {
+                level.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.NEUTRAL, 2.0F, 0.8F);
+            }
+        }
+    }
+
+    /** Emerging, it rises toward {@link #over} and then flies about it at work; diving, it goes down to {@link #under} and is gone into the void. */
+    private void passOn(ServerLevel level) {
+        var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? under : over).subtract(position());
+        double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
+        if (way.length() > speed && ++passageTicks < MOST_PASSAGE_TICKS) {
+            setDeltaMovement(way.normalize().scale(speed));
+            return;
+        }
+        setDeltaMovement(Vec3.ZERO);
+        if (showing == Showing.DIVING) {
+            burst(level);
+            discard();
+            return;
+        }
+        noPhysics = false;
+        goalSelector.enableControlFlag(Goal.Flag.MOVE);
+        goalSelector.enableControlFlag(Goal.Flag.LOOK);
+        settle(Showing.WORKING);
+    }
+
+    /** The void opening where a presence emerges or is gone. */
+    private void burst(ServerLevel level) {
+        level.playSound(null, blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.NEUTRAL, 2.0F, 0.5F);
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, getX(), getY() + 1.0, getZ(), 96, 1.5, 1.0, 1.5, 0.1);
     }
 
     /** @return the player who placed the egg it hatched from */
@@ -202,8 +330,12 @@ public final class VoidDragon extends PathfinderMob {
         oFlapTime = flapTime;
         flapTime += 0.1F;
         recordFlight();
-        if (level() instanceof ServerLevel level && !grown() && owner != null && --ticksToGrow <= 0) {
-            growUp(level);
+        if (level() instanceof ServerLevel level) {
+            if (passing()) {
+                passOn(level);
+            } else if (!grown() && owner != null && --ticksToGrow <= 0) {
+                growUp(level);
+            }
         }
     }
 

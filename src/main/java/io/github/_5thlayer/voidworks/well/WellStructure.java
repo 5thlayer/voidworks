@@ -50,7 +50,7 @@ public final class WellStructure {
      *         a position under the walls, beside the floor, is not the well's
      */
     public static Map<BlockPos, Part> layout(BlockPos core, Direction facing) {
-        var centre = core.relative(facing.getOpposite(), 2);
+        var centre = shaft(core, facing);
         var layout = new LinkedHashMap<BlockPos, Part>();
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
@@ -71,6 +71,16 @@ public final class WellStructure {
         }
         layout.remove(core);
         return layout;
+    }
+
+    /**
+     * @param core where the core stands
+     * @param facing the way the core faces, out of its wall; horizontal
+     * @return the middle of the well's shaft, level with its core: the shaft's open column runs from
+     *         one below it to two above, the rim's top course
+     */
+    public static BlockPos shaft(BlockPos core, Direction facing) {
+        return core.relative(facing.getOpposite(), 2);
     }
 
     /**

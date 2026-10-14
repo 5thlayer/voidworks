@@ -45,6 +45,14 @@ class WellStructureTest {
         assertEquals(null, layout.get(CORE));
     }
 
+    @ParameterizedTest
+    @EnumSource(value = Direction.class, names = {"NORTH", "SOUTH", "EAST", "WEST"})
+    void itsShaftIsTwoBlocksBehindItsCoreLevelWithIt(Direction facing) {
+        var shaft = WellStructure.shaft(CORE, facing);
+        assertEquals(CORE.relative(facing.getOpposite(), 2), shaft);
+        assertEquals(Part.OPEN, WellStructure.layout(CORE, facing).get(shaft));
+    }
+
     @Test
     void itTakesFiftySixCasingAndSixteenRim() {
         var world = build(CORE, Direction.NORTH);

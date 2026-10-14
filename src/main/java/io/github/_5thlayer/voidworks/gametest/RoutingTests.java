@@ -79,11 +79,11 @@ final class RoutingTests {
         });
     }
 
-    private static long total(ServerLevel level, BlockPos pos) {
+    static long total(ServerLevel level, BlockPos pos) {
         return VoidstoneNetworks.of(level).store(pos).map(MoteStore::total).orElse(0L);
     }
 
-    private static void assertUnloaded(GameTestHelper helper, ServerLevel level, BlockPos pos) {
+    static void assertUnloaded(GameTestHelper helper, ServerLevel level, BlockPos pos) {
         helper.assertTrue(!level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4), "the chunk of " + pos + " in " + level.dimension().identifier() + " is loaded");
     }
 }
