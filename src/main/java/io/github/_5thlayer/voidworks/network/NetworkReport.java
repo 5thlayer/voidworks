@@ -22,23 +22,31 @@ import net.minecraft.server.level.ServerLevel;
 
 /**
  * What a network shows a player looking at its Voidstone or Void Well: the motes it holds by grade,
- * lowest first, their total against its capacity, what the block looked at holds of them, which is
+ * lowest first, their total against its capacity, what the Voidstone looked at holds of them, which is
  * what a spend beside it reaches now, and what the network's motes are worth in void energy there,
  * which a player compares with a cost. Read on the server, where networks and Void Pressure live,
  * and sent to the client, which words it with {@link #lines}.
  *
  * @param motes each grade it holds motes of, lowest first, with how many
- * @param here how many motes the block looked at holds, of every grade together
- * @param hereCapacity how many it holds at most
+ * @param here what the Voidstone looked at holds; none for a Void Well, whose motes are most of its
+ *        network's total, so a line of their own only confuses
  * @param worth the void energy the network's motes release together at the block looked at
  */
-public record NetworkReport(Map<Integer, Long> motes, long capacity, long here, long hereCapacity, long worth) {
+public record NetworkReport(Map<Integer, Long> motes, long capacity, Optional<Held> here, long worth) {
+
+    /** What one store holds, of every grade together, against what it holds at most. */
+    public record Held(long count, long capacity) {
+
+        static final StreamCodec<ByteBuf, Held> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG, Held::count,
+                ByteBufCodecs.VAR_LONG, Held::capacity,
+                Held::new);
+    }
 
     public static final StreamCodec<ByteBuf, NetworkReport> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.map(size -> new TreeMap<Integer, Long>(), ByteBufCodecs.VAR_INT, ByteBufCodecs.VAR_LONG), NetworkReport::motes,
             ByteBufCodecs.VAR_LONG, NetworkReport::capacity,
-            ByteBufCodecs.VAR_LONG, NetworkReport::here,
-            ByteBufCodecs.VAR_LONG, NetworkReport::hereCapacity,
+            ByteBufCodecs.optional(Held.STREAM_CODEC), NetworkReport::here,
             ByteBufCodecs.VAR_LONG, NetworkReport::worth,
             NetworkReport::new);
 
@@ -52,7 +60,8 @@ public record NetworkReport(Map<Integer, Long> motes, long capacity, long here, 
      */
     public static NetworkReport of(MoteNetwork network, MoteStore store, int pressure) {
         var motes = network.countByGrade();
-        return new NetworkReport(motes, network.capacity(), store.total(), store.capacity(), VoidEnergy.worth(motes, pressure));
+        var here = store.kind() == StoreKind.VOIDSTONE ? Optional.of(new Held(store.total(), store.capacity())) : Optional.<Held>empty();
+        return new NetworkReport(motes, network.capacity(), here, VoidEnergy.worth(motes, pressure));
     }
 
     /** @return what the network of the Voidstone or Void Well at {@code pos} holds, or empty when there is none */
@@ -68,14 +77,14 @@ public record NetworkReport(Map<Integer, Long> motes, long capacity, long here, 
 
     /**
      * @return a line per grade it holds, tinted like that grade's butterflies, then its total against
-     *         its capacity, then what the block looked at holds, then its worth, unless it holds nothing
+     *         its capacity, then what the Voidstone looked at holds, then its worth, unless it holds nothing
      */
     public List<Component> lines() {
         var lines = new ArrayList<Component>();
         motes.forEach((grade, count) -> lines.add(
                 Component.translatable("voidworks.jade.network.grade", grade, count).withColor(GradeColor.of(grade))));
         lines.add(Component.translatable("voidworks.jade.network.held", total(), capacity));
-        lines.add(Component.translatable("voidworks.jade.network.here", here, hereCapacity));
+        here.ifPresent(held -> lines.add(Component.translatable("voidworks.jade.network.here", held.count(), held.capacity())));
         if (!motes.isEmpty()) {
             lines.add(Component.translatable("voidworks.jade.network.worth", worth));
         }
