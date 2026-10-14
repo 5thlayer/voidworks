@@ -100,13 +100,15 @@ _Avoid_: frame, uncharged (charging is the Void Siphon's)
 
 **Void Well**:
 A large store of motes on a Voidstone network, and the stop where the Void Dragon loads, unloads
-and heals: a 5×5×5 well of casing and a raised rim, its core, the store itself, set in one wall.
-Voidstone touching any block of it reaches the store.
+and heals: a 5×5×5 well of casing and a raised rim, its core, which holds the store, set in one
+wall. Voidstone touching any block of it joins it to that network. A Well is the face of its
+network: what it holds, how full it is, its fill target and what a dragon takes from it or heals
+from are the whole network's, its core and every Voidstone together.
 _Avoid_: roost, Void Displacer
 
 **Fill target**:
-How full a Void Well asks to be kept, as a share of all it can hold: none, a quarter, a half, three
-quarters or full. Void Dragons deliver to a Well below its target and take from one above it; a
+How full a Void Well asks to be kept, as a share of all its network can hold: none, a quarter, a
+half, three quarters or full. Void Dragons deliver to a Well below its target and take from one above it; a
 Well with none is a reservoir, which only gives.
 _Avoid_: quota, setpoint
 

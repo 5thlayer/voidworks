@@ -201,22 +201,34 @@ durability.
 A built well, 5 by 5 by 5: a large store of motes, the Void Dragon's stop and its healing point. A
 3×3 floor of Well casing, a 5×5 ring of casing walls three courses high standing around it, the
 shaft inside them open, and a raised rim of Well rim around the top. Its core sits in the middle of
-one wall, in its middle course, facing out, so a player and a Void Siphon reach it; the core is the
-store, and the rest is structure. The Well touches through every block of it: Voidstone beside its
+one wall, in its middle course, facing out, so a player and a Void Siphon reach it; the core holds
+the store, and the rest is structure. The Well touches through every block of it: Voidstone beside its
 casing, its rim or its core joins it to that network and pays its Dormant cost, so the core's face
 stays free. It comes with the Dragon, after the dragon: the core's recipe is
 shulker shells from the End cities, an ender chest and crying obsidian, placed Dormant, and it soaks
 its cost only once the well around it is whole. A Well that is no longer whole stops: it leaves its
 network, keeping its motes, until it is whole again. A broken core loses them. Before it, Voidstone
 bodies are a base's storage. Its pressure stays low until it is nearly full, so with no fill target
-it is a reservoir that soaks up surplus and gives it back.
+it is a reservoir that soaks up surplus and gives it back to whatever draws on it: a spender pulling
+motes toward it draws them out of a Well whatever its pressure.
+
+A Well is the **face of its network**
+([ADR 0006](../adr/0006-a-void-well-is-the-face-of-its-network.md)): what it holds, how full it is,
+its fill target and what a dragon loads from it or heals from are the whole network's, its core and
+every Voidstone together, so what a player reads of a Well is what a dragon uses. A dragon loading
+takes from the core first, then from the network's Voidstone, at once, wherever it is; an unload
+goes into the core, and only once it is full into the Voidstone nearest the Well. Several Wells on
+one network are one stop: a dragon never carries between them, and each is a place to stop, load,
+unload and heal. A second Well adds its core's capacity; whether that is worth its build and its
+price is its owner's call. Wells of different owners may share a network, and with it its motes;
+keeping others out is claiming the land.
 
 A Well has an **owner**, the player who placed its core, and only its owner's dragons serve it. A
 Well from before owners existed is claimed by the first player to name it or set its target.
 Every control is in the world, with no screen:
 
-- **Fill target**: none, a quarter, a half, three quarters or full of its capacity, one total over
-  every grade. Its owner cycles it by sneak-using the core with an empty hand; using it plainly
+- **Fill target**: none, a quarter, a half, three quarters or full of its network's capacity, one
+  total over every grade. Its owner cycles it by sneak-using the core with an empty hand; using it plainly
   with an empty hand shows its status and target, and Jade shows both. A Void Dragon delivers to a Well below its
   target and takes from one above it; a Well with none is a reservoir, which only gives.
 - **Name**: a name tag its owner uses on the core names the Well and is used up, as naming a mob
@@ -256,9 +268,11 @@ Dragonling or a Void Dragon.
 - **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension. It flies only to a
   Well below its fill target, and takes from the owner's Well of highest network pressure that holds
   something worth delivering there, a reservoir or a Well above its target, which gives its excess;
-  a Well below its target never gives. It loads only grades worth something at the destination's
-  Void Pressure, highest first, up to its load. Each trip is claimed, and a Well's need counts the
-  motes already on their way to it, so several dragons share the work without overshooting. A
+  a Well below its target never gives. A network with several of the owner's Wells is judged by the
+  highest of their targets, and another owner's targets never bind it. It loads only grades worth
+  something at the destination's Void Pressure, highest first, up to its load. Each trip is claimed,
+  and a network's need counts the motes already on their way to it, whoever's dragon carries them,
+  so several dragons share the work without overshooting. A
   destination that is broken, no longer whole or no longer short when the dragon arrives sends the
   load on to another of the owner's Wells that needs it, else to the one with most room; with no
   room anywhere it holds the load and rests until there is.
@@ -406,3 +420,7 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   motes; an egg laid each 65,536 motes carried).
 - **Void Dragon life stages** — young, adult, senior and old, trading speed for load, and death in
   old age ([#54](https://github.com/5thlayer/voidworks/issues/54)).
+- **Teams** — after the first major version: players sharing Wells and dragons as a team, beyond
+  owners sharing a network's motes.
+- **Planned routes** — after the first major version: a player directing a dragon's travel beyond
+  its automated routing, such as tying one dragon to carrying from one Well to another.
