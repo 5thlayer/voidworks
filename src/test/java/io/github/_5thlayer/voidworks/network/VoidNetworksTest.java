@@ -106,6 +106,54 @@ class VoidNetworksTest {
     }
 
     @Test
+    void aDepositAtAWellFillsItsCoreBeforeTheVoidstoneNearestIt() {
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        networks.join(A.east(2));
+
+        assertEquals(PER_WELL - 4, deposit(A, 3, PER_WELL - 4));
+        assertEquals(Map.of(), held(A.east()));
+
+        assertEquals(30, deposit(A, 3, 30));
+
+        assertEquals(Map.of(3, PER_WELL), held(A));
+        assertEquals(Map.of(3, PER_VOIDSTONE), held(A.east()));
+        assertEquals(Map.of(3, 30 - 4 - PER_VOIDSTONE), held(A.east(2)));
+    }
+
+    @Test
+    void aDrawTakesFromWhereItIsThenTheNearestStoresOfItsNetworkHoldingTheGrade() {
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        networks.join(A.east(2));
+        networks.join(A.east(3));
+        insert(A, 3, 5);
+        insert(A.east(), 4, 10);
+        insert(A.east(2), 3, 4);
+        insert(A.east(3), 3, 10);
+
+        assertEquals(12, draw(A, 3, 12));
+
+        assertEquals(Map.of(), held(A));
+        assertEquals(Map.of(4, 10), held(A.east()));
+        assertEquals(Map.of(), held(A.east(2)));
+        assertEquals(Map.of(3, 7), held(A.east(3)));
+    }
+
+    @Test
+    void aDrawStopsWhenTheNetworkHoldsNoMoreOfTheGrade() {
+        networks.join(A, StoreKind.WELL);
+        networks.join(A.east());
+        insert(A.east(), 3, 6);
+        networks.join(A.east(5));
+        insert(A.east(5), 3, 9);
+
+        assertEquals(6, draw(A, 3, 20));
+        assertEquals(0, draw(A.east(4), 3, 20));
+        assertEquals(Map.of(3, 9), held(A.east(5)));
+    }
+
+    @Test
     void motesConductFromAFullerVoidstoneToAnEmptierOneAtTheRate() {
         networks.join(A);
         networks.join(A.east());
@@ -534,6 +582,14 @@ class VoidNetworksTest {
             int inserted = networks.deposit(pos, MoteResource.of(grade), count, transaction);
             transaction.commit();
             return inserted;
+        }
+    }
+
+    private int draw(BlockPos pos, int grade, int count) {
+        try (var transaction = Transaction.openRoot()) {
+            int drawn = networks.draw(pos, MoteResource.of(grade), count, transaction);
+            transaction.commit();
+            return drawn;
         }
     }
 }

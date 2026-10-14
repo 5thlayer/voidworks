@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.network.MoteNetwork;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -28,7 +30,8 @@ import net.minecraft.server.players.NameAndId;
  * @param owner    the name of the player who owns it, empty for a core from before owners
  * @param whole    whether the well around it is whole
  * @param target   how full it asks to be kept
- * @param capacity how many motes it holds at most, which its target is a share of
+ * @param capacity how many motes its network holds at most, which its target is a share of; its
+ *        core's own while it is in none
  */
 public record WellReport(Component label, Optional<String> owner, boolean whole, FillTarget target, long capacity) {
 
@@ -45,7 +48,8 @@ public record WellReport(Component label, Optional<String> owner, boolean whole,
 
     /** @return what {@code well}, standing in {@code level}, shows */
     public static WellReport of(VoidWellBlockEntity well, ServerLevel level) {
-        return new WellReport(well.label(), well.owner().map(NameAndId::name), well.whole(level), well.target(), VoidworksConfig.wellCapacity());
+        long capacity = VoidstoneNetworks.of(level).at(well.getBlockPos()).map(MoteNetwork::capacity).orElse((long) VoidworksConfig.wellCapacity());
+        return new WellReport(well.label(), well.owner().map(NameAndId::name), well.whole(level), well.target(), capacity);
     }
 
     /**

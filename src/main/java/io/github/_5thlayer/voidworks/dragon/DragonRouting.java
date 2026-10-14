@@ -6,14 +6,12 @@ package io.github._5thlayer.voidworks.dragon;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.MoteResource;
-import io.github._5thlayer.voidworks.energy.VoidEnergy;
-import io.github._5thlayer.voidworks.network.MoteStore;
 import io.github._5thlayer.voidworks.network.StoreKind;
+import io.github._5thlayer.voidworks.network.VoidNetworks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
@@ -30,7 +28,7 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * Runs the Void Dragons' {@link Routing} on the server, a step every {@link #INTERVAL} server ticks,
  * timed by the Overworld's game time, with no chunk loaded: a Well is found in the server's
  * {@link io.github._5thlayer.voidworks.well.VoidWells}, and what it holds in its dimension's
- * networks, which are saved data, not blocks (ADR 0005).
+ * networks, which are saved data, not blocks (ADR 0005): its whole network's motes (ADR 0006).
  */
 public final class DragonRouting {
 
@@ -71,7 +69,10 @@ public final class DragonRouting {
         return VoidPressure.dimension(server.registryAccess(), dimension).pressure(() -> false);
     }
 
-    /** The server's Wells: an owner's, listed with their targets, each whole and awake while its network holds its store. */
+    /**
+     * The server's Wells: an owner's, listed with their targets, each whole and awake while its network
+     * holds its store. Each is its whole network, its core and every Voidstone together (ADR 0006).
+     */
     private record ServerWells(MinecraftServer server) implements Wells {
 
         @Override
@@ -82,36 +83,35 @@ public final class DragonRouting {
                 if (level == null) {
                     continue;
                 }
-                store(entry.place()).ifPresent(store -> {
-                    var motes = new TreeMap<Integer, Long>();
-                    for (int index = 0; index < store.size(); index++) {
-                        if (store.getAmountAsLong(index) > 0) {
-                            motes.put(store.getResource(index).grade(), store.getAmountAsLong(index));
-                        }
-                    }
-                    wells.add(new Well(entry.place(), entry.target().motes(store.capacity()), wellPressure(server, level.dimension()), store.capacity(), motes));
-                });
+                networks(entry.place()).flatMap(networks -> networks.at(entry.place().pos())).ifPresent(network ->
+                        wells.add(new Well(entry.place(), entry.target().motes(network.capacity()), wellPressure(server, level.dimension()),
+                                network.capacity(), network.countByGrade())));
             }
             return wells;
         }
 
+        /** Takes out of the Well's core first, then out of the Voidstone of its network nearest it. */
         @Override
         public long take(Place place, int grade, long count) {
-            return store(place).map(store -> move(count, (amount, transaction) ->
-                    store.extract(grade - VoidEnergy.MIN_GRADE, MoteResource.of(grade), amount, transaction))).orElse(0L);
+            return networks(place).map(networks -> move(count, (amount, transaction) ->
+                    networks.draw(place.pos(), MoteResource.of(grade), amount, transaction))).orElse(0L);
         }
 
+        /** Puts into the Well's core, and only once it is full into the Voidstone of its network nearest it. */
         @Override
         public long put(Place place, int grade, long count) {
-            return store(place).map(store -> move(count, (amount, transaction) ->
-                    store.insert(grade - VoidEnergy.MIN_GRADE, MoteResource.of(grade), amount, transaction))).orElse(0L);
+            return networks(place).map(networks -> move(count, (amount, transaction) ->
+                    networks.deposit(place.pos(), MoteResource.of(grade), amount, transaction))).orElse(0L);
         }
 
-        /** @return the Well's store at {@code place}, while it is whole and awake */
-        private Optional<MoteStore> store(Place place) {
+        /** @return the networks of the Well's dimension, while it is whole and awake in one of them */
+        private Optional<VoidNetworks> networks(Place place) {
             var level = place.level(server);
-            return level == null ? Optional.empty()
-                    : VoidstoneNetworks.of(level).store(place.pos()).filter(store -> store.kind() == StoreKind.WELL);
+            if (level == null) {
+                return Optional.empty();
+            }
+            var networks = VoidstoneNetworks.of(level);
+            return networks.store(place.pos()).filter(store -> store.kind() == StoreKind.WELL).map(store -> networks);
         }
 
         private static long move(long count, Move move) {

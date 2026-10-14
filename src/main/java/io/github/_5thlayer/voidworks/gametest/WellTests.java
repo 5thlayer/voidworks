@@ -79,6 +79,8 @@ final class WellTests {
         tests.test("anyone_else_sneak_using_or_naming_a_void_well_changes_nothing_and_is_told_whose_it_is", TICKS, WellTests::othersChangeNothing);
         tests.test("plain_use_of_a_void_well_core_shows_its_status_and_target", TICKS, WellTests::plainUseShowsStatusAndTarget);
         tests.test("jade_shows_a_void_well_s_status_target_and_name", TICKS, WellTests::jadeShowsStatusTargetAndName);
+        tests.test("jade_shows_a_void_well_s_target_as_a_share_of_its_network_s_capacity_which_voidstone_joining_raises", TICKS,
+                WellTests::jadeTargetIsANetworkShare);
         tests.test("a_name_tag_names_a_void_well_and_is_used_up", TICKS, WellTests::nameTagNamesIt);
         tests.test("a_void_well_no_one_owns_is_claimed_by_the_first_player_to_name_it_or_set_its_target", TICKS, WellTests::unownedIsClaimed);
         tests.test("an_emptying_siphon_used_on_a_dormant_void_well_core_pays_its_cost", TICKS, WellTests::siphonPaysIt);
@@ -191,6 +193,35 @@ final class WellTests {
         var reservoir = WellReport.of(well, helper.getLevel()).lines().get(2);
         helper.assertTrue(reservoir.equals(Component.translatable("voidworks.jade.well.reservoir")), "Jade shows no target as " + reservoir);
         helper.succeed();
+    }
+
+    /**
+     * Awake in a network, a Well's target is a share of its core and every Voidstone of the network
+     * together, so Voidstone joining it raises the target Jade shows (ADR 0006).
+     */
+    private static void jadeTargetIsANetworkShare(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        var well = placeCore(helper, owner);
+        owner.setShiftKeyDown(true);
+        helper.useBlock(WELL, owner);
+        helper.setBlock(BESIDE_CASING, VoidworksBlocks.VOIDSTONE.get());
+        VoidstoneTests.insert(helper, BESIDE_CASING, DisplacerTests.pressure(helper, WELL) + COST_STEPS, costInMotes(helper, well));
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant, paid " + well.dormancy().paid()))
+                .thenExecute(() -> {
+                    assertTargetShown(helper, well, VoidworksConfig.wellCapacity() + VoidworksConfig.voidstoneCapacity());
+                    helper.setBlock(BESIDE_RIM, VoidworksBlocks.VOIDSTONE.get());
+                    assertTargetShown(helper, well, VoidworksConfig.wellCapacity() + 2L * VoidworksConfig.voidstoneCapacity());
+                })
+                .thenSucceed();
+    }
+
+    /** Asserts that Jade shows {@code well}'s quarter target as a quarter of {@code capacity}. */
+    private static void assertTargetShown(GameTestHelper helper, VoidWellBlockEntity well, long capacity) {
+        var shown = WellReport.of(well, helper.getLevel()).lines().get(1);
+        var expected = Component.translatable("voidworks.jade.well.target", FillTarget.QUARTER.label(), capacity / 4);
+        helper.assertTrue(shown.equals(expected), "Jade shows the target as " + shown + ", not a quarter of " + capacity);
     }
 
     private static void nameTagNamesIt(GameTestHelper helper) {

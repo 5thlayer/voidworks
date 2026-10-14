@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
+import java.util.function.ToIntBiFunction;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -267,17 +268,40 @@ public final class VoidNetworks {
      * @return how many went in, fewer than {@code amount} only when the network is full
      */
     public int deposit(BlockPos pos, MoteResource mote, int amount, TransactionContext transaction) {
+        int slot = MoteStore.slot(mote.grade());
+        return nearestFirst(pos, amount, (store, left) -> store.insert(slot, mote, left, transaction));
+    }
+
+    /**
+     * Takes motes out of the network at {@code pos} wherever in it they are, as a Void Dragon loads at a
+     * Void Well: out of the store at {@code pos}, then out of the nearest stores of its network that
+     * hold them, as {@link #deposit} fills them.
+     *
+     * @return how many it took, fewer than {@code amount} only when the network holds no more of the grade
+     */
+    public int draw(BlockPos pos, MoteResource mote, int amount, TransactionContext transaction) {
+        int slot = MoteStore.slot(mote.grade());
+        return nearestFirst(pos, amount, (store, left) -> store.extract(slot, mote, left, transaction));
+    }
+
+    /**
+     * Moves up to {@code amount} motes at the store at {@code pos}, then at the nearest stores of its
+     * network, until they are all moved.
+     *
+     * @param move moves up to so many at one store, and says how many it moved
+     * @return how many moved in all; none when nothing at {@code pos} is in a network
+     */
+    private int nearestFirst(BlockPos pos, int amount, ToIntBiFunction<MoteStore, Integer> move) {
         var start = stores.get(pos);
         if (start == null) {
             return 0;
         }
-        int slot = MoteStore.slot(mote.grade());
         int left = amount;
         for (var store : component(start)) {
             if (left == 0) {
                 break;
             }
-            left -= store.insert(slot, mote, left, transaction);
+            left -= move.applyAsInt(store, left);
         }
         return amount - left;
     }

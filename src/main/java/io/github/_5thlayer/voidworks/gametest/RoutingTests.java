@@ -41,6 +41,16 @@ final class RoutingTests {
     private static final BlockPos HEALING_END_WELL = new BlockPos(80_000, 64, -8_000);
     /** The healing test's Nether Well, at the same place in Overworld blocks. */
     private static final BlockPos HEALING_NETHER_WELL = new BlockPos(10_000, 64, -1_000);
+    /** The staircase test's Overworld reservoir, far out, where nothing loads a chunk. */
+    private static final BlockPos STAIRCASE_WELL = new BlockPos(80_000, 64, 16_000);
+    /** The staircase test's Nether Well, at the same place in Overworld blocks. */
+    private static final BlockPos STAIRCASE_NETHER_WELL = new BlockPos(10_000, 64, 2_000);
+    /** How many Voidstone run east from the staircase test's reservoir, each a step of the staircase. */
+    private static final int STAIRCASE_STEPS = 16;
+    /** How many motes the staircase test's Nether Well is short of its target. */
+    private static final int STAIRCASE_SHORT = 50;
+    /** The staircase test's dragon's health lost, healed before it dives. */
+    private static final int STAIRCASE_HURT = 4;
     /** The healing test's dragon's health when it sets off. */
     private static final int HURT = 70;
     /** How many motes the Nether Well is short of its target: less than a load, so one trip meets it. */
@@ -57,6 +67,8 @@ final class RoutingTests {
                 TICKS, RoutingTests::deliversAcrossDimensions);
         tests.test("a_hurt_void_dragon_leaving_a_well_heals_from_its_motes_lowest_grade_first",
                 TICKS, RoutingTests::healsAtAWell);
+        tests.test("a_void_dragon_loads_and_heals_from_a_reservoir_s_motes_settled_in_its_voidstone_short_of_its_core",
+                TICKS, RoutingTests::loadsFromVoidstone);
     }
 
     private static void deliversAcrossDimensions(GameTestHelper helper) {
@@ -128,6 +140,58 @@ final class RoutingTests {
             // Arriving at no Well of its owner's, the dragon holds its load, idle.
             VoidstoneNetworks.of(end).leave(HEALING_END_WELL);
             VoidstoneNetworks.of(nether).leave(HEALING_NETHER_WELL);
+            wells.remove(reservoir);
+            wells.remove(shortWell);
+        });
+    }
+
+    /**
+     * A reservoir in the Overworld whose motes all sit in a line of Voidstone running from its core, in
+     * the staircase conduction leaves them in, each Voidstone a mote more than its neighbour nearer the
+     * Well, none in the core: a dragon resting there, hurt, loads them for the Nether and heals from
+     * them before it dives, though the core holds none (ADR 0006).
+     */
+    private static void loadsFromVoidstone(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var overworld = server.overworld();
+        var nether = server.getLevel(Level.NETHER);
+        var owner = UUID.randomUUID();
+        var reservoir = Place.of(overworld, STAIRCASE_WELL);
+        var shortWell = Place.of(nether, STAIRCASE_NETHER_WELL);
+        long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
+        assertUnloaded(helper, overworld, STAIRCASE_WELL);
+        assertUnloaded(helper, nether, STAIRCASE_NETHER_WELL);
+        var networks = VoidstoneNetworks.of(overworld);
+        networks.rejoin(STAIRCASE_WELL, StoreKind.WELL, Set.of(), Map.of());
+        long staircase = 0;
+        for (int step = 1; step <= STAIRCASE_STEPS; step++) {
+            networks.rejoin(STAIRCASE_WELL.east(step), StoreKind.VOIDSTONE, Set.of(), Map.of(4, (long) step));
+            staircase += step;
+        }
+        VoidstoneNetworks.of(nether).rejoin(STAIRCASE_NETHER_WELL, StoreKind.WELL, Set.of(), Map.of(4, target - STAIRCASE_SHORT));
+        var wells = SavedVoidWells.of(server);
+        wells.put(new VoidWells.Entry(reservoir, owner, FillTarget.NONE));
+        wells.put(new VoidWells.Entry(shortWell, owner, FillTarget.QUARTER));
+        var dragons = SavedVoidDragons.of(server);
+        var dragon = dragons.add(owner, reservoir).weakened(STAIRCASE_HURT);
+        dragons.update(dragon);
+        // 136 motes, 1 to 16 in the Voidstone: it loads 50 of grade 4, then 4 points at the default 16 motes, leaving 22.
+        long left = staircase - STAIRCASE_SHORT - (long) STAIRCASE_HURT * VoidworksConfig.dragonHealMotes();
+        helper.succeedWhen(() -> {
+            // Seen the tick it sets off, before a step of its dive could weaken it.
+            var leaving = dragons.get(dragon.id()).orElseThrow();
+            helper.assertTrue(leaving.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.TO_DESTINATION)), "the dragon has not left the reservoir");
+            helper.assertTrue(leaving.load().equals(Map.of(4, (long) STAIRCASE_SHORT)), "the dragon loaded " + leaving.load());
+            helper.assertTrue(leaving.health() == VoidDragonRecord.FULL_HEALTH, "the dragon left the reservoir with " + leaving.health() + " health");
+            long held = networks.at(STAIRCASE_WELL).orElseThrow().total();
+            helper.assertTrue(held == left, "the reservoir's network holds " + held + ", not " + left);
+            helper.assertTrue(total(overworld, STAIRCASE_WELL) == 0, "the reservoir's core holds " + total(overworld, STAIRCASE_WELL));
+            assertUnloaded(helper, overworld, STAIRCASE_WELL);
+            for (int step = 1; step <= STAIRCASE_STEPS; step++) {
+                networks.leave(STAIRCASE_WELL.east(step));
+            }
+            networks.leave(STAIRCASE_WELL);
+            VoidstoneNetworks.of(nether).leave(STAIRCASE_NETHER_WELL);
             wells.remove(reservoir);
             wells.remove(shortWell);
         });

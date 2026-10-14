@@ -27,7 +27,7 @@ import java.util.UUID;
  *
  * <p>Diving, it weakens by the worse of its two ends' pressure ({@link Harm}), as it goes; a dive is a
  * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
- * dives from a Well it heals from that Well's motes, as far as they go.
+ * dives from a Well it heals from that Well's motes, its network's, as far as they go.
  */
 public final class Routing {
 

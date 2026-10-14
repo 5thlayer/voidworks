@@ -10,7 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
 
 /**
- * How full a Void Well asks to be kept, as a share of its capacity: one total over every grade. Void
+ * How full a Void Well asks to be kept, as a share of its network's capacity, core and Voidstone
+ * together, so it moves as Voidstone joins or leaves: one total over every grade. Void
  * Dragons deliver to a Well below its target and take from one above it; a Well with none is a
  * reservoir, which only gives. Its owner cycles it in the order declared here, back to none after full.
  */
