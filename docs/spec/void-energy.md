@@ -293,10 +293,12 @@ Dragonling or a Void Dragon.
   Well below its fill target, and takes from the owner's Well of highest network pressure that holds
   something worth delivering there, a reservoir or a Well above its target, which gives its excess;
   a Well below its target never gives. A network with several of the owner's Wells is judged by the
-  highest of their targets, and another owner's targets never bind it. It loads only grades worth
+  highest of their targets, a reservoir among them setting none, and another owner's targets never
+  bind it; it stops at whichever of them its dive reaches soonest. It loads only grades worth
   something at the destination's Void Pressure, highest first, up to its load. Each trip is claimed,
   and a network's need counts the motes already on their way to it, whoever's dragon carries them,
-  so several dragons share the work without overshooting. A
+  as what it gives counts those any dragon is on its way to load there, so several dragons share the
+  work without overshooting. A
   destination that is broken, no longer whole or no longer short when the dragon arrives sends the
   load on to another of the owner's Wells that needs it, else to the one with most room; with no
   room anywhere it holds the load and rests until there is.
