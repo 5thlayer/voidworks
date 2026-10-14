@@ -45,7 +45,12 @@ final class ConductionTests {
     /** Grades above the pressure that pay the Well's cost in as many motes as one Voidstone holds. */
     private static final int WELL_STEPS = 5;
 
+    /** The Mutation Chamber's shipped Dormant cost, in motes one step above the pressure, as {@code MutationChamberTests.DORMANT_MOTES}. */
+    private static final int CHAMBER_DORMANT_MOTES = 16;
+
     private static final int TICKS = 400;
+    /** Long enough for the Well to wake, then give the Chamber its cost a mote a step along the line. */
+    private static final int DRAW_TICKS = 800;
     /** Long enough for the showcase's motes to crawl its whole line. */
     private static final int SHOWCASE_TICKS = 600;
 
@@ -56,6 +61,8 @@ final class ConductionTests {
         tests.test("motes_conduct_through_voidstone_to_a_dormant_machine_at_its_far_end", TICKS, ConductionTests::reachesTheFarEnd);
         tests.test("a_void_well_placed_dormant_soaks_its_cost_then_joins_its_network_and_soaks_up_its_motes", TICKS,
                 ConductionTests::wellSoaksUp);
+        tests.test("a_mutation_chamber_on_voidstone_far_from_a_void_well_draws_motes_out_of_it", DRAW_TICKS,
+                ConductionTests::chamberDrawsFromWell);
         tests.test("a_broken_void_well_loses_its_motes", TICKS, ConductionTests::brokenWellLosesItsMotes);
         tests.test("a_void_well_core_with_no_well_around_it_soaks_nothing", TICKS, ConductionTests::coreAloneSoaksNothing);
         tests.test("a_void_well_no_longer_whole_leaves_its_network_keeping_its_motes_until_it_is_whole_again", TICKS,
@@ -98,6 +105,43 @@ final class ConductionTests {
                     var inWell = held(helper, WELL);
                     helper.assertTrue(inWell.values().stream().mapToInt(Integer::intValue).sum() == 9,
                             "the Well holds " + inWell + ", not the 9 of the network's 10 motes it soaks up");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A Dormant Chamber at the far end of a line of Voidstone running from beside the Well, the Well
+     * nowhere near full: its pressure stays below even one mote in a Voidstone, but the Chamber
+     * draws motes out of it all the same, which crawl along the line and pay its cost.
+     */
+    private static void chamberDrawsFromWell(GameTestHelper helper) {
+        var well = placeWell(helper);
+        // North of the Well, then west along the platform's edge, touching none of the Well but the core.
+        var line = new BlockPos[] {BESIDE_WELL.north(), BESIDE_WELL.north().west(), BESIDE_WELL.north().west(2),
+                BESIDE_WELL.north().west(3), BESIDE_WELL.north().west(4)};
+        var chamberAt = line[line.length - 1].south();
+        int grade = DisplacerTests.pressure(helper, WELL) + 1;
+        // Far more than the Chamber's cost, and still nowhere near full.
+        int inWell = 4 * CHAMBER_DORMANT_MOTES;
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant, paid " + well.dormancy().paid()))
+                .thenExecute(() -> {
+                    for (var pos : line) {
+                        helper.setBlock(pos, VoidworksBlocks.VOIDSTONE.get());
+                    }
+                    VoidstoneTests.insert(helper, WELL, grade, inWell);
+                    helper.assertTrue(held(helper, WELL).equals(Map.of(grade, inWell)), "the Well holds " + held(helper, WELL) + ", not " + inWell);
+                    helper.setBlock(chamberAt, VoidworksBlocks.MUTATION_CHAMBER.get());
+                })
+                .thenWaitUntil(() -> {
+                    var chamber = helper.getBlockEntity(chamberAt, MutationChamberBlockEntity.class);
+                    helper.assertTrue(chamber.dormancy().awake(), "the Chamber is still Dormant, paid " + chamber.dormancy().paid()
+                            + ", the Well holding " + held(helper, WELL));
+                })
+                .thenExecute(() -> {
+                    var motes = DisplacerTests.motes(helper, WELL);
+                    helper.assertTrue(motes.equals(Map.of(grade, inWell - CHAMBER_DORMANT_MOTES)),
+                            "the network holds " + motes + ", not the " + (inWell - CHAMBER_DORMANT_MOTES) + " left after the Chamber's cost");
                 })
                 .thenSucceed();
     }

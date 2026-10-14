@@ -18,7 +18,9 @@ Voidstone together: what it holds, how full it is, its fill target, as a share o
 whole capacity, what a dragon loads, at once and from anywhere on it, the core first, and what
 heals a dragon. The core keeps its store: an unload goes into it, and only once it is full into the
 Voidstone nearest the Well. A spender pulling motes toward it draws them out of a Well whatever the
-Well's pressure, so a Well still soaks up its network's surplus and gives it back to whatever draws.
+Well's pressure, so a Well still soaks up its network's surplus and gives it back to whatever draws:
+only the grades worth something where the spender spends them, and while it draws, the Well soaks
+up none of those on their way to it.
 Several Wells on one network are one stop, a dragon never carrying between them; they may be
 different owners', who then share the network's motes, each owner's dragons judging it by that
 owner's targets alone and counting every dragon's motes already on their way to it.
