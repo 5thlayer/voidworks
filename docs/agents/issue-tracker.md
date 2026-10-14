@@ -13,10 +13,6 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-## Specs
-
-A spec lives in `docs/spec/`, not in an issue. `/to-spec` updates that file and agrees the test seams with the user; the parent issue links to it.
-
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
@@ -31,7 +27,7 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 
 ## When a skill says "publish to the issue tracker"
 
-When the session is working an existing issue, such as one under `/triage`, publish into that issue: replace its body, retitle it, and set its labels. Otherwise create a GitHub issue.
+When the repo has `docs/spec/`, a spec lives there, not in an issue: `/to-spec` updates its file there and the issue links to it. Otherwise, when the session is working an existing issue, such as one under `/triage`, publish into that issue: replace its body, retitle it, and set its labels. Otherwise create a GitHub issue.
 
 ## When a skill says "fetch the relevant ticket"
 
