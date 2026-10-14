@@ -115,8 +115,8 @@ public final class VoidworksConfig {
                         value -> value instanceof Integer motes && motes > 0);
         FE_PER_VOID_ENERGY = builder
                 .comment("The FE each void energy a Void Siphon releases charges into the FE items its holder wears or holds,",
-                        "any mod's. Tuned against Gearworks' Gear, whose battery upgrade holds 100,000 FE; balance it against",
-                        "the FE mods in the pack.")
+                        "any mod's. Provisional, tuned against Gearworks' Gear, whose battery upgrade holds 100,000 FE;",
+                        "balance it against the FE mods in the pack.")
                 .defineInRange("fePerVoidEnergy", 10L, 1L, 1L << 20);
         FIRST_EGG_PRICE = builder
                 .comment("The void energy a player's first dragon egg soaks before it hatches. Each egg's price is fixed when it",

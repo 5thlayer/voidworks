@@ -53,6 +53,12 @@ final class FeChargingTests {
     /** The FE the stand-in holds, with no limit to an insert but its room. */
     static final int CAPACITY = 100_000;
 
+    /** A second stand-in, held, which takes at most {@link #INSERT_LIMIT} FE in one insert. */
+    static final Item LIMITED_FE_ITEM = Items.REDSTONE_TORCH;
+
+    /** What the held stand-in takes in one insert: a mote and a half's FE at the default rate. */
+    static final int INSERT_LIMIT = 1_500;
+
     private static final DeferredRegister.DataComponents COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Voidworks.MOD_ID);
 
@@ -66,14 +72,16 @@ final class FeChargingTests {
     private FeChargingTests() {
     }
 
-    /** For the game test run alone: the stand-in's energy and its capability. */
-    static void register(IEventBus modBus) {
+    /** For the game test run alone: the stand-ins' energy and their capability. */
+    static void registerStandIns(IEventBus modBus) {
         COMPONENTS.register(modBus);
         modBus.addListener(FeChargingTests::registerCapabilities);
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerItem(Capabilities.Energy.ITEM, (stack, access) -> new ItemAccessEnergyHandler(access, ENERGY.get(), CAPACITY), FE_ITEM);
+        event.registerItem(Capabilities.Energy.ITEM,
+                (stack, access) -> new ItemAccessEnergyHandler(access, ENERGY.get(), CAPACITY, INSERT_LIMIT), LIMITED_FE_ITEM);
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
@@ -88,6 +96,7 @@ final class FeChargingTests {
         tests.test("a_siphon_charges_at_most_its_rate_into_fe_items", 1, FeChargingTests::atMostTheRate);
         tests.test("fe_items_charge_chest_first", 1, FeChargingTests::chestFirst);
         tests.test("siphons_charge_fe_items_in_inventory_order", 1, FeChargingTests::siphonsInOrder);
+        tests.test("a_held_fe_item_takes_no_more_than_it_accepts", 1, FeChargingTests::heldTakesWhatItAccepts);
     }
 
     private static void chargesOffVoidstone(GameTestHelper helper) {
@@ -215,6 +224,18 @@ final class FeChargingTests {
         helper.succeed();
     }
 
+    /** Three motes and an off-hand item that takes a mote and a half's FE in one insert: one mote is spent. */
+    private static void heldTakesWhatItAccepts(GameTestHelper helper) {
+        int fits = INSERT_LIMIT / fe(helper);
+        helper.assertTrue(fits >= 1 && fits < 3, "this test needs an insert limit of one or two motes' FE, not " + fits);
+        var player = player(helper, SiphonMotes.EMPTY.with(grade(helper), 3));
+        player.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(LIMITED_FE_ITEM));
+        SiphonCharging.step(helper.getLevel(), player);
+        assertEnergy(helper, player, EquipmentSlot.OFFHAND, (long) fits * fe(helper));
+        assertMotes(helper, player.getMainHandItem(), Map.of(grade(helper), 3 - fits));
+        helper.succeed();
+    }
+
     // -- helpers --------------------------------------------------------------------------------
 
     /** A survival player standing on the platform, holding a Void Siphon of {@code motes} in the main hand. */
@@ -261,7 +282,7 @@ final class FeChargingTests {
         return pressure(helper) + 1;
     }
 
-    /** The FE one mote one step above the platform's pressure charges. */
+    /** The FE one mote one step above the platform's pressure charges, worked out here as the spec states it. */
     private static int fe(GameTestHelper helper) {
         return Math.toIntExact(VoidEnergy.release(grade(helper), pressure(helper)).orElseThrow() * VoidworksConfig.fePerVoidEnergy());
     }

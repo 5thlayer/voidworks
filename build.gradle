@@ -36,10 +36,11 @@ repositories {
 }
 
 // Mods the dev client loads alongside the Module, to look up recipes (EMI), inspect blocks (Jade) and
-// wear FE items a Void Siphon charges (Gearworks) while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
-// which holds only what is listed here; the game tests run elsewhere and never load them, so they
-// still prove the Module plays alone. It names EMI's types only from compat/emi and Jade's only from
-// its plugin, each loaded by its viewer alone.
+// wear FE items a Void Siphon charges (Gearworks) while trying it by hand. 26.1 has no per-run
+// classpath, so they go into the client's mods folder, which holds only what is listed here; the
+// game tests run elsewhere and never load them, so they still prove the Module plays alone. It names
+// EMI's types only from compat/emi and Jade's only from its plugin, each loaded by its viewer alone,
+// and no type of Gearworks'.
 configurations {
     clientMods { transitive = false }
 }

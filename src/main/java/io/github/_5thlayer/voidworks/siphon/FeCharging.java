@@ -51,7 +51,7 @@ public final class FeCharging {
      * @return the FE charged, from every Siphon together
      */
     public static long charge(ServerLevel level, Player player) {
-        if (feItems(player).isEmpty()) {
+        if (!wearsOrHolds(player)) {
             return 0;
         }
         int pressure = VoidPressure.at(level, player.blockPosition());
@@ -61,7 +61,7 @@ public final class FeCharging {
             var stack = player.getInventory().getItem(slot);
             if (stack.getItem() instanceof VoidSiphonItem siphon && VoidSiphonItem.mode(stack) == SiphonMode.CHARGE) {
                 // Asked again for each Siphon, as the one before may have filled them.
-                charged += charge(VoidSiphonItem.moteStore(ItemAccess.forPlayerSlot(player, slot)), siphon.rate(), feItems(player), pressure);
+                charged += chargeFrom(VoidSiphonItem.moteStore(ItemAccess.forPlayerSlot(player, slot)), siphon.rate(), feItems(player), pressure);
             }
         }
         return charged;
@@ -73,7 +73,7 @@ public final class FeCharging {
     }
 
     /** Spends what {@code siphon} can of its motes into {@code items}, all or nothing in one transaction. */
-    private static long charge(ResourceHandler<MoteResource> siphon, int rate, List<EnergyHandler> items, int pressure) {
+    private static long chargeFrom(ResourceHandler<MoteResource> siphon, int rate, List<EnergyHandler> items, int pressure) {
         long room = 0;
         for (var item : items) {
             room += room(item);

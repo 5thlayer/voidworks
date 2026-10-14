@@ -34,7 +34,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  * Void Wells touching it, so a tier's rate is not held to what one Voidstone holds; conduction
  * brings the rest of the network to them. The motes fly between the Voidstone and the player.
  * Then, wherever the player is, each Siphon set to charge charges the FE items they wear or hold
- * ({@link FeCharging}), so on Voidstone a charging Siphon fills itself and the gear at once.
+ * ({@link FeCharging}), so on Voidstone a charging Siphon fills itself and those FE items at once.
  */
 public final class SiphonCharging {
 

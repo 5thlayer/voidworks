@@ -57,7 +57,7 @@ public final class VoidworksGameTests {
             // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
             modBus.addListener(SpendTests::registerCapabilities);
             // A vanilla item stands in for another mod's FE item, so the run alone gives it an energy handler.
-            FeChargingTests.register(modBus);
+            FeChargingTests.registerStandIns(modBus);
         }
         // A Dormant machine that ships with no Module, which the game-test pack gives a cost, and the dev
         // pack too, so the dev client can pay it by hand with a Void Siphon until a real one ships.
@@ -81,8 +81,8 @@ public final class VoidworksGameTests {
         DragonlingTests.register(tests);
         EggTests.register(tests);
         EndDisplacerTests.register(tests);
-        FeChargingTests.register(tests);
         FamilyTests.register(tests);
+        FeChargingTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         MutationChamberTests.register(tests);
