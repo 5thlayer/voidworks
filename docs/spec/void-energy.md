@@ -234,7 +234,9 @@ its cost only once the well around it is whole. A Well that is no longer whole s
 network, keeping its motes, until it is whole again. A broken core loses them. Before it, Voidstone
 bodies are a base's storage. Its pressure stays low until it is nearly full, so with no fill target
 it is a reservoir that soaks up surplus and gives it back to whatever draws on it: a spender pulling
-motes toward it draws them out of a Well whatever its pressure.
+motes toward it draws them out of a Well whatever its pressure, only the grades worth something
+where it spends them, so motes it cannot spend never crowd out those it can. While it draws, a Well
+soaks up none of those grades from the Voidstone between it and the spender: they are on their way.
 
 A Well is the **face of its network**
 ([ADR 0006](../adr/0006-a-void-well-is-the-face-of-its-network.md)): what it holds, how full it is,

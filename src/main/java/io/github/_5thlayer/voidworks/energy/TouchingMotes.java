@@ -97,7 +97,7 @@ public final class TouchingMotes {
      */
     public static boolean spend(ServerLevel level, BlockPos pos, long required) {
         var stores = distinct(at(level, pos));
-        want(level, stores);
+        want(level, pos, stores);
         var taken = VoidSpender.spendTogether(stores.stream().map(Store::motes).toList(), level, pos, required);
         if (taken.isEmpty()) {
             return false;
@@ -110,9 +110,20 @@ public final class TouchingMotes {
     }
 
     /**
-     * Marks each Voidstone or Void Well among {@code stores} as wanted ({@link VoidNetworks#want}), so
-     * its network's motes find their way to a machine drawing on them, however few. Only a real draw
-     * calls it, a soak or a spend; a look at what the stores are worth does not.
+     * Marks each Voidstone or Void Well among {@code stores} as wanted ({@link VoidNetworks#want(BlockPos, int)})
+     * by a machine at {@code pos}, so its network's motes find their way to the machine drawing on
+     * them, however few, and a Void Well gives it those worth something at the machine's Void
+     * Pressure. Only a real draw calls it, a soak or a spend; a look at what the stores are worth does not.
+     */
+    public static void want(ServerLevel level, BlockPos pos, List<Store> stores) {
+        var networks = VoidstoneNetworks.of(level);
+        int pressure = VoidPressure.at(level, pos);
+        stores.forEach(store -> networks.want(store.pos(), pressure));
+    }
+
+    /**
+     * Marks each Voidstone or Void Well among {@code stores} as wanted, as {@link #want(ServerLevel, BlockPos, List)}
+     * does, by a machine that may spend motes of every grade.
      */
     public static void want(ServerLevel level, List<Store> stores) {
         var networks = VoidstoneNetworks.of(level);
