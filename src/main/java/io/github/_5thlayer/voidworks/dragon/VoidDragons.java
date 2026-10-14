@@ -37,10 +37,17 @@ public final class VoidDragons {
      * @return the new Void Dragon, at full health and resting there
      */
     public VoidDragonRecord add(UUID owner, Place rest) {
-        var dragon = new VoidDragonRecord(UUID.randomUUID(), owner, VoidDragonRecord.FULL_HEALTH, rest);
+        var dragon = VoidDragonRecord.grown(owner, rest);
         dragons.put(dragon.id(), dragon);
         onChange.run();
         return dragon;
+    }
+
+    /** Replaces the dragon with {@code dragon}'s id by {@code dragon}, as it is now; a dragon it does not have stays gone. */
+    void update(VoidDragonRecord dragon) {
+        if (dragons.replace(dragon.id(), dragon) != null) {
+            onChange.run();
+        }
     }
 
     /** @return the dragon with {@code id}, if there is one */

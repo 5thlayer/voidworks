@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.well;
 import com.mojang.serialization.MapCodec;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -39,7 +40,7 @@ import org.jspecify.annotations.Nullable;
  * middle of one wall facing out, the way its placer looked from outside. It is placed Dormant, and
  * once the well is whole soaks its cost, the {@code voidworks:dormant_cost} entry for its block; then
  * it joins the network of the Voidstone it touches ({@link VoidWellBlockEntity}). Broken, it loses
- * the motes it held.
+ * the motes it held, and its owner's Void Dragons no longer stop at it.
  *
  * <p>The player who places it owns it. Every control is in the world: its owner sneak-using it with
  * an empty hand cycles its {@link FillTarget}, and a name tag its owner uses on it names it and is
@@ -137,6 +138,7 @@ public final class VoidWellBlock extends BaseEntityBlock {
     protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
         super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
         VoidstoneNetworks.of(level).leave(pos);
+        SavedVoidWells.of(level.getServer()).remove(Place.of(level, pos));
     }
 
     @Override

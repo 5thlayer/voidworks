@@ -12,6 +12,7 @@ import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksItems;
+import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -19,8 +20,10 @@ import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.SiphonMotes;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import io.github._5thlayer.voidworks.well.FillTarget;
+import io.github._5thlayer.voidworks.well.SavedVoidWells;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.VoidWells;
 import io.github._5thlayer.voidworks.well.WellReport;
 import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.ChatFormatting;
@@ -84,6 +87,7 @@ final class WellTests {
         tests.test("a_void_well_saved_before_its_casing_touched_for_it_rejoins_through_its_casing_once_loaded", TICKS,
                 WellTests::savedWellRejoinsThroughItsCasing);
         tests.test("a_void_well_keeps_its_owner_target_and_name_while_not_whole_and_across_a_save_and_reload", TICKS, WellTests::keptWhileNotWholeAndReloaded);
+        tests.test("a_void_well_is_listed_for_its_owner_s_dragons_with_its_target_until_its_core_is_broken", TICKS, WellTests::listedForDragons);
     }
 
     private static void placerOwnsIt(GameTestHelper helper) {
@@ -360,6 +364,24 @@ final class WellTests {
         helper.assertTrue(ownedBy(well, owner), "the Well " + when + " is owned by " + well.owner());
         helper.assertTrue(well.target() == FillTarget.QUARTER, "the Well " + when + " has the target " + well.target());
         helper.assertTrue(well.name().equals(Optional.of(Component.literal("Home"))), "the Well " + when + " is named " + well.name());
+    }
+
+    /** Its owner's dragons find it, with its target as it changes, in the server's listing, which needs no chunk loaded; broken, it is gone. */
+    private static void listedForDragons(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        placeCore(helper, owner);
+        var place = Place.of(helper.getLevel(), helper.absolutePos(WELL));
+        var wells = SavedVoidWells.of(helper.getLevel().getServer());
+        helper.assertTrue(wells.owned(owner.getUUID()).equals(List.of(new VoidWells.Entry(place, owner.getUUID(), FillTarget.NONE))),
+                "the placed Well is listed as " + wells.owned(owner.getUUID()));
+        owner.setShiftKeyDown(true);
+        helper.useBlock(WELL, owner);
+        helper.assertTrue(wells.owned(owner.getUUID()).equals(List.of(new VoidWells.Entry(place, owner.getUUID(), FillTarget.QUARTER))),
+                "the Well with a new target is listed as " + wells.owned(owner.getUUID()));
+        helper.setBlock(WELL, Blocks.AIR);
+        helper.assertTrue(wells.owned(owner.getUUID()).isEmpty(), "the broken Well is still listed: " + wells.owned(owner.getUUID()));
+        helper.succeed();
     }
 
     private static void buildWell(GameTestHelper helper) {

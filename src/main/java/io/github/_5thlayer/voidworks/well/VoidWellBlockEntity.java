@@ -13,6 +13,7 @@ import com.mojang.serialization.Codec;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import net.minecraft.core.BlockPos;
@@ -39,7 +40,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>It keeps its owner, the player who placed it, its {@link FillTarget} and its name, whole or not.
  * A core from before owners existed has none, and is claimed by the first player to set its target or
- * name it ({@link #ownsOrClaims}).
+ * name it ({@link #ownsOrClaims}). Once it has an owner, it keeps itself in the server's
+ * {@link VoidWells} with its target, so its owner's Void Dragons find it with no chunk loaded.
  */
 public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.Holder {
 
@@ -59,6 +61,8 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     private int sinceLook = Integer.MAX_VALUE - 1;
     /** Whether, since it loaded, it has rejoined its network with its parts, which a Well saved before they touched for it lacks. */
     private boolean joinedWithParts;
+    /** Whether, since it loaded, it has put itself in the server's {@link VoidWells}, which a Well saved before them lacks. */
+    private boolean listed;
 
     public VoidWellBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.VOID_WELL_ENTITY.get(), pos, state);
@@ -97,6 +101,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     void claim(Player player) {
         owner = new NameAndId(player.getGameProfile());
         setChanged();
+        list();
     }
 
     /**
@@ -119,6 +124,15 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     void cycleTarget() {
         target = target.next();
         setChanged();
+        list();
+    }
+
+    /** Puts it in the server's {@link VoidWells}, as it is now, once it has an owner. */
+    private void list() {
+        if (owner != null && level instanceof ServerLevel server) {
+            SavedVoidWells.of(server.getServer()).put(new VoidWells.Entry(Place.of(server, worldPosition), owner.id(), target));
+            listed = true;
+        }
     }
 
     /** Names it, as a name tag does. */
@@ -164,6 +178,9 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     }
 
     void serverTick(ServerLevel level) {
+        if (!listed) {
+            list();
+        }
         if (++sinceLook >= VoidworksConfig.soakInterval()) {
             sinceLook = 0;
             whole = whole(level);

@@ -8,8 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.UUID;
 
+import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -17,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The Void Dragons, server state rather than entities (ADR 0005): each a record of its owner, its
- * health and where it rests, kept across a save and reload.
+ * health, where it rests, its load and its claimed trip, kept across a save and reload.
  */
 class VoidDragonsTest {
 
@@ -53,6 +57,29 @@ class VoidDragonsTest {
         assertEquals(first, read.get(first.id()).orElseThrow());
         assertEquals(second, read.get(second.id()).orElseThrow());
         assertEquals(2, read.all().size());
+    }
+
+    @Test
+    void aSaveAndReloadKeepsALoadAndAClaimedTrip() {
+        var dragon = dragons.add(ALICE, HERE);
+        var trip = new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234);
+        var carrying = dragon.carrying(new TreeMap<>(Map.of(5, 40L, 3, 30L))).on(Optional.of(trip));
+        dragons.update(carrying);
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(carrying, read.get(dragon.id()).orElseThrow());
+    }
+
+    @Test
+    void aDragonSavedBeforeRoutingReadsWithNoLoadAndNoTrip() {
+        var saved = JsonParser.parseString("""
+                [{"id": [0, 0, 0, 1], "owner": [0, 0, 0, 2], "health": 100,
+                  "rest": {"dimension": "minecraft:overworld", "pos": [1, 64, 2]}}]
+                """);
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
+        assertTrue(read.load().isEmpty());
+        assertTrue(read.trip().isEmpty());
+        assertEquals(HERE, read.rest());
     }
 
     @Test

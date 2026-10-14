@@ -40,6 +40,10 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.LongValue FIRST_EGG_PRICE;
     private static final ModConfigSpec.IntValue DRAGONLING_GROW_TICKS;
     private static final ModConfigSpec.LongValue DRAGONLING_FEED_ENERGY;
+    private static final ModConfigSpec.IntValue DRAGON_LOAD;
+    private static final ModConfigSpec.IntValue DRAGON_STOP_TICKS;
+    private static final ModConfigSpec.IntValue DRAGON_DIVE_TICKS;
+    private static final ModConfigSpec.IntValue DRAGON_DIVE_BLOCKS_PER_SECOND;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -116,6 +120,19 @@ public final class VoidworksConfig {
         DRAGONLING_FEED_ENERGY = builder
                 .comment("The void energy its owner feeds a Dragonling, from a Void Siphon, that takes a minute off its growing.")
                 .defineInRange("dragonlingFeedEnergy", 1_000L, 1L, Long.MAX_VALUE);
+        DRAGON_LOAD = builder
+                .comment("How many motes a Void Dragon carries on a trip, of every grade together, at most.")
+                .defineInRange("dragonLoad", 8_192, 1, 1 << 30);
+        DRAGON_STOP_TICKS = builder
+                .comment("Ticks a Void Dragon stops at a Void Well to load or unload.")
+                .defineInRange("dragonStopTicks", 100, 0, 24000);
+        DRAGON_DIVE_TICKS = builder
+                .comment("Ticks any dive of a Void Dragon's through the void between two Void Wells takes, however near.")
+                .defineInRange("dragonDiveTicks", 200, 0, 24000);
+        DRAGON_DIVE_BLOCKS_PER_SECOND = builder
+                .comment("How many blocks apart two Void Wells are, in Overworld blocks, for each second a dive between them",
+                        "takes beyond the fixed time: a Nether block counts eight, an End block one.")
+                .defineInRange("dragonDiveBlocksPerSecond", 64, 1, 1 << 20);
         SPEC = builder.build();
     }
 
@@ -220,5 +237,25 @@ public final class VoidworksConfig {
     public static int motes(int density) {
         var motes = DENSITY_MOTES.get();
         return motes.get(Math.min(density, motes.size()) - 1);
+    }
+
+    /** @return the most motes a Void Dragon carries on a trip */
+    public static int dragonLoad() {
+        return DRAGON_LOAD.getAsInt();
+    }
+
+    /** @return ticks a Void Dragon stops at a Well to load or unload */
+    public static int dragonStopTicks() {
+        return DRAGON_STOP_TICKS.getAsInt();
+    }
+
+    /** @return ticks any dive takes, however near */
+    public static int dragonDiveTicks() {
+        return DRAGON_DIVE_TICKS.getAsInt();
+    }
+
+    /** @return Overworld blocks apart for each second a dive takes beyond its fixed time */
+    public static int dragonDiveBlocksPerSecond() {
+        return DRAGON_DIVE_BLOCKS_PER_SECOND.getAsInt();
     }
 }

@@ -126,6 +126,12 @@ A Void Dragon's passage through the void between two Void Wells, in any dimensio
 travel time set by distance, and nothing in the world sees the dragon, or its rider, while it lasts.
 _Avoid_: teleport, flight
 
+**Trip**:
+A Void Dragon's errand: to a source Well to load, a dive, and on to the destination Well to unload.
+It is claimed as it is planned, so a Well's need counts the motes already on their way to it. A
+load no Well needs is stowed: carried to the owner's Well with most room.
+_Avoid_: route, job
+
 **Dragonling**:
 A young Void Dragon, hatched from an egg soaked in motes. It cannot carry yet; it stays near where
 it hatched, follows a player holding a Void Siphon, and grows faster for the motes a Siphon feeds it.
