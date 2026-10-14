@@ -37,6 +37,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_CAPACITY;
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_RATE;
+    private static final ModConfigSpec.LongValue FE_PER_VOID_ENERGY;
     private static final ModConfigSpec.LongValue FIRST_EGG_PRICE;
     private static final ModConfigSpec.IntValue DRAGONLING_GROW_TICKS;
     private static final ModConfigSpec.LongValue DRAGONLING_FEED_ENERGY;
@@ -112,6 +113,11 @@ public final class VoidworksConfig {
                         "Resonant and the Draconic.")
                 .defineList("siphonRate", SiphonTier.DEFAULT_RATES, () -> 1,
                         value -> value instanceof Integer motes && motes > 0);
+        FE_PER_VOID_ENERGY = builder
+                .comment("The FE each void energy a Void Siphon releases charges into the FE items its holder wears or holds,",
+                        "any mod's. Tuned against Gearworks' Gear, whose battery upgrade holds 100,000 FE; balance it against",
+                        "the FE mods in the pack.")
+                .defineInRange("fePerVoidEnergy", 10L, 1L, 1L << 20);
         FIRST_EGG_PRICE = builder
                 .comment("The void energy a player's first dragon egg soaks before it hatches. Each egg's price is fixed when it",
                         "starts soaking, at this doubled for every dragon its owner has hatched or is soaking.")
@@ -220,6 +226,11 @@ public final class VoidworksConfig {
     /** @return how many motes a Void Siphon of {@code tier} charges or empties each time, at most */
     public static int siphonRate(SiphonTier tier) {
         return tier.of(SIPHON_RATE.get());
+    }
+
+    /** @return the FE each void energy a Void Siphon releases charges into an FE item */
+    public static long fePerVoidEnergy() {
+        return FE_PER_VOID_ENERGY.getAsLong();
     }
 
     /** @return the void energy a player's first dragon egg soaks before it hatches */

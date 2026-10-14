@@ -22,8 +22,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /**
  * The seam every spender calls: release at least some void energy from a mote store, where the
  * spender stands. It joins the spend rule ({@link VoidEnergy}), the motes in the store and the
- * Void Pressure at the position. Mutation, void gear, zone upgrades and hatching spend through
- * it; healing a Void Dragon is the one spend that does not.
+ * Void Pressure at the position. Mutation, zone upgrades and hatching spend through it. A Void
+ * Siphon charging FE items keeps the same rule by {@link VoidEnergy} itself, since it spends only
+ * whole motes whose FE fits; healing a Void Dragon is the one spend that does not keep it.
  *
  * <p>It works on any {@code ResourceHandler<MoteResource>}: a block's, as
  * {@link io.github._5thlayer.voidworks.VoidworksCapabilities#MOTES} provides it, or a machine's own.

@@ -185,8 +185,16 @@ public final class VoidSiphonItem extends Item {
                 Component.translatable("voidworks.siphon.tooltip.grade", grade, count).withColor(GradeColor.of(grade) & 0xFFFFFF)));
         if (motes.total() > 0) {
             // Known only on a client the server has told its dimension's pressure.
-            KnownPressure.here().ifPresent(pressure -> builder.accept(
-                    Component.translatable("voidworks.siphon.tooltip.worth", VoidEnergy.worth(motes.byGrade(), pressure)).withStyle(ChatFormatting.GRAY)));
+            KnownPressure.here().ifPresent(pressure -> {
+                long worth = VoidEnergy.worth(motes.byGrade(), pressure);
+                builder.accept(Component.translatable("voidworks.siphon.tooltip.worth", worth).withStyle(ChatFormatting.GRAY));
+                // Only to a player with something to charge, so a pack with no FE mod never reads of FE.
+                var viewer = KnownPressure.viewer();
+                if (VoidworksConfig.loaded() && viewer != null && FeCharging.wearsOrHolds(viewer)) {
+                    builder.accept(Component.translatable("voidworks.siphon.tooltip.fe", worth * VoidworksConfig.fePerVoidEnergy())
+                            .withStyle(ChatFormatting.GRAY));
+                }
+            });
         }
         builder.accept(Component.translatable("voidworks.siphon.tooltip." + mode(stack).getSerializedName()).withStyle(ChatFormatting.DARK_PURPLE));
     }

@@ -96,6 +96,7 @@
   "voidworks.siphon.tooltip.grade": "Grade %s: %s",
   "voidworks.siphon.tooltip.held": "%s of %s motes",
   "voidworks.siphon.tooltip.worth": "Worth %s void energy here",
+  "voidworks.siphon.tooltip.fe": "Charges %s FE here into what you wear or hold",
   "voidworks.well.not_whole": "The Void Well is not whole: a 3×3 floor, a 5×5 ring of casing walls three high around it, a rim on top, and this core in the middle of a wall",
   "voidworks.well.owned_by": "This Void Well is %s's",
   "voidworks.well.target.full": "full",

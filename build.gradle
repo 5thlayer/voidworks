@@ -14,12 +14,13 @@ libworks {
 
 repositories {
     // libworks-runtime, from the local maven only, where its releases are published. CI builds its tag
-    // there first.
+    // there first. Gearworks too, which only the dev client loads, so CI never resolves it.
     exclusiveContent {
         forRepository { mavenLocal() }
         filter {
             includeModule 'io.github.5thlayer', 'libworks-runtime'
             includeModule 'io.github.5thlayer', 'libworks-gametest'
+            includeModule 'io.github.5thlayer', 'gearworks'
         }
     }
     // EMI for 26.1 is an unofficial port, published on CurseForge only.
@@ -34,8 +35,8 @@ repositories {
     }
 }
 
-// Mods the dev client loads alongside the Module, to look up recipes (EMI) and inspect blocks (Jade)
-// while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
+// Mods the dev client loads alongside the Module, to look up recipes (EMI), inspect blocks (Jade) and
+// wear FE items a Void Siphon charges (Gearworks) while trying it by hand. 26.1 has no per-run classpath, so they go into the client's mods folder,
 // which holds only what is listed here; the game tests run elsewhere and never load them, so they
 // still prove the Module plays alone. It names EMI's types only from compat/emi and Jade's only from
 // its plugin, each loaded by its viewer alone.
@@ -59,6 +60,9 @@ dependencies {
     // plugin by its annotation, so the Module runs without it (#37).
     compileOnly 'maven.modrinth:jade:26.1.11+neoforge'
     clientMods 'maven.modrinth:jade:26.1.11+neoforge'
+    // Gearworks' Gear, an FE item to wear while a Void Siphon charges it (ADR 0007). Voidworks names
+    // none of its types and requires it nowhere: it charges through NeoForge's item energy capability.
+    clientMods 'io.github.5thlayer:gearworks:0.1.0'
 }
 
 neoForge {
