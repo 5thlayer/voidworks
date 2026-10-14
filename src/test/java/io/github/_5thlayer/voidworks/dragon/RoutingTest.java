@@ -8,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -25,7 +27,8 @@ import org.junit.jupiter.api.Test;
  * or a Well above its target; it carries only grades worth something at the destination, highest
  * first, up to its load; its trip is claimed, so dragons sharing a Well never overshoot it; and a load
  * its destination no longer takes goes on elsewhere, or waits. Diving it weakens, hurt it flies more
- * slowly, and it heals from a Well's motes as it leaves it.
+ * slowly, and it heals from a Well's motes as it leaves it. An owner's Wells on one network are one
+ * stop, judged by the highest of their targets, and another owner's Wells there never bind it.
  */
 class RoutingTest {
 
@@ -345,6 +348,72 @@ class RoutingTest {
         assertEquals(50, rested.health());
     }
 
+    @Test
+    void aDragonNeverCarriesBetweenTwoOfItsOwnersWellsOnOneNetwork() {
+        // A reservoir and a Well short of its target, holding the same 300 motes.
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(4, 300L));
+        wells.join(ALICE, OTHER_WELL, OptionalLong.of(500), OVERWORLD_WELL);
+        var dragon = dragons.add(ALICE, OVERWORLD_WELL);
+        runFor(20_000);
+        var rested = dragons.get(dragon.id()).orElseThrow();
+        assertTrue(rested.trip().isEmpty(), "the dragon took a trip");
+        assertEquals(OVERWORLD_WELL, rested.rest());
+        assertEquals(Map.of(4, 300L), wells.motes(OTHER_WELL));
+    }
+
+    @Test
+    void aWellElsewhereFillsANetworkOfTwoWellsUntilTheHigherOfTheirTargets() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
+        wells.join(ALICE, OTHER_WELL, OptionalLong.of(150), OVERWORLD_WELL);
+        dragons.add(ALICE, END_WELL);
+        var second = dragons.add(ALICE, END_WELL);
+        runFor(1);
+        // The network is 150 short, whichever Well each dragon unloads at: a load and half another.
+        assertEquals(50, dragons.get(second.id()).orElseThrow().carried());
+        runFor(20_000);
+        assertEquals(Map.of(4, 150L), wells.motes(OVERWORLD_WELL));
+        assertEquals(Map.of(4, 850L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aNetworkOfTwoWellsGivesOnlyItsExcessOverTheHigherOfTheirTargets() {
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of(4, 500L));
+        wells.join(ALICE, OTHER_WELL, OptionalLong.of(300), OVERWORLD_WELL);
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        dragons.add(ALICE, NETHER_WELL);
+        runFor(20_000);
+        assertEquals(Map.of(4, 300L), wells.motes(OVERWORLD_WELL));
+        assertEquals(Map.of(4, 200L), wells.motes(NETHER_WELL));
+    }
+
+    @Test
+    void aDragonJudgesANetworkByItsOwnersTargetsAloneAndCountsEveryDragonsClaimOnIt() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(300), 2, Map.of());
+        // Bob's Well on Alice's network asks for more, and his dragon brings 250 to it.
+        wells.join(BOB, OTHER_WELL, OptionalLong.of(800), OVERWORLD_WELL);
+        carrying(BOB, OTHER_END_WELL, VoidDragonRecord.FULL_HEALTH, Map.of(4, 250L));
+        var alices = dragons.add(ALICE, END_WELL);
+        runFor(1);
+        assertEquals(50, dragons.get(alices.id()).orElseThrow().carried());
+        runFor(20_000);
+        assertEquals(Map.of(4, 300L), wells.motes(OVERWORLD_WELL));
+        assertEquals(Map.of(4, 950L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aReservoirOnANetworkWithAnotherOwnersTargetedWellGivesAllItHolds() {
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(4, 500L));
+        // Bob's Well on Alice's network asks for 800, which never binds Alice's dragons.
+        wells.join(BOB, OTHER_WELL, OptionalLong.of(800), OVERWORLD_WELL);
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        dragons.add(ALICE, NETHER_WELL);
+        runFor(20_000);
+        assertEquals(Map.of(), wells.motes(OVERWORLD_WELL));
+        assertEquals(Map.of(4, 500L), wells.motes(NETHER_WELL));
+    }
+
     /** Runs the rest of the test with {@link #HARM}. */
     private void harming() {
         routing = new Routing(wells, DIVE, HARM, LOAD, STOP);
@@ -371,24 +440,44 @@ class RoutingTest {
         }
     }
 
-    /** Wells as plain data, each its owner's, whole and awake until broken. */
+    /** Wells as plain data, each its owner's, whole and awake until broken; Wells on one network share its motes. */
     private static final class FakeWells implements Wells {
 
-        private record Entry(UUID owner, OptionalLong target, int pressure, TreeMap<Integer, Long> motes) {
+        /** One network: the places of its Wells, whoever's, and the motes they share, {@link #CAPACITY} a Well. */
+        private record Network(Set<Place> wells, TreeMap<Integer, Long> motes) {
+
+            long capacity() {
+                return CAPACITY * wells.size();
+            }
+        }
+
+        private record Entry(UUID owner, OptionalLong target, int pressure, Network network) {
         }
 
         private final Map<Place, Entry> wells = new LinkedHashMap<>();
 
+        /** Adds {@code owner}'s Well at {@code place}, on a network of its own holding {@code motes}. */
         void add(UUID owner, Place place, OptionalLong target, int pressure, Map<Integer, Long> motes) {
-            wells.put(place, new Entry(owner, target, pressure, new TreeMap<>(motes)));
+            wells.put(place, new Entry(owner, target, pressure, new Network(new LinkedHashSet<>(Set.of(place)), new TreeMap<>(motes))));
+        }
+
+        /** Adds {@code owner}'s Well at {@code place} to the network of the Well at {@code onNetworkOf}, sharing its motes. */
+        void join(UUID owner, Place place, OptionalLong target, Place onNetworkOf) {
+            var on = wells.get(onNetworkOf);
+            on.network().wells().add(place);
+            wells.put(place, new Entry(owner, target, on.pressure(), on.network()));
         }
 
         void remove(Place place) {
-            wells.remove(place);
+            var removed = wells.remove(place);
+            if (removed != null) {
+                removed.network().wells().remove(place);
+            }
         }
 
+        /** @return what the network of the Well at {@code place} holds, of the grades it holds any of */
         Map<Integer, Long> motes(Place place) {
-            var motes = new TreeMap<>(wells.get(place).motes());
+            var motes = new TreeMap<>(wells.get(place).network().motes());
             motes.values().removeIf(count -> count == 0);
             return motes;
         }
@@ -398,7 +487,8 @@ class RoutingTest {
             var owned = new ArrayList<Well>();
             wells.forEach((place, entry) -> {
                 if (entry.owner().equals(owner)) {
-                    owned.add(new Well(place, entry.target(), entry.pressure(), CAPACITY, entry.motes()));
+                    var network = entry.network();
+                    owned.add(new Well(place, entry.target(), entry.pressure(), network.capacity(), network.motes(), Set.copyOf(network.wells())));
                 }
             });
             return owned;
@@ -409,7 +499,7 @@ class RoutingTest {
             if (!wells.containsKey(place)) {
                 return 0;
             }
-            var motes = wells.get(place).motes();
+            var motes = wells.get(place).network().motes();
             long taken = Math.min(count, motes.getOrDefault(grade, 0L));
             motes.merge(grade, -taken, Long::sum);
             return taken;
@@ -420,10 +510,10 @@ class RoutingTest {
             if (!wells.containsKey(place)) {
                 return 0;
             }
-            var motes = wells.get(place).motes();
-            long total = motes.values().stream().mapToLong(Long::longValue).sum();
-            long put = Math.min(count, CAPACITY - total);
-            motes.merge(grade, put, Long::sum);
+            var network = wells.get(place).network();
+            long total = network.motes().values().stream().mapToLong(Long::longValue).sum();
+            long put = Math.min(count, network.capacity() - total);
+            network.motes().merge(grade, put, Long::sum);
             return put;
         }
     }

@@ -51,6 +51,12 @@ final class RoutingTests {
     private static final int STAIRCASE_SHORT = 50;
     /** The staircase test's dragon's health lost, healed before it dives. */
     private static final int STAIRCASE_HURT = 4;
+    /** The one-stop test's Overworld reservoir, far out, where nothing loads a chunk. */
+    private static final BlockPos ONE_STOP_RESERVOIR = new BlockPos(80_000, 64, 24_000);
+    /** The one-stop test's Nether Well with a target, at the same place in Overworld blocks. */
+    private static final BlockPos ONE_STOP_TARGET_WELL = new BlockPos(10_000, 64, 3_000);
+    /** The one-stop test's Nether reservoir, on the same network, a Voidstone between them. */
+    private static final BlockPos ONE_STOP_NETHER_RESERVOIR = ONE_STOP_TARGET_WELL.east(2);
     /** The healing test's dragon's health when it sets off. */
     private static final int HURT = 70;
     /** How many motes the Nether Well is short of its target: less than a load, so one trip meets it. */
@@ -69,6 +75,8 @@ final class RoutingTests {
                 TICKS, RoutingTests::healsAtAWell);
         tests.test("a_void_dragon_loads_and_heals_from_a_reservoir_s_motes_settled_in_its_voidstone_short_of_its_core",
                 TICKS, RoutingTests::loadsFromVoidstone);
+        tests.test("two_void_wells_on_one_network_are_one_stop_which_a_void_dragon_fills_from_elsewhere",
+                TICKS, RoutingTests::servesTwoWellsAsOne);
     }
 
     private static void deliversAcrossDimensions(GameTestHelper helper) {
@@ -194,6 +202,53 @@ final class RoutingTests {
             VoidstoneNetworks.of(nether).leave(STAIRCASE_NETHER_WELL);
             wells.remove(reservoir);
             wells.remove(shortWell);
+        });
+    }
+
+    /**
+     * A Nether Well a little short of its quarter target, and a reservoir on its network, which as a
+     * Well of its own would be the fullest to give it its motes: they are one stop (ADR 0006), so a
+     * dragon never carries between them, and fetches what the network is short of from a reservoir in
+     * the Overworld, though that is the emptier. The dragon rests there, so it sets off unhurt.
+     */
+    private static void servesTwoWellsAsOne(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var overworld = server.overworld();
+        var nether = server.getLevel(Level.NETHER);
+        var owner = UUID.randomUUID();
+        var reservoir = Place.of(overworld, ONE_STOP_RESERVOIR);
+        var targetWell = Place.of(nether, ONE_STOP_TARGET_WELL);
+        var netherReservoir = Place.of(nether, ONE_STOP_NETHER_RESERVOIR);
+        long capacity = 2L * VoidworksConfig.wellCapacity() + VoidworksConfig.voidstoneCapacity();
+        long target = FillTarget.QUARTER.motes(capacity).orElseThrow();
+        assertUnloaded(helper, overworld, ONE_STOP_RESERVOIR);
+        assertUnloaded(helper, nether, ONE_STOP_TARGET_WELL);
+        VoidstoneNetworks.of(overworld).rejoin(ONE_STOP_RESERVOIR, StoreKind.WELL, Set.of(), Map.of(4, 1_000L));
+        var networks = VoidstoneNetworks.of(nether);
+        networks.rejoin(ONE_STOP_TARGET_WELL, StoreKind.WELL, Set.of(), Map.of(4, target - SHORT));
+        networks.rejoin(ONE_STOP_TARGET_WELL.east(), StoreKind.VOIDSTONE, Set.of(), Map.of());
+        networks.rejoin(ONE_STOP_NETHER_RESERVOIR, StoreKind.WELL, Set.of(), Map.of());
+        var wells = SavedVoidWells.of(server);
+        wells.put(new VoidWells.Entry(reservoir, owner, FillTarget.NONE));
+        wells.put(new VoidWells.Entry(targetWell, owner, FillTarget.QUARTER));
+        wells.put(new VoidWells.Entry(netherReservoir, owner, FillTarget.NONE));
+        var dragon = SavedVoidDragons.of(server).add(owner, reservoir);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(networks.at(ONE_STOP_TARGET_WELL).orElseThrow().capacity() == capacity, "the Nether Wells are not on one network");
+            long held = networks.at(ONE_STOP_TARGET_WELL).orElseThrow().total();
+            helper.assertTrue(held == target, "the Nether network holds " + held + ", not its target " + target);
+            helper.assertTrue(total(overworld, ONE_STOP_RESERVOIR) == 1_000 - SHORT, "the reservoir holds " + total(overworld, ONE_STOP_RESERVOIR));
+            var after = SavedVoidDragons.of(server).get(dragon.id()).orElseThrow();
+            helper.assertTrue(after.trip().isEmpty() && after.load().isEmpty(), "the dragon is still on its trip");
+            assertUnloaded(helper, overworld, ONE_STOP_RESERVOIR);
+            assertUnloaded(helper, nether, ONE_STOP_TARGET_WELL);
+            VoidstoneNetworks.of(overworld).leave(ONE_STOP_RESERVOIR);
+            networks.leave(ONE_STOP_NETHER_RESERVOIR);
+            networks.leave(ONE_STOP_TARGET_WELL.east());
+            networks.leave(ONE_STOP_TARGET_WELL);
+            wells.remove(reservoir);
+            wells.remove(targetWell);
+            wells.remove(netherReservoir);
         });
     }
 

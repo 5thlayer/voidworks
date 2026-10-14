@@ -6,10 +6,13 @@ package io.github._5thlayer.voidworks.dragon;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.MoteResource;
+import io.github._5thlayer.voidworks.network.MoteNetwork;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidNetworks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -18,6 +21,7 @@ import io.github._5thlayer.voidworks.well.SavedVoidWells;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -85,9 +89,17 @@ public final class DragonRouting {
                 }
                 networks(entry.place()).flatMap(networks -> networks.at(entry.place().pos())).ifPresent(network ->
                         wells.add(new Well(entry.place(), entry.target().motes(network.capacity()), wellPressure(server, level.dimension()),
-                                network.capacity(), network.countByGrade())));
+                                network.capacity(), network.countByGrade(), wellsOn(network, level))));
             }
             return wells;
+        }
+
+        /** @return the places of every Well on {@code network} in {@code level}, whoever's */
+        private static Set<Place> wellsOn(MoteNetwork network, ServerLevel level) {
+            return network.stores().stream()
+                    .filter(store -> store.kind() == StoreKind.WELL)
+                    .map(store -> Place.of(level, store.pos()))
+                    .collect(Collectors.toSet());
         }
 
         /** Takes out of the Well's core first, then out of the Voidstone of its network nearest it. */

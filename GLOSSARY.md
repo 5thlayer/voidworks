@@ -114,10 +114,16 @@ network: what it holds, how full it is, its fill target and what a dragon takes 
 from are the whole network's, its core and every Voidstone together.
 _Avoid_: roost, Void Displacer
 
+**Stop**:
+An owner's Void Wells on one network, which their dragons treat as one: a dragon never carries
+between them, stops at whichever its dive reaches soonest, and judges the network by the highest of
+their fill targets. Another owner's Wells on the network are that owner's stop.
+_Avoid_: station, hub
+
 **Fill target**:
 How full a Void Well asks to be kept, as a share of all its network can hold: none, a quarter, a
-half, three quarters or full. Void Dragons deliver to a Well below its target and take from one above it; a
-Well with none is a reservoir, which only gives.
+half, three quarters or full. Void Dragons deliver to a stop below its target, the highest of its
+Wells', and take from one above it; a stop whose Wells have none is a reservoir, which only gives.
 _Avoid_: quota, setpoint
 
 **Owner**:
@@ -139,7 +145,8 @@ _Avoid_: teleport, flight
 
 **Trip**:
 A Void Dragon's errand: to a source Well to load, a dive, and on to the destination Well to unload.
-It is claimed as it is planned, so a Well's need counts the motes already on their way to it. A
+It is claimed as it is planned, so a network's need counts the motes already on their way to any
+Well on it, whoever's dragon carries them. A
 load no Well needs is stowed: carried to the owner's Well with most room.
 _Avoid_: route, job
 
