@@ -219,8 +219,9 @@ Every control is in the world, with no screen:
   every grade. Its owner cycles it by sneak-using the core with an empty hand; using it plainly
   with an empty hand shows its status and target, and Jade shows both. A Void Dragon delivers to a Well below its
   target and takes from one above it; a Well with none is a reservoir, which only gives.
-- **Name**: a name tag used on the core names the Well and is used up, as naming a mob is.
-  Unnamed, a Well goes by its dimension and position.
+- **Name**: a name tag its owner uses on the core names the Well and is used up, as naming a mob
+  is; anyone else's name tag is refused and tells them whose Well it is. Unnamed, a Well goes by
+  its dimension and position.
 - **Calling**: its owner standing in its shaft calls a dragon (§ The Void Dragon).
 
 ### The Void Dragon
