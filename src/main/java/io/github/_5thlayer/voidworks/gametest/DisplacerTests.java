@@ -112,16 +112,20 @@ final class DisplacerTests {
         });
     }
 
-    /** Grass is natural terrain: 26.1's {@code #minecraft:dirt} no longer names it, its substrate tag does. */
+    /**
+     * Grass is natural terrain: 26.1's {@code #minecraft:dirt} no longer names it, its substrate tag
+     * does. The Displacer floats beside the grass, not on it: grass under an opaque block turns to
+     * dirt on a random tick, and it would harvest that dirt instead.
+     */
     private static void harvestsGrass(GameTestHelper helper) {
         var grass = new BlockPos(4, 2, 4);
-        var above = grass.above();
+        var beside = grass.east();
         helper.setBlock(grass, Blocks.GRASS_BLOCK);
-        var displacer = place(helper, above, 2);
+        var displacer = place(helper, beside, 2);
         feed(displacer, Items.COPPER_BLOCK, 1);
         helper.succeedWhen(() -> {
             helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), grass);
-            helper.assertItemEntityPresent(Items.GRASS_BLOCK, above, 2);
+            helper.assertItemEntityPresent(Items.GRASS_BLOCK, beside, 2);
         });
     }
 
