@@ -11,6 +11,9 @@ import io.github._5thlayer.voidworks.displacer.DisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.DisplacerBlockEntity;
 import io.github._5thlayer.voidworks.displacer.DisplacerReport;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.DragonReport;
+import io.github._5thlayer.voidworks.dragon.DragonlingReport;
+import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.mutation.ChamberReport;
 import io.github._5thlayer.voidworks.mutation.CrucibleReport;
@@ -46,6 +49,8 @@ import snownee.jade.api.WailaPlugin;
  * Chamber's {@link UnmakingReport}; a Void Crucible's {@link CrucibleReport}; and a Void Well's
  * {@link WellReport}, its name, target and owner, beside its network and payment. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
+ * A Void Dragon's presence shows its record's {@link DragonReport}, and a Dragonling its
+ * {@link DragonlingReport}, each a {@link CreatureReport} in place of Jade's hearts.
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
  *
@@ -71,6 +76,12 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     private static final MachineReport<VoidWellBlockEntity, WellReport> WELL =
             new MachineReport<>(id("well"), VoidWellBlockEntity.class, VoidworksJadePlugin::well, WellReport.STREAM_CODEC);
+
+    private static final CreatureReport<VoidDragon, DragonReport> DRAGON =
+            new CreatureReport<>(id("dragon"), VoidDragon.class, VoidworksJadePlugin::dragon, DragonReport.STREAM_CODEC);
+
+    private static final CreatureReport<VoidDragon, DragonlingReport> DRAGONLING =
+            new CreatureReport<>(id("dragonling"), VoidDragon.class, VoidworksJadePlugin::dragonling, DragonlingReport.STREAM_CODEC);
 
     static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, path);
@@ -107,6 +118,14 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return well.getLevel() instanceof ServerLevel level ? WellReport.of(well, level) : null;
     }
 
+    private static @Nullable DragonReport dragon(VoidDragon presence) {
+        return presence.grown() && presence.level() instanceof ServerLevel level ? DragonReport.of(presence, level.getServer()).orElse(null) : null;
+    }
+
+    private static @Nullable DragonlingReport dragonling(VoidDragon dragonling) {
+        return !dragonling.grown() && dragonling.level() instanceof ServerLevel level ? DragonlingReport.of(dragonling, level.getServer()) : null;
+    }
+
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
@@ -117,6 +136,8 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         registration.registerBlockDataProvider(UNMAKING, UnmakingChamberBlockEntity.class);
         registration.registerBlockDataProvider(CRUCIBLE, VoidCrucibleBlockEntity.class);
         registration.registerBlockDataProvider(WELL, VoidWellBlockEntity.class);
+        registration.registerEntityDataProvider(DRAGON, VoidDragon.class);
+        registration.registerEntityDataProvider(DRAGONLING, VoidDragon.class);
     }
 
     @Override
@@ -134,5 +155,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 VoidCrucibleBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidWellBlock.class);
+        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines), VoidDragon.class);
+        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
     }
 }

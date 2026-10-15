@@ -340,6 +340,9 @@ Dragonling or a Void Dragon.
   long dive to or from the Nether takes longer still; it cannot die. It never dives from a Well before
   that Well has healed it, from its store, a fixed number of motes per point of health, lowest grade
   first and not by the spend rule, as far as the motes go; an empty Well heals nothing.
+- **Seen in Jade.** Anyone looking at a dragon's presence sees what its record holds: what it is
+  doing, the Well it is bound for by name, the motes it carries by grade and in total, its health
+  and its owner; looking at a Dragonling, how far it has grown and its owner.
 - **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
   runtime and tinted the void's purple: the Void Dragon about half the Ender Dragon's size, the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
