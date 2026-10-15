@@ -340,11 +340,13 @@ Dragonling or a Void Dragon.
   long dive to or from the Nether takes longer still; it cannot die. It never dives from a Well before
   that Well has healed it, from its store, a fixed number of motes per point of health, lowest grade
   first and not by the spend rule, as far as the motes go; an empty Well heals nothing.
-- **Look.** The vanilla Ender Dragon's model, built from the player's own game at runtime, wears a
-  texture of our own on its layout: the Void Dragon about half the Ender Dragon's size, the
-  Dragonling about a fifth. Nothing of Mojang's ships in the jar, so until the art the placeholder is
-  the vanilla texture tinted at runtime. The Drained Dragon Egg is a pale, cracked dragon egg whose
-  four stages glow as it fills.
+- **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
+  runtime and tinted the void's purple: the Void Dragon about half the Ender Dragon's size, the
+  Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
+  own. The Drained Dragon Egg is a pale, cracked dragon egg on the vanilla egg's shape, its cracks dark
+  while it is only an egg. Soaking, either egg wears that look, the vanilla egg too, though it is still
+  the vanilla egg it drops if broken; its cracks spread and glow brighter at each of its four stages,
+  glowing in the dark.
 
 ## Mutation
 
