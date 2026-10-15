@@ -277,8 +277,11 @@ Dragonling or a Void Dragon.
 - **Eggs.** The first dragon kill gives the vanilla egg, the founder of every line. Later kills give
   nothing, but while no player has hatched a dragon in the world, a kill places a vanilla egg on the
   exit portal again, so a lost founder is replaced. Every other egg is a **Drained Dragon Egg**,
-  laid by a grown Void Dragon each time it has carried a set number of motes since its last: it
-  pops out of the shaft of the Well it is at, as an item, so eggs are given and traded. Until it
+  laid by a grown Void Dragon each time it has carried a set number of motes since its last, counted
+  as it unloads them, a stowed load too: it pops out of the shaft of the next Well it stops at, to
+  load or unload, as an item, so eggs are given and traded. A Well whose chunk is not loaded lays
+  none: the dragon owes the egg, with any others it comes to owe, to its next stop at a loaded Well,
+  where it lays them all, so its eggs follow only the motes it carries. Until it
   soaks, a Drained Dragon Egg falls and teleports when hit, as the vanilla egg does.
 - **Hatching.** Either egg, placed by a player touching a Voidstone network, soaks up motes from it
   by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling its

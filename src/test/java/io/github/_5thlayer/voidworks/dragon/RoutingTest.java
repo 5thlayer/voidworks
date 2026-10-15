@@ -28,7 +28,8 @@ import org.junit.jupiter.api.Test;
  * first, up to its load; its trip is claimed, so dragons sharing a Well never overshoot it; and a load
  * its destination no longer takes goes on elsewhere, or waits. Diving it weakens, hurt it flies more
  * slowly, and it heals from a Well's motes as it leaves it. An owner's Wells on one network are one
- * stop, judged by the highest of their targets, and another owner's Wells there never bind it.
+ * stop, judged by the highest of their targets, and another owner's Wells there never bind it. Each
+ * time it has carried a set number of motes since its last egg, it lays one at a Well it stops at.
  */
 class RoutingTest {
 
@@ -41,6 +42,8 @@ class RoutingTest {
     private static final long CAPACITY = 1_000;
     private static final long LOAD = 100;
     private static final int STOP = 100;
+    /** The motes a dragon carries for each egg it lays. */
+    private static final long EGG = 250;
     /** A dive of 200 ticks and a second per 64 blocks, the Nether's counting eight. */
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     /** No harm anywhere, so a trip's motes go only where it carries them. */
@@ -56,7 +59,7 @@ class RoutingTest {
 
     private final FakeWells wells = new FakeWells();
     private final VoidDragons dragons = new VoidDragons();
-    private Routing routing = new Routing(wells, DIVE, HARMLESS, LOAD, STOP);
+    private Routing routing = new Routing(wells, DIVE, HARMLESS, LOAD, STOP, EGG);
     private long now;
 
     @Test
@@ -414,9 +417,63 @@ class RoutingTest {
         assertEquals(Map.of(4, 500L), wells.motes(NETHER_WELL));
     }
 
+    @Test
+    void aDragonLaysAnEggAtTheWellItStopsAtOnceItHasCarriedTheSetNumberOfMotes() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(200), 1, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(20_000);
+        // 200 carried, short of the 250 an egg takes.
+        assertEquals(List.of(), wells.laid);
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
+        runFor(20_000);
+        // A load of 100 makes 300: it lays at the Overworld Well, as it unloads there, and the 50 over count on.
+        assertEquals(List.of(OVERWORLD_WELL), wells.laid);
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+    }
+
+    @Test
+    void theCountRestartsAfterEachEggWithWhatItCarriedBeyondIt() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(500), 1, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(20_000);
+        // Five loads of 100: an egg as it unloads the third, at 300, and the next at the fifth, at 50 and 200 more.
+        assertEquals(List.of(NETHER_WELL, NETHER_WELL), wells.laid);
+        assertEquals(0, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+    }
+
+    @Test
+    void aStowedLoadCountsTowardAnEgg() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        var dragon = carrying(ALICE, END_WELL, VoidDragonRecord.FULL_HEALTH, Map.of(4, 300L));
+        runFor(20_000);
+        assertEquals(Map.of(4, 300L), wells.motes(END_WELL));
+        assertEquals(List.of(END_WELL), wells.laid);
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+    }
+
+    @Test
+    void eggsDueAtAWellWhoseChunkIsNotLoadedAreAllLaidAtTheNextWellItStopsAtThatIs() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(600), 1, Map.of());
+        wells.unseen.addAll(Set.of(END_WELL, NETHER_WELL));
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(20_000);
+        assertEquals(List.of(), wells.laid);
+        assertEquals(600, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        wells.unseen.remove(END_WELL);
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
+        runFor(20_000);
+        // It stops next at the End's Well, to load for the Overworld, and lays both eggs it owes there.
+        assertEquals(List.of(END_WELL, END_WELL), wells.laid);
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+    }
+
     /** Runs the rest of the test with {@link #HARM}. */
     private void harming() {
-        routing = new Routing(wells, DIVE, HARM, LOAD, STOP);
+        routing = new Routing(wells, DIVE, HARM, LOAD, STOP, EGG);
     }
 
     /** @return {@code dragon}, now of {@code health} */
@@ -455,6 +512,10 @@ class RoutingTest {
         }
 
         private final Map<Place, Entry> wells = new LinkedHashMap<>();
+        /** Where an egg was laid, egg by egg. */
+        final List<Place> laid = new ArrayList<>();
+        /** The Wells whose chunks are not loaded, where no egg is laid. */
+        final Set<Place> unseen = new LinkedHashSet<>();
 
         /** Adds {@code owner}'s Well at {@code place}, on a network of its own holding {@code motes}. */
         void add(UUID owner, Place place, OptionalLong target, int pressure, Map<Integer, Long> motes) {
@@ -515,6 +576,15 @@ class RoutingTest {
             long put = Math.min(count, network.capacity() - total);
             network.motes().merge(grade, put, Long::sum);
             return put;
+        }
+
+        @Override
+        public boolean lay(Place place) {
+            if (!wells.containsKey(place) || unseen.contains(place)) {
+                return false;
+            }
+            laid.add(place);
+            return true;
         }
     }
 }

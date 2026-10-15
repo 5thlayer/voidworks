@@ -37,6 +37,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -48,9 +50,10 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 /**
  * A Void Dragon seen at work: its presence follows its record through a stop and a dive at a Well
- * whose chunk is loaded, the test's own, and never drives it (ADR 0005). Its other Well is in the
- * Nether under the test's, so the dive is the fixed time alone, and in a chunk nothing loads, where
- * the dragon shows nothing. Which trips a dragon makes is {@code RoutingTest}'s.
+ * whose chunk is loaded, the test's own, and never drives it (ADR 0005); and an egg it lays there pops
+ * out of the shaft, for whoever places it. Its other Well is in the Nether under the test's, so the
+ * dive is the fixed time alone, and in a chunk nothing loads, where the dragon shows nothing. Which
+ * trips a dragon makes, and when it lays, is {@code RoutingTest}'s.
  */
 final class PresenceTests {
 
@@ -70,6 +73,12 @@ final class PresenceTests {
      */
     private static final int STOPS_Y = 64;
     private static final int EMERGES_Y = 96;
+    private static final int LAYS_Y = 32;
+
+    /** Where the laid egg is placed, on the platform clear of the Well. */
+    private static final BlockPos EGG = new BlockPos(0, 1, 4);
+    /** Where Voidstone touches it, a network of its own. */
+    private static final BlockPos EGG_NETWORK = EGG.south();
 
     /** Waking the Well, then a stop to load, a dive and a stop to unload, at the default numbers, with room to spare. */
     private static final int TICKS = 1_200;
@@ -82,6 +91,8 @@ final class PresenceTests {
                 PresenceTests::stopsThenDives);
         tests.test("a_void_dragon_at_an_unloaded_well_shows_nothing_and_arriving_at_a_loaded_one_is_seen_emerging_then_resting_there", TICKS,
                 PresenceTests::emergesThenRests);
+        tests.test("a_void_dragon_that_has_carried_enough_since_its_last_egg_lays_a_drained_dragon_egg_in_the_shaft_of_the_well_it_unloads_at",
+                TICKS, PresenceTests::laysInTheShaft);
     }
 
     /**
@@ -152,9 +163,7 @@ final class PresenceTests {
                 })
                 .thenExecute(() -> {
                     helper.assertTrue(presences(helper, dragonId.get()).isEmpty(), "the dragon away in the Nether shows a presence here");
-                    VoidstoneNetworks.of(nether).leave(under.pos());
-                    SavedVoidWells.of(server).remove(under);
-                    helper.setBlock(WELL, Blocks.AIR);
+                    clearAway(helper, under);
                 })
                 .thenSucceed();
     }
@@ -181,9 +190,7 @@ final class PresenceTests {
                     helper.useBlock(WELL, owner);
                     helper.assertTrue(well.target() == FillTarget.QUARTER, "the Well's target is " + well.target());
                     deposit(helper, Math.toIntExact(target - SHORT));
-                    RoutingTests.assertUnloaded(helper, nether, under.pos());
-                    VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of(GRADE, (long) HELD));
-                    SavedVoidWells.of(server).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
+                    reservoir(helper, owner, under);
                     dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), under).id());
                 })
                 .thenWaitUntil(() -> helper.assertTrue(record(helper, dragonId.get()).trip().map(Trip::leg).equals(Optional.of(Trip.Leg.LOADING)),
@@ -217,11 +224,77 @@ final class PresenceTests {
                     helper.assertTrue(presences(helper, dragonId.get()).size() == 1, "the dragon shows " + presences(helper, dragonId.get()).size() + " presences");
                     helper.assertTrue(shown.get().getY() > shaft.getY() + 2 || !shown.get().blockPosition().closerThan(helper.absolutePos(WELL), 2.0),
                             "the resting dragon is in the Well's wall, at " + shown.get().blockPosition());
-                    VoidstoneNetworks.of(nether).leave(under.pos());
-                    SavedVoidWells.of(server).remove(under);
-                    helper.setBlock(WELL, Blocks.AIR);
+                    clearAway(helper, under);
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * A mote short of an egg, the dragon carries a load from the Nether to the test's Well and lays
+     * there as it unloads; the egg it lays, placed by another player, soaks at that player's first
+     * price and is theirs.
+     */
+    private static void laysInTheShaft(GameTestHelper helper) {
+        var owner = owner(helper);
+        var well = wakeWell(helper, owner);
+        var server = helper.getLevel().getServer();
+        var under = under(helper, server.getLevel(Level.NETHER), LAYS_Y);
+        long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
+        // Relative, as GameTestHelper.relativePos turns an unrotated test half round.
+        var shaft = WellStructure.shaft(WELL, Direction.NORTH);
+        var dragonId = new AtomicReference<UUID>();
+        var laid = new AtomicReference<ItemEntity>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper).isPresent(), "the Well has not woken"))
+                .thenExecute(() -> {
+                    owner.setShiftKeyDown(true);
+                    helper.useBlock(WELL, owner);
+                    helper.assertTrue(well.target() == FillTarget.QUARTER, "the Well's target is " + well.target());
+                    deposit(helper, Math.toIntExact(target - SHORT));
+                    reservoir(helper, owner, under);
+                    var dragons = SavedVoidDragons.of(server);
+                    var grown = dragons.add(owner.getUUID(), under);
+                    dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(),
+                            VoidworksConfig.dragonEggMotes() - 1));
+                    dragonId.set(grown.id());
+                })
+                .thenWaitUntil(() -> {
+                    var eggs = helper.getEntities(EntityType.ITEM, shaft, 3.0);
+                    helper.assertTrue(eggs.size() == 1, eggs.size() + " items in the shaft, not one egg");
+                    laid.set(eggs.getFirst());
+                })
+                .thenExecute(() -> {
+                    var egg = laid.get().getItem();
+                    helper.assertTrue(egg.is(VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get()) && egg.getCount() == 1, "the dragon laid " + egg);
+                    var after = record(helper, dragonId.get());
+                    helper.assertTrue(after.rest().pos().equals(helper.absolutePos(WELL)), "the dragon laid at " + after.rest() + ", not the Well");
+                    helper.assertTrue(after.sinceEgg() == SHORT - 1, "the dragon's count is " + after.sinceEgg() + " after its egg, not what it carried over");
+                    laid.get().discard();
+                    helper.setBlock(EGG_NETWORK, VoidworksBlocks.VOIDSTONE.get());
+                    var other = EggTests.player(helper);
+                    EggTests.placeOnTheFloor(helper, other, egg.getItem(), EGG);
+                    var soaking = EggTests.soaking(helper, EGG);
+                    helper.assertTrue(soaking.owner().equals(Optional.of(other.getUUID())), "the laid egg soaks for " + soaking.owner() + ", not its placer");
+                    helper.assertTrue(soaking.dormancy().cost() == VoidworksConfig.firstEggPrice(),
+                            "the laid egg costs its placer " + soaking.dormancy().cost() + ", not their first price " + VoidworksConfig.firstEggPrice());
+                    clearAway(helper, under);
+                })
+                .thenSucceed();
+    }
+
+    /** Makes {@code under}, in a chunk nothing loads, {@code owner}'s reservoir holding {@link #HELD} motes of {@link #GRADE}. */
+    private static void reservoir(GameTestHelper helper, ServerPlayer owner, Place under) {
+        var nether = under.level(helper.getLevel().getServer());
+        RoutingTests.assertUnloaded(helper, nether, under.pos());
+        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of(GRADE, (long) HELD));
+        SavedVoidWells.of(helper.getLevel().getServer()).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
+    }
+
+    /** Takes away the Nether Well {@code under} and the test's Well, leaving the dragon with none to serve. */
+    private static void clearAway(GameTestHelper helper, Place under) {
+        VoidstoneNetworks.of(under.level(helper.getLevel().getServer())).leave(under.pos());
+        SavedVoidWells.of(helper.getLevel().getServer()).remove(under);
+        helper.setBlock(WELL, Blocks.AIR);
     }
 
     /** At work, a presence flies close about the open air over the shaft, never in the core's wall. */

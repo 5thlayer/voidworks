@@ -32,6 +32,14 @@ public interface Wells {
     long put(Place place, int grade, long count);
 
     /**
+     * Lays a Drained Dragon Egg in the shaft of the Well at {@code place}, as an item, while its chunk is
+     * loaded; a dragon owes an egg it could not lay to its next stop.
+     *
+     * @return whether it laid it
+     */
+    boolean lay(Place place);
+
+    /**
      * A Void Well as it is now.
      *
      * @param target how many motes it asks to keep, over every grade, a share of its {@code capacity}; empty for a reservoir

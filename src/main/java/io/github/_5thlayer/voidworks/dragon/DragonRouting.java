@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
@@ -18,11 +19,16 @@ import io.github._5thlayer.voidworks.network.VoidNetworks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.VoidWellBlock;
+import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
@@ -56,7 +62,8 @@ public final class DragonRouting {
             var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
-        new Routing(new ServerWells(server), dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks())
+        new Routing(new ServerWells(server), dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks(),
+                VoidworksConfig.dragonEggMotes())
                 .step(SavedVoidDragons.of(server), server.overworld().getGameTime());
     }
 
@@ -114,6 +121,23 @@ public final class DragonRouting {
         public long put(Place place, int grade, long count) {
             return networks(place).map(networks -> move(count, (amount, transaction) ->
                     networks.deposit(place.pos(), MoteResource.of(grade), amount, transaction))).orElse(0L);
+        }
+
+        /** Pops the egg out of the middle of the Well's shaft, while its chunk is loaded and ticking. */
+        @Override
+        public boolean lay(Place place) {
+            var level = place.level(server);
+            if (level == null || !level.isPositionEntityTicking(place.pos())) {
+                return false;
+            }
+            var core = level.getBlockState(place.pos());
+            if (!core.is(VoidworksBlocks.VOID_WELL.get())) {
+                return false;
+            }
+            var shaft = Vec3.atCenterOf(WellStructure.shaft(place.pos(), core.getValue(VoidWellBlock.FACING)));
+            var egg = new ItemEntity(level, shaft.x, shaft.y, shaft.z, new ItemStack(VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get()));
+            egg.setDefaultPickUpDelay();
+            return level.addFreshEntity(egg);
         }
 
         /** @return the networks of the Well's dimension, while it is whole and awake in one of them */

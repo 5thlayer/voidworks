@@ -311,7 +311,7 @@ final class EggTests {
         helper.assertTrue(owner.equals(Optional.of(player.getUUID())), "the Dragonling's owner is " + owner + ", not the egg's placer");
     }
 
-    private static SoakingEggBlockEntity soaking(GameTestHelper helper, BlockPos pos) {
+    static SoakingEggBlockEntity soaking(GameTestHelper helper, BlockPos pos) {
         return helper.getBlockEntity(pos, SoakingEggBlockEntity.class);
     }
 
@@ -321,7 +321,7 @@ final class EggTests {
     }
 
     /** A new player, so one with no dragons yet, on the platform. */
-    private static ServerPlayer player(GameTestHelper helper) {
+    static ServerPlayer player(GameTestHelper helper) {
         var player = new FakePlayer(helper.getLevel(), new GameProfile(UUID.randomUUID(), "egg-placer"));
         var feet = helper.absoluteVec(new Vec3(0.5, 1, 0.5));
         player.setPos(feet.x, feet.y, feet.z);
@@ -329,7 +329,7 @@ final class EggTests {
     }
 
     /** {@code player} places {@code egg} at {@code pos}, using it on the top of the block below. */
-    private static void placeOnTheFloor(GameTestHelper helper, ServerPlayer player, Item egg, BlockPos pos) {
+    static void placeOnTheFloor(GameTestHelper helper, ServerPlayer player, Item egg, BlockPos pos) {
         var below = helper.absolutePos(pos.below());
         place(player, egg, new BlockHitResult(Vec3.atCenterOf(below).add(0, 0.5, 0), Direction.UP, below, false));
         helper.assertTrue(!helper.getBlockState(pos).isAir(), "the player placed no egg at " + pos);

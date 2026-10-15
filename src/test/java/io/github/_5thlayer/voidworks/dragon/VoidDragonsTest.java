@@ -21,7 +21,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The Void Dragons, server state rather than entities (ADR 0005): each a record of its owner, its
- * health, where it rests, its load and its claimed trip, kept across a save and reload.
+ * health, where it rests, its load, its claimed trip and the motes it has carried since its last
+ * egg, kept across a save and reload.
  */
 class VoidDragonsTest {
 
@@ -81,6 +82,16 @@ class VoidDragonsTest {
     }
 
     @Test
+    void aSaveAndReloadKeepsTheMotesCarriedSinceItsLastEgg() {
+        var dragon = dragons.add(ALICE, HERE);
+        var carried = dragon.unloaded(3_000);
+        dragons.update(carried);
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(3_000, read.get(dragon.id()).orElseThrow().sinceEgg());
+    }
+
+    @Test
     void aDragonSavedBeforeRoutingReadsWithNoLoadAndNoTrip() {
         var saved = JsonParser.parseString("""
                 [{"id": [0, 0, 0, 1], "owner": [0, 0, 0, 2], "health": 100,
@@ -89,6 +100,7 @@ class VoidDragonsTest {
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
         assertTrue(read.load().isEmpty());
         assertTrue(read.trip().isEmpty());
+        assertEquals(0, read.sinceEgg());
         assertEquals(HERE, read.rest());
     }
 

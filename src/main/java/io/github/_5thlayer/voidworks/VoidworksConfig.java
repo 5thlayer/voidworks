@@ -47,6 +47,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGON_DIVE_BLOCKS_PER_SECOND;
     private static final ModConfigSpec.IntValue DRAGON_WEAKEN_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_HEAL_MOTES;
+    private static final ModConfigSpec.LongValue DRAGON_EGG_MOTES;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -151,6 +152,10 @@ public final class VoidworksConfig {
                 .comment("Motes a Void Dragon takes from a Void Well before it dives from it, lowest grade first, to heal a point",
                         "of health.")
                 .defineInRange("dragonHealMotes", 16, 1, 1 << 20);
+        DRAGON_EGG_MOTES = builder
+                .comment("Motes a grown Void Dragon carries, counted as it unloads them at Void Wells, for each Drained Dragon Egg",
+                        "it lays at a Well it stops at.")
+                .defineInRange("dragonEggMotes", 65_536L, 1L, Long.MAX_VALUE);
         SPEC = builder.build();
     }
 
@@ -290,5 +295,10 @@ public final class VoidworksConfig {
     /** @return motes a Void Dragon takes from a Well before it dives from it to heal a point of health */
     public static int dragonHealMotes() {
         return DRAGON_HEAL_MOTES.getAsInt();
+    }
+
+    /** @return motes a Void Dragon carries for each Drained Dragon Egg it lays */
+    public static long dragonEggMotes() {
+        return DRAGON_EGG_MOTES.getAsLong();
     }
 }

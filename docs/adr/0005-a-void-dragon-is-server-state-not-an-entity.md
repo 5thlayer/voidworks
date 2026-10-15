@@ -32,3 +32,5 @@ it hatched, is an ordinary entity until it grows.
   nothing, and two presences of one dragon never coexist.
 - Riding moves a player along a record's trip: the rider waits out the dive in the void and is set
   down at the destination Well.
+- What a dragon leaves in the world waits for a loaded chunk, never the dragon: an egg due at a Well
+  whose chunk is not loaded is owed to its next stop at one that is, while it routes on.

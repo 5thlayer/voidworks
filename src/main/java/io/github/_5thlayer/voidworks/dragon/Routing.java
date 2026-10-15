@@ -38,6 +38,10 @@ import java.util.function.Predicate;
  * <p>Diving, it weakens by the worse of its two ends' pressure ({@link Harm}), as it goes; a dive is a
  * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
  * dives from a Well it heals from that Well's motes, its network's, as far as they go.
+ *
+ * <p>Each time it has carried a set number of motes since its last egg, counted as it unloads them, it
+ * owes a Drained Dragon Egg, which it lays at the next Well it stops at, to load or unload, whose chunk
+ * is loaded, with every other egg it owes; what it carried beyond them counts toward the next.
  */
 public final class Routing {
 
@@ -49,17 +53,20 @@ public final class Routing {
     private final Harm harm;
     private final long load;
     private final int stopTicks;
+    private final long eggMotes;
 
     /**
      * @param load the most motes a dragon carries
      * @param stopTicks how long a dragon stops at a Well to load or unload
+     * @param eggMotes how many motes a dragon carries for each egg it lays
      */
-    public Routing(Wells wells, Dive dive, Harm harm, long load, int stopTicks) {
+    public Routing(Wells wells, Dive dive, Harm harm, long load, int stopTicks, long eggMotes) {
         this.wells = wells;
         this.dive = dive;
         this.harm = harm;
         this.load = load;
         this.stopTicks = stopTicks;
+        this.eggMotes = eggMotes;
     }
 
     /** Moves every dragon on to game time {@code now}: each leg that has ended leads to its next, and each dragon with nothing to do looks for a trip. */
@@ -145,7 +152,7 @@ public final class Routing {
         if (loaded.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        return stopped.carrying(loaded).on(Optional.of(trip.claiming(most - left).then(Trip.Leg.LOADING, now + stopTicks)));
+        return laying(stopped.carrying(loaded), source).on(Optional.of(trip.claiming(most - left).then(Trip.Leg.LOADING, now + stopTicks)));
     }
 
     /**
@@ -174,7 +181,20 @@ public final class Routing {
         if (room == most) {
             return stopped.on(Optional.empty());
         }
-        return stopped.carrying(left).on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+        return laying(stopped.carrying(left).unloaded(most - room), trip.destination())
+                .on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+    }
+
+    /**
+     * @return {@code dragon}, stopping at its owner's Well at {@code place}, having laid there an egg for
+     *         every {@link #eggMotes} it has carried toward them, as many as the Well lays; it owes the rest
+     */
+    private VoidDragonRecord laying(VoidDragonRecord dragon, Place place) {
+        long eggs = 0;
+        while (eggs < dragon.sinceEgg() / eggMotes && wells.lay(place)) {
+            eggs++;
+        }
+        return dragon.laid(eggs * eggMotes);
     }
 
     /**
