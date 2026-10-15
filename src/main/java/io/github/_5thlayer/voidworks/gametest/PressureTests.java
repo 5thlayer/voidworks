@@ -3,16 +3,20 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.Lifecycle;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -39,6 +43,25 @@ final class PressureTests {
         tests.test("void_pressure_unnamed_dimension_takes_the_overworlds", 1, PressureTests::unnamedDimensionTakesTheOverworlds);
         tests.test("void_pressure_datapack_entry_overrides_a_default", 1, PressureTests::datapackEntryOverridesADefault);
         tests.test("void_pressure_entry_reads_harvest_kinds_by_lower_case_name", 1, PressureTests::entryReadsHarvestKindsByName);
+        tests.test("void_pressure_counts_a_dimension_the_registry_does_not_hold_yet", 1, PressureTests::countsADimensionTheRegistryDoesNotHoldYet);
+    }
+
+    /**
+     * A new world's data is loaded before its dimensions exist: the Overworld, the Nether and the End
+     * come from the world preset, so the dimension registry the map is read against holds none of
+     * them. Their entries count all the same.
+     */
+    private static void countsADimensionTheRegistryDoesNotHoldYet(GameTestHelper helper) {
+        var registries = helper.getLevel().registryAccess();
+        var noDimensions = new RegistryAccess.ImmutableRegistryAccess(
+                List.of(new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze())).freeze();
+        var loaded = VoidPressure.dimension(registries, Level.OVERWORLD);
+        var entry = VoidPressure.dimension(noDimensions, Level.OVERWORLD);
+        if (!entry.equals(loaded)) {
+            helper.fail("with no dimensions registered yet the Overworld's entry is " + entry + ", not its loaded " + loaded);
+            return;
+        }
+        helper.succeed();
     }
 
     /** An entry spells its harvest kind in lower case, and a name that is no kind is an error, not a default. */
