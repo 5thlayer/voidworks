@@ -318,10 +318,10 @@ Dragonling or a Void Dragon.
   dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests at the Well
   it last stopped at, neither weakening nor healing: it lands and sits astride the Well's rim over
   its shaft, lengthwise along the core's wall so neither head nor tail covers the core, in the Ender
-  Dragon's sitting pose with a slow flap and its head turned to a nearby player, never roaring or
-  breathing at anyone. Where blocks fill the room it would sit in, it flies about over the shaft
-  instead, and lands once there is room. As it sets off it takes off, rising over the shaft within its dive's time,
-  then dives into the shaft. Holding a load it has
+  Dragon's sitting pose, its wings held still and down and its head turned to a nearby player,
+  never roaring or breathing at anyone. Where blocks fill the room it would sit in, it flies about
+  over the shaft instead, and lands once there is room. As it sets off it takes off, rising over
+  the shaft within its dive's time, then dives into the shaft. Holding a load it has
   no room for, it rests the same way. At work there, loading, unloading, waiting for its owner or
   setting a rider down, it stays in the air close about the Well. One that has never stopped at a
   Well rests where it grew up, flying about.

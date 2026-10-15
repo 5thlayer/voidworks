@@ -118,6 +118,9 @@ public final class VoidDragon extends PathfinderMob {
      */
     private static final Vec3 SEAT = new Vec3(0.0, 1.6, 0.45);
 
+    /** How far through a wingbeat its model's wings hang lowest, the tips bent down too: where a sitting presence holds them. */
+    private static final float WINGS_DOWN = 0.75F;
+
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
     private static final float MAX_TURN = 3.0F;
 
@@ -598,7 +601,7 @@ public final class VoidDragon extends PathfinderMob {
     public void aiStep() {
         super.aiStep();
         oFlapTime = flapTime;
-        flapTime += 0.1F;
+        flapTime = flap(flapTime, perch() == Perch.SITTING);
         recordFlight();
         if (level() instanceof ServerLevel level) {
             if (carrying()) {
@@ -618,6 +621,17 @@ public final class VoidDragon extends PathfinderMob {
                 growUp(level);
             }
         }
+    }
+
+    /**
+     * @return its wingbeat a tick on from {@code time}: beating steadily, as the Ender Dragon's, or
+     *         sitting, finishing its beat to hold its wings down and still
+     */
+    static float flap(float time, boolean sitting) {
+        if (!sitting) {
+            return time + 0.1F;
+        }
+        return Math.min(time + 0.1F, Mth.ceil(time - WINGS_DOWN) + WINGS_DOWN);
     }
 
     /**
