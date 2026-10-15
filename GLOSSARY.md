@@ -11,7 +11,7 @@ The Module's terms, each with what it is and the words to avoid. `/domain-modeli
 **Module**:
 One of the 5thlayer mods, each owning one capability, playing alone in vanilla and requiring no
 other Module.
-_Avoid_: Library
+_Avoid_: Library, Binding
 
 **Voidworks**:
 This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing a player installs but Minecraft and NeoForge.
