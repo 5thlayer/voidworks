@@ -315,11 +315,19 @@ Dragonling or a Void Dragon.
   eight and the End's one, and a fixed time more for a dive between dimensions. Every dive takes at
   least 2 seconds, so even between near Wells it is seen diving into one shaft and emerging from
   the other. It is the only thing that carries motes between
-  dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests near the Well
-  it last stopped at, neither weakening nor healing; one that has never stopped at a Well rests
-  where it grew up.
+  dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests at the Well
+  it last stopped at, neither weakening nor healing: it lands and sits astride the Well's rim over
+  its shaft, lengthwise along the core's wall so neither head nor tail covers the core, in the Ender
+  Dragon's sitting pose with a slow flap and its head turned to a nearby player, never roaring or
+  breathing at anyone. Where blocks fill the room it would sit in, it flies about over the shaft
+  instead, and lands once there is room. As it sets off it takes off, rising over the shaft within its dive's time,
+  then dives into the shaft. Holding a load it has
+  no room for, it rests the same way. At work there, loading, unloading, waiting for its owner or
+  setting a rider down, it stays in the air close about the Well. One that has never stopped at a
+  Well rests where it grew up, flying about.
 - **Riding.** Its owner uses a dragon stopped at one of their Wells, resting or at work there, and
-  mounts it, with no harness; anyone else cannot. It hovers, and waits at its stop for as long as
+  mounts it, with no harness; anyone else cannot. It hovers, taking off first if it sat resting
+  (and landing again if they get off before a dive), and waits at its stop for as long as
   they ride: strafing left and right steps through the owner's other Wells, whole and awake, in the
   order they were placed, the one picked shown above the hotbar by its name, or its dimension and
   position; jumping dives, and sneaking gets off before the dive, onto the rim of the Well it is at.
