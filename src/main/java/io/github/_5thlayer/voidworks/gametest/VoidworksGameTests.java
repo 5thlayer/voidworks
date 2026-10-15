@@ -91,6 +91,7 @@ public final class VoidworksGameTests {
         NetherDisplacerTests.register(tests);
         PresenceTests.register(tests);
         PressureTests.register(tests);
+        RideTests.register(tests);
         RoutingTests.register(tests);
         SiphonTests.register(tests);
         SpendTests.register(tests);

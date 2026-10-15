@@ -14,7 +14,7 @@ public enum Showing {
     DIVING,
     /** It has just stopped at a Well, and is seen emerging from its shaft. */
     EMERGING,
-    /** It is stopped at a Well, loading or unloading, and flies close about it. */
+    /** It is stopped at a Well, loading or unloading, waiting for its owner or setting its rider down, and flies close about it. */
     WORKING,
     /** It has nothing to do, and flies about where it rests. */
     RESTING;
@@ -33,8 +33,8 @@ public enum Showing {
         }
         var trip = dragon.trip().get();
         return switch (trip.leg()) {
-            case TO_SOURCE, TO_DESTINATION -> DIVING;
-            case LOADING, UNLOADING -> now - (trip.until() - stopTicks) < EMERGE_TICKS ? EMERGING : WORKING;
+            case TO_SOURCE, TO_DESTINATION, TO_CALL, TO_PICKED -> DIVING;
+            case LOADING, UNLOADING, WAITING, SETTING_DOWN -> now - (trip.until() - stopTicks) < EMERGE_TICKS ? EMERGING : WORKING;
         };
     }
 }

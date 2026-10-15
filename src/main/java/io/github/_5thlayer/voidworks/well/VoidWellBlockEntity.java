@@ -90,11 +90,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
 
     /** @return its name, or unnamed, its dimension and position */
     public Component label() {
-        if (name != null) {
-            return name;
-        }
-        var dimension = level == null ? "" : level.dimension().identifier().toString();
-        return Component.translatable("voidworks.well.unnamed", dimension, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ());
+        return VoidWells.label(Optional.ofNullable(name), level == null ? "" : level.dimension().identifier().toString(), worldPosition);
     }
 
     /** Makes {@code player}, who placed it, its owner. */
@@ -148,7 +144,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     /** Puts it in the server's {@link VoidWells}, as it is now, once it has an owner. */
     private void list() {
         if (owner != null && level instanceof ServerLevel server) {
-            SavedVoidWells.of(server.getServer()).put(new VoidWells.Entry(Place.of(server, worldPosition), owner.id(), target));
+            SavedVoidWells.of(server.getServer()).put(new VoidWells.Entry(Place.of(server, worldPosition), owner.id(), target, Optional.ofNullable(name)));
             listed = true;
         }
     }
@@ -157,6 +153,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     void rename(Component name) {
         this.name = name;
         setChanged();
+        list();
     }
 
     /** @return for a player: that the well around it is not whole, else its payment, or that it is awake */

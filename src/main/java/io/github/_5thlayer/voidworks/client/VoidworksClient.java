@@ -18,7 +18,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -42,6 +45,9 @@ public final class VoidworksClient {
         modBus.addListener(VoidworksClient::registerParticles);
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         modBus.addListener(VoidworksClient::registerRenderers);
+        // Over the world but under the hotbar: a dragon's rider sees only the void through its dive.
+        modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS,
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dive"), DiveOverlay::render));
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             KnownPressure.forget();

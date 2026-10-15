@@ -53,13 +53,14 @@ public final class VoidDragons {
 
     /**
      * Takes out every dragon that rests at a place {@code at} accepts, or is on a trip to or from one,
-     * whoever owns it.
+     * or to a stop added there, whoever owns it.
      *
      * @return the dragons taken out, in the order they grew up
      */
     public List<VoidDragonRecord> removeAt(Predicate<Place> at) {
         var removed = dragons.values().stream().filter(dragon -> at.test(dragon.rest())
-                || dragon.trip().map(trip -> at.test(trip.destination()) || trip.source().filter(at).isPresent()).orElse(false)).toList();
+                || dragon.trip().map(trip -> at.test(trip.destination()) || trip.source().filter(at).isPresent() || trip.added().filter(at).isPresent())
+                        .orElse(false)).toList();
         if (!removed.isEmpty()) {
             removed.forEach(dragon -> dragons.remove(dragon.id()));
             onChange.run();

@@ -42,6 +42,14 @@ import java.util.function.Predicate;
  * <p>Each time it has carried a set number of motes since its last egg, counted as it unloads them, it
  * owes a Drained Dragon Egg, which it lays at the next Well it stops at, to load or unload, whose chunk
  * is loaded, with every other egg it owes; what it carried beyond them counts toward the next.
+ *
+ * <p>Its owner riding it at a stop holds it there, whatever it is doing, until they get off or pick
+ * another Well of theirs ({@link #ride}): it dives there at once, carrying them, a stop added to its
+ * trip, where it sets them down and unloads what that Well is short of, in grades worth something
+ * there, before it goes on to its destination with the rest. Its owner standing in the shaft of one of
+ * their Wells calls a dragon ({@link Owners#calling}): the next of theirs to finish its stop, or one
+ * with nothing to do at once, dives there with what it carries, a stop added to its trip, waits while
+ * they stay, and then goes on.
  */
 public final class Routing {
 
@@ -49,6 +57,7 @@ public final class Routing {
     private static final int MOST_LEGS = 8;
 
     private final Wells wells;
+    private final Owners owners;
     private final Dive dive;
     private final Harm harm;
     private final long load;
@@ -60,8 +69,9 @@ public final class Routing {
      * @param stopTicks how long a dragon stops at a Well to load or unload
      * @param eggMotes how many motes a dragon carries for each egg it lays
      */
-    public Routing(Wells wells, Dive dive, Harm harm, long load, int stopTicks, long eggMotes) {
+    public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes) {
         this.wells = wells;
+        this.owners = owners;
         this.dive = dive;
         this.harm = harm;
         this.load = load;
@@ -91,17 +101,82 @@ public final class Routing {
             if (divingTo.isPresent() && trip.toCover() > 0 && trip.countedTo() < now) {
                 return dived(dragon, trip, divingTo.get(), now);
             }
-            if (trip.until() > now) {
+            // Its rider holds it at its stop, however long the stop was to last.
+            if (trip.until() > now || divingTo.isEmpty() && owners.riding(dragon.id())) {
                 return dragon;
             }
             return switch (trip.leg()) {
                 case TO_SOURCE -> load(dragons, dragon, trip, now);
-                case LOADING -> setOff(dragon, trip.then(Trip.Leg.TO_DESTINATION, now), now);
+                case LOADING -> answer(dragons, dragon, Optional.of(trip), now)
+                        .orElseGet(() -> setOff(dragon, trip.then(Trip.Leg.TO_DESTINATION, now), now));
                 case TO_DESTINATION -> unload(dragons, dragon, trip, now);
-                case UNLOADING -> dragon.on(Optional.empty());
+                case UNLOADING -> answer(dragons, dragon, Optional.of(trip), now).orElseGet(() -> dragon.on(Optional.empty()));
+                case TO_CALL -> dragon.resting(trip.added().orElseThrow()).on(Optional.of(trip.then(Trip.Leg.WAITING, now + stopTicks)));
+                case WAITING -> owners.calling(dragon.owner()).equals(trip.added()) ? dragon : goOn(dragon, trip, now);
+                case TO_PICKED -> drop(dragons, dragon, trip, now);
+                case SETTING_DOWN -> answer(dragons, dragon, Optional.of(trip), now).orElseGet(() -> goOn(dragon, trip, now));
             };
         }
-        return dragon.load().isEmpty() ? plan(dragons, dragon, now) : send(dragons, dragon, now);
+        if (owners.riding(dragon.id())) {
+            return dragon;
+        }
+        return answer(dragons, dragon, Optional.empty(), now)
+                .orElseGet(() -> dragon.load().isEmpty() ? plan(dragons, dragon, now) : send(dragons, dragon, now));
+    }
+
+    /**
+     * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}: it
+     * dives there at once, healing first as it leaves a Well, carrying them, a stop added to its trip.
+     *
+     * @return the dragon on its way; empty, with nothing changed, while it is not stopped at one of its
+     *         owner's Wells or when {@code picked} is not one of theirs
+     */
+    public Optional<VoidDragonRecord> ride(VoidDragons dragons, UUID id, Place picked, long now) {
+        var riding = dragons.get(id)
+                .filter(dragon -> dragon.trip().flatMap(Trip::divingTo).isEmpty())
+                .filter(dragon -> stop(dragon.owner(), dragon.rest()).isPresent() && stop(dragon.owner(), picked).isPresent())
+                .map(dragon -> setOff(dragon, dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked), now));
+        riding.ifPresent(dragons::update);
+        return riding;
+    }
+
+    /**
+     * A dragon that has finished its stop, or has nothing to do, answers its owner's call, while they
+     * call at a stop of theirs that none of their other dragons is answering: it dives there, a stop
+     * added to {@code onward}, the rest of its trip, else to a trip of that stop alone.
+     *
+     * @return the dragon on its way; empty while no call is left to answer
+     */
+    private Optional<VoidDragonRecord> answer(VoidDragons dragons, VoidDragonRecord dragon, Optional<Trip> onward, long now) {
+        return owners.calling(dragon.owner())
+                .filter(called -> stop(dragon.owner(), called).isPresent())
+                .filter(called -> dragons.all().stream().noneMatch(other -> other.owner().equals(dragon.owner())
+                        && other.trip().filter(trip -> trip.answering(called)).isPresent()))
+                .map(called -> setOff(dragon, onward.orElseGet(() -> alone(called)).adding(Trip.Leg.TO_CALL, called), now));
+    }
+
+    /** @return a trip that is only a stop added at the Well at {@code place}, claiming nothing, after which it ends */
+    private static Trip alone(Place place) {
+        return Trip.planned(Optional.empty(), place, 0, false, Trip.Leg.TO_DESTINATION);
+    }
+
+    /** After a stop added to its trip, it goes on to its destination with what it still claims; claiming nothing, its trip ends. */
+    private VoidDragonRecord goOn(VoidDragonRecord dragon, Trip trip, long now) {
+        return trip.claimed() > 0 ? setOff(dragon, trip.goingOn(), now) : dragon.on(Optional.empty());
+    }
+
+    /**
+     * Arrived at the Well its rider picked, it sets them down there and unloads what the Well is short
+     * of, in grades worth something there, highest first; what it still carries, up to its claim, goes
+     * on with the trip.
+     */
+    private VoidDragonRecord drop(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
+        var place = trip.added().orElseThrow();
+        var stopped = dragon.resting(place);
+        var after = stop(dragon.owner(), place).map(stop -> putInto(stopped, place, stop, need(dragons, stop, dragon.id()), false)).orElse(stopped);
+        long dropped = stopped.carried() - after.carried();
+        var laid = dropped > 0 ? laying(after.unloaded(dropped), place) : after;
+        return laid.on(Optional.of(trip.claiming(Math.min(trip.claimed(), laid.carried())).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
     }
 
     /** A dragon with nothing to do and nothing carried: a trip to the stop that needs most, from the fullest that can give it something; or none. */
@@ -162,27 +237,37 @@ public final class Routing {
      */
     private VoidDragonRecord unload(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
         var stopped = dragon.resting(trip.destination());
-        var to = stop(dragon.owner(), trip.destination());
-        long most = to.map(stop -> trip.stow() ? stop.room() : need(dragons, stop, dragon.id())).orElse(0L);
+        var after = stop(dragon.owner(), trip.destination())
+                .map(stop -> putInto(stopped, trip.destination(), stop, trip.stow() ? stop.room() : need(dragons, stop, dragon.id()), trip.stow()))
+                .orElse(stopped);
+        long put = stopped.carried() - after.carried();
+        if (put == 0) {
+            return stopped.on(Optional.empty());
+        }
+        return laying(after.unloaded(put), trip.destination()).on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+    }
+
+    /**
+     * @return {@code dragon} having put up to {@code most} of its load into its owner's Well at
+     *         {@code place}, of stop {@code to}, highest grade first: of grades worth something there,
+     *         or for a load stowed, of any
+     */
+    private VoidDragonRecord putInto(VoidDragonRecord dragon, Place place, Stop to, long most, boolean stow) {
         var left = new TreeMap<>(dragon.load());
         long room = most;
         for (var grade : dragon.load().sequencedKeySet().reversed()) {
             if (room == 0) {
                 break;
             }
-            if (trip.stow() || to.get().worth(grade)) {
-                long put = wells.put(trip.destination(), grade, Math.min(room, left.get(grade)));
+            if (stow || to.worth(grade)) {
+                long put = wells.put(place, grade, Math.min(room, left.get(grade)));
                 room -= put;
                 if (left.merge(grade, -put, Long::sum) == 0) {
                     left.remove(grade);
                 }
             }
         }
-        if (room == most) {
-            return stopped.on(Optional.empty());
-        }
-        return laying(stopped.carrying(left).unloaded(most - room), trip.destination())
-                .on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+        return dragon.carrying(left);
     }
 
     /**

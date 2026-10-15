@@ -50,18 +50,20 @@ class VoidDragonsTest {
     }
 
     @Test
-    void removingByPlaceTakesEveryDragonRestingThereOrOnATripToOrFromIt() {
+    void removingByPlaceTakesEveryDragonRestingThereOrOnATripToOrFromItOrToAStopAddedThere() {
         var elsewhere = new Place(Identifier.withDefaultNamespace("overworld"), new BlockPos(100, 64, 100));
         var resting = dragons.add(ALICE, HERE);
         var bound = dragons.add(ALICE, elsewhere);
         dragons.update(bound.on(Optional.of(new Trip(Optional.empty(), HERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234, 1_000, 0))));
         var loading = dragons.add(UUID.randomUUID(), elsewhere);
         dragons.update(loading.on(Optional.of(new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_SOURCE, 1_234, 1_000, 0))));
+        var ridden = dragons.add(ALICE, elsewhere);
+        dragons.update(ridden.on(Optional.of(new Trip(Optional.empty(), THERE, 70, false, Trip.Leg.TO_PICKED, 1_234, 1_000, 0, Optional.of(HERE)))));
         var away = dragons.add(ALICE, elsewhere);
 
         var removed = dragons.removeAt(HERE::equals);
 
-        assertEquals(List.of(resting.id(), bound.id(), loading.id()), removed.stream().map(VoidDragonRecord::id).toList());
+        assertEquals(List.of(resting.id(), bound.id(), loading.id(), ridden.id()), removed.stream().map(VoidDragonRecord::id).toList());
         assertEquals(List.of(away), List.copyOf(dragons.all()));
     }
 
@@ -96,6 +98,16 @@ class VoidDragonsTest {
         var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
         assertEquals(carrying, read.get(dragon.id()).orElseThrow());
+    }
+
+    @Test
+    void aSaveAndReloadKeepsAStopAddedToATrip() {
+        var dragon = dragons.add(ALICE, HERE);
+        var called = dragon.on(Optional.of(new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.WAITING, 1_234, 1_000, 0, Optional.of(HERE))));
+        dragons.update(called);
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(called, read.get(dragon.id()).orElseThrow());
     }
 
     @Test

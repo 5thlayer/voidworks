@@ -60,7 +60,7 @@ final class PresenceTests {
     /** The core, in the middle of its north wall's middle course, its floor on the platform. */
     private static final BlockPos WELL = new BlockPos(4, 3, 2);
     /** The grade carried: worth something in the Overworld and the Nether. */
-    private static final int GRADE = 4;
+    static final int GRADE = 4;
     /** What the reservoir holds. */
     private static final int HELD = 1_000;
     /** How many motes the Well below its target is short of it: less than a load, so one trip meets it. */
@@ -310,36 +310,55 @@ final class PresenceTests {
 
     /** The test's Well, whole and owned by {@code owner}, at no price, so it wakes on its first look and joins a network of its own. */
     private static VoidWellBlockEntity wakeWell(GameTestHelper helper, ServerPlayer owner) {
-        WellTests.buildWell(helper, WELL, Direction.NORTH);
-        var below = helper.absolutePos(WELL.below());
+        return wakeWell(helper, owner, WELL);
+    }
+
+    /**
+     * A Well at {@code core}, its core in its north wall, whole and owned by {@code owner}, at no price,
+     * so it wakes on its first look and joins a network of its own.
+     */
+    static VoidWellBlockEntity wakeWell(GameTestHelper helper, ServerPlayer owner, BlockPos core) {
+        WellTests.buildWell(helper, core, Direction.NORTH);
+        var below = helper.absolutePos(core.below());
         owner.setYRot(0.0F);
         owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksBlocks.VOID_WELL_ITEM.get()));
         owner.getMainHandItem().useOn(new UseOnContext(owner, InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(below).add(0, 0.5, 0), Direction.UP, below, false)));
-        var well = helper.getBlockEntity(WELL, VoidWellBlockEntity.class);
+        owner.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        var well = helper.getBlockEntity(core, VoidWellBlockEntity.class);
         well.dormancy().setPrice(0);
         return well;
     }
 
     /** Puts {@code count} motes of {@link #GRADE} into the test's Well. */
     private static void deposit(GameTestHelper helper, int count) {
+        deposit(helper, WELL, count);
+    }
+
+    /** Puts {@code count} motes of {@link #GRADE} into the Well at {@code core}. */
+    static void deposit(GameTestHelper helper, BlockPos core, int count) {
         try (var transaction = Transaction.openRoot()) {
-            VoidstoneNetworks.of(helper.getLevel()).deposit(helper.absolutePos(WELL), MoteResource.of(GRADE), count, transaction);
+            VoidstoneNetworks.of(helper.getLevel()).deposit(helper.absolutePos(core), MoteResource.of(GRADE), count, transaction);
             transaction.commit();
         }
     }
 
     private static Optional<MoteStore> stored(GameTestHelper helper) {
-        return VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(WELL)).filter(store -> store.kind() == StoreKind.WELL);
+        return stored(helper, WELL);
+    }
+
+    /** @return the store of the Well at {@code core}, once it is awake in its network */
+    static Optional<MoteStore> stored(GameTestHelper helper, BlockPos core) {
+        return VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(core)).filter(store -> store.kind() == StoreKind.WELL);
     }
 
     /** @return a place in the Nether under the test's Well, the same place in Overworld blocks, at height {@code y} */
-    private static Place under(GameTestHelper helper, ServerLevel nether, int y) {
+    static Place under(GameTestHelper helper, ServerLevel nether, int y) {
         var pos = helper.absolutePos(WELL);
         return Place.of(nether, new BlockPos(Math.floorDiv(pos.getX(), 8), y, Math.floorDiv(pos.getZ(), 8)));
     }
 
-    private static VoidDragonRecord record(GameTestHelper helper, UUID id) {
+    static VoidDragonRecord record(GameTestHelper helper, UUID id) {
         return SavedVoidDragons.of(helper.getLevel().getServer()).get(id).orElseThrow();
     }
 

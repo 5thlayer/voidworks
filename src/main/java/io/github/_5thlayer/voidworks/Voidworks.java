@@ -8,6 +8,7 @@ import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.Displacement;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
+import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.DragonRouting;
 import io.github._5thlayer.voidworks.dragon.Hatching;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
@@ -53,6 +54,7 @@ public final class Voidworks {
         Hatching.register();
         DragonPresences.register();
         DragonRouting.register();
+        DragonRiding.register();
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);
     }
