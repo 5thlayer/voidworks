@@ -4,7 +4,7 @@ A 5thlayer Module: a mod its Consumers, other Modules or a pack, read from the l
 
 ## Workflow
 
-Commit on the current branch; open a feature branch only when the user asks for one. Nothing is pushed without the user's word.
+Commit on the current branch; open a feature branch only when the user asks for one. Nothing is pushed without the user's word. Asking a session to steward a PR is the user's word for that PR's pushes, its rebases onto `main`, and its merge, under the `steward` skill.
 
 Pull requests are squash-merged, the PR title becoming the conventional commit on `main`. Work after a merge starts on a new branch from `main`, never on the merged one.
 
