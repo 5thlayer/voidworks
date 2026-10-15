@@ -22,8 +22,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * What a player sees of the Void Dragons: each shows one presence, a {@link VoidDragon} that holds
  * no state of its own, where its dragon is while that place is loaded and ticking (ADR 0005). The
  * presence follows what the record shows ({@link Showing}) and never drives it: it emerges from a
- * Well's shaft as its dragon stops there, flies about the Well while it loads, unloads and rests,
- * and dives into the shaft and is gone as its dragon sets off. A dragon that rests where it grew up
+ * Well's shaft, first seen at its mouth, as its dragon stops there, flies about the Well while it
+ * loads, unloads and rests, and dives into the shaft and is gone as its dragon sets off. A dragon that rests where it grew up
  * is shown there. A presence is never saved, so a chunk unloading takes it away and loses nothing,
  * and it comes back once the place is loaded again, mid-stop or resting; one dragon never shows two.
  */
@@ -34,6 +34,16 @@ public final class DragonPresences {
 
     /** How far above the middle of a Well's shaft its dragon's presence flies about: in the open air over its rim, with room for its body. */
     public static final int OVER_SHAFT = 4;
+
+    /**
+     * How far above the middle of a Well's shaft its mouth is: the first open air over its rim, where
+     * an emerging presence is first seen, since its body, far wider than the shaft, would be in the
+     * walls lower down.
+     */
+    public static final int MOUTH = 3;
+
+    /** How far above a Well's shaft's mouth an emerging presence climbs before it flies about at work. */
+    private static final int RISE = 4;
 
     /** How far below where a dragon rests away from any Well its presence dives before it is gone. */
     private static final int DIVE_DEPTH = 8;
@@ -87,36 +97,42 @@ public final class DragonPresences {
                 continue;
             }
             var spot = spot(level, dragon.rest().pos());
-            if (!level.isPositionEntityTicking(showing == Showing.EMERGING ? spot.under() : spot.over())) {
+            if (!level.isPositionEntityTicking(showing == Showing.EMERGING ? spot.emerges() : spot.over())) {
                 continue;
             }
             var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
             if (presence != null) {
-                presence.showPresenceOf(dragon, showing, spot.over(), spot.under());
+                presence.showPresenceOf(dragon, showing, spot);
                 level.addFreshEntity(presence);
                 saved.presences.put(dragon.id(), presence);
             }
         }
     }
 
-    /** @return where a presence of a dragon at {@code pos} flies about, and where it emerges from and dives to: over a Well's shaft and into it, or where it rests elsewhere and below */
+    /** @return where a presence of a dragon at {@code pos} flies about, emerges and dives: over a Well's shaft, up out of its mouth and down into it, or where it rests elsewhere and below */
     private static Spot spot(ServerLevel level, BlockPos pos) {
         var state = level.getBlockState(pos);
         if (state.is(VoidworksBlocks.VOID_WELL.get())) {
             // A dragon at a Well is at its core, set in its wall: its presence is over the shaft, never in the wall.
             var shaft = WellStructure.shaft(pos, state.getValue(VoidWellBlock.FACING));
-            return new Spot(shaft.above(OVER_SHAFT), shaft.below());
+            return new Spot(shaft.above(OVER_SHAFT), shaft.above(MOUTH), shaft.above(MOUTH + RISE), shaft.below());
         }
-        return new Spot(pos, pos.below(DIVE_DEPTH));
+        var below = pos.below(DIVE_DEPTH);
+        return new Spot(pos, below, pos, below);
     }
 
     /**
      * Where a dragon's presence is shown.
      *
      * @param over where it flies about
-     * @param under where it emerges from and dives to
+     * @param emerges where it emerges, first seen
+     * @param risen where it has emerged to, and starts to fly about
+     * @param under where it dives to
      */
-    private record Spot(BlockPos over, BlockPos under) {
+    record Spot(BlockPos over, BlockPos emerges, BlockPos risen, BlockPos under) {
+
+        /** Where a presence is shown before it is the presence of a dragon: a Dragonling's, never read. */
+        static final Spot NOWHERE = new Spot(BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO);
     }
 
     /** @return the presence the dragon with {@code id} shows now, if it shows one */

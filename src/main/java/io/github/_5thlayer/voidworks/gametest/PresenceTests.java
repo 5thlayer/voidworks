@@ -205,7 +205,11 @@ final class PresenceTests {
                 .thenExecute(() -> {
                     var presence = shown.get();
                     helper.assertTrue(presence.showing() == Showing.EMERGING, "the arriving dragon is first seen " + presence.showing());
-                    helper.assertTrue(presence.getY() < shaft.getY() + 2, "the dragon emerges at " + presence.blockPosition() + ", not in the shaft");
+                    // Its body is far wider than the shaft, so it is first seen at its mouth, clear of the walls and rim.
+                    var mouth = shaft.above(DragonPresences.MOUTH);
+                    helper.assertTrue(presence.getY() >= mouth.getY() && presence.getY() < mouth.getY() + 1
+                                    && Math.abs(presence.getX() - (mouth.getX() + 0.5)) < 0.5 && Math.abs(presence.getZ() - (mouth.getZ() + 0.5)) < 0.5,
+                            "the dragon emerges at " + presence.position() + ", not at the shaft's mouth " + mouth.toShortString());
                     var arrived = record(helper, dragonId.get()).trip().map(Trip::leg);
                     helper.assertTrue(arrived.equals(Optional.of(Trip.Leg.UNLOADING)), "the dragon emerged while it is " + arrived);
                 })

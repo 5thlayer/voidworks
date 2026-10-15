@@ -68,7 +68,7 @@ import org.jspecify.annotations.Nullable;
  *       {@link VoidDragonRecord}, and this creature is then only the record's <b>presence</b>,
  *       {@link DragonPresences}' to show, about half the Ender Dragon's size, which holds no state of
  *       its own and is never saved. It follows what its record shows ({@link Showing}): it emerges
- *       from a Well's shaft as its dragon stops there, flies close about the Well while it loads or
+ *       from a Well's shaft, up out of its mouth, as its dragon stops there, flies close about the Well while it loads or
  *       unloads and wider while it rests, and dives into the shaft and is gone as its dragon sets
  *       off.</li>
  * </ul>
@@ -128,10 +128,8 @@ public final class VoidDragon extends PathfinderMob {
     private @Nullable UUID dragon;
     /** Where a presence's dragon is, which it shows; null for a Dragonling. */
     private @Nullable Place shownAt;
-    /** Where a presence flies about: over its dragon's Well, or where its dragon rests elsewhere. */
-    private BlockPos over = BlockPos.ZERO;
-    /** Where a presence emerges from and dives to: down a Well's shaft, or below where its dragon rests elsewhere. */
-    private BlockPos under = BlockPos.ZERO;
+    /** Where a presence flies about, emerges and dives, over its dragon's Well or where its dragon rests elsewhere. */
+    private DragonPresences.Spot spot = DragonPresences.Spot.NOWHERE;
     /** What a presence shows of its dragon now. */
     private Showing showing = Showing.RESTING;
     /** How long a presence has been emerging or diving. */
@@ -195,20 +193,17 @@ public final class VoidDragon extends PathfinderMob {
 
     /**
      * Makes it the presence of {@code record}, holding nothing that is saved or that the record reads, where its dragon is: emerging
-     * from {@code under}, or already flying about {@code over}.
+     * at the spot's {@code emerges}, or already flying about its {@code over}.
      *
      * @param showing what the record shows, never {@link Showing#DIVING}
-     * @param over where it flies about: over its dragon's Well, in the open air, or where its dragon rests elsewhere
-     * @param under where it emerges from, and dives to
      */
-    void showPresenceOf(VoidDragonRecord record, Showing showing, BlockPos over, BlockPos under) {
+    void showPresenceOf(VoidDragonRecord record, Showing showing, DragonPresences.Spot spot) {
         dragon = record.id();
         owner = record.owner();
         shownAt = record.rest();
-        this.over = over;
-        this.under = under;
+        this.spot = spot;
         entityData.set(DATA_GROWN, true);
-        var at = Vec3.atBottomCenterOf(showing == Showing.EMERGING ? under : over);
+        var at = Vec3.atBottomCenterOf(showing == Showing.EMERGING ? spot.emerges() : spot.over());
         snapTo(at.x, at.y, at.z, getRandom().nextFloat() * 360.0F, 0.0F);
         if (showing == Showing.EMERGING) {
             pass(Showing.EMERGING);
@@ -249,13 +244,13 @@ public final class VoidDragon extends PathfinderMob {
         return showing == Showing.EMERGING || showing == Showing.DIVING;
     }
 
-    /** It flies about {@link #over}, close while its dragon is at work and wider while it rests. */
+    /** It flies about its spot's {@code over}, close while its dragon is at work and wider while it rests. */
     private void settle(Showing showing) {
         this.showing = showing;
-        setHomeTo(over, showing == Showing.WORKING ? WORKING_RADIUS : RESTING_RADIUS);
+        setHomeTo(spot.over(), showing == Showing.WORKING ? WORKING_RADIUS : RESTING_RADIUS);
     }
 
-    /** It starts to emerge from {@link #under} or to dive to it, flying straight, with its goals set aside until it is through. */
+    /** It starts to emerge or to dive, flying straight, with its goals set aside until it is through. */
     private void pass(Showing passage) {
         showing = passage;
         passageTicks = 0;
@@ -273,9 +268,9 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** Emerging, it rises toward {@link #over} and then flies about it at work; diving, it goes down to {@link #under} and is gone into the void. */
+    /** Emerging, it rises to its spot's {@code risen} and then flies about its {@code over} at work; diving, it goes down to its {@code under} and is gone into the void. */
     private void passOn(ServerLevel level) {
-        var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? under : over).subtract(position());
+        var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? spot.under() : spot.risen()).subtract(position());
         double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
         if (way.length() > speed && ++passageTicks < MOST_PASSAGE_TICKS) {
             setDeltaMovement(way.normalize().scale(speed));
