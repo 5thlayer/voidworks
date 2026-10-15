@@ -16,7 +16,7 @@ public enum Showing {
     EMERGING,
     /** It is stopped at a Well, loading or unloading, waiting for its owner or setting its rider down, and flies close about it. */
     WORKING,
-    /** It has nothing to do, and flies about where it rests. */
+    /** It has nothing to do: at a Well, it sits astride its rim, room allowing, else flies about where it rests. */
     RESTING;
 
     /** How long after a dragon stops at a Well a presence shown there emerges, rather than being there already. */

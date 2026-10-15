@@ -74,6 +74,11 @@ final class PresenceTests {
     private static final int STOPS_Y = 64;
     private static final int EMERGES_Y = 96;
     private static final int LAYS_Y = 32;
+    /** The core of a second Well, high over the test's, in its column, which the dragon taking off sets off for. */
+    private static final BlockPos HIGH_WELL = WELL.above(24);
+
+    /** Where a block keeps the dragon from sitting: on the Well's rim, in the room its body takes there. */
+    private static final BlockPos IN_THE_ROOM = new BlockPos(6, 6, 4);
 
     /** Where the laid egg is placed, on the platform clear of the Well. */
     private static final BlockPos EGG = new BlockPos(0, 1, 4);
@@ -93,6 +98,10 @@ final class PresenceTests {
                 PresenceTests::emergesThenRests);
         tests.test("a_void_dragon_that_has_carried_enough_since_its_last_egg_lays_a_drained_dragon_egg_in_the_shaft_of_the_well_it_unloads_at",
                 TICKS, PresenceTests::laysInTheShaft);
+        tests.test("a_void_dragon_resting_at_a_well_lands_astride_its_rim_once_there_is_room_and_is_back_sitting_after_its_chunk_unloads", TICKS,
+                PresenceTests::sits);
+        tests.test("a_void_dragon_resting_at_a_well_takes_off_then_dives_as_it_sets_off_on_a_trip_the_presence_never_changes", TICKS,
+                PresenceTests::takesOffThenDives);
     }
 
     /**
@@ -286,6 +295,114 @@ final class PresenceTests {
                 .thenSucceed();
     }
 
+    /**
+     * Resting at the test's Well, the dragon flies about while a block on the rim fills the room its
+     * body takes there; the block gone, it lands astride the rim, along the core's wall, touching no
+     * block. Taken away as a chunk unloading takes it, it comes back sitting.
+     */
+    private static void sits(GameTestHelper helper) {
+        var owner = owner(helper);
+        wakeWell(helper, owner);
+        var server = helper.getLevel().getServer();
+        var seat = Vec3.atBottomCenterOf(WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).above(DragonPresences.MOUTH));
+        var dragonId = new AtomicReference<UUID>();
+        var shown = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper).isPresent(), "the Well has not woken"))
+                .thenExecute(() -> {
+                    helper.setBlock(IN_THE_ROOM, Blocks.STONE);
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Place.of(helper.getLevel(), helper.absolutePos(WELL))).id());
+                })
+                .thenWaitUntil(() -> {
+                    var presence = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(presence.isPresent() && presence.get().showing() == Showing.RESTING, "the dragon is not seen resting at the Well");
+                    shown.set(presence.get());
+                })
+                .thenIdle(60)
+                .thenExecute(() -> {
+                    helper.assertTrue(shown.get().perch() == VoidDragon.Perch.FLYING, "the dragon sits with a block in its room: it is " + shown.get().perch());
+                    var over = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).above(DragonPresences.OVER_SHAFT);
+                    helper.assertTrue(shown.get().blockPosition().closerThan(over, VoidDragon.RESTING_RADIUS + 2),
+                            "the dragon kept from sitting is at " + shown.get().blockPosition() + ", not over the shaft at " + over);
+                    helper.setBlock(IN_THE_ROOM, Blocks.AIR);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(shown.get().perch() == VoidDragon.Perch.SITTING, "the dragon has not sat down: it is " + shown.get().perch()))
+                .thenExecute(() -> {
+                    assertSitting(helper, shown.get(), seat);
+                    shown.get().remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                })
+                .thenWaitUntil(() -> {
+                    var presence = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(presence.isPresent() && presence.get() != shown.get(), "the presence taken away has not come back");
+                    // Seen the moment it is back, sooner than it lands.
+                    helper.assertTrue(presence.get().perch() == VoidDragon.Perch.SITTING, "the dragon is back " + presence.get().perch() + ", not sitting");
+                    assertSitting(helper, presence.get(), seat);
+                })
+                .thenExecute(() -> helper.setBlock(WELL, Blocks.AIR))
+                .thenSucceed();
+    }
+
+    /**
+     * Sitting at the test's Well, below its target, the dragon sets off for a reservoir high over it:
+     * its presence takes off, then dives into the shaft and is gone, and the dive its record holds is
+     * the one it set off on throughout.
+     */
+    private static void takesOffThenDives(GameTestHelper helper) {
+        var owner = owner(helper);
+        var well = wakeWell(helper, owner);
+        wakeWell(helper, owner, HIGH_WELL);
+        var server = helper.getLevel().getServer();
+        var shaft = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH);
+        var dragonId = new AtomicReference<UUID>();
+        var shown = new AtomicReference<VoidDragon>();
+        var trip = new AtomicReference<Trip>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(stored(helper).isPresent() && stored(helper, HIGH_WELL).isPresent(), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    owner.setShiftKeyDown(true);
+                    helper.useBlock(WELL, owner);
+                    helper.assertTrue(well.target() == FillTarget.QUARTER, "the Well's target is " + well.target());
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Place.of(helper.getLevel(), helper.absolutePos(WELL))).id());
+                })
+                .thenWaitUntil(() -> {
+                    var presence = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(presence.isPresent() && presence.get().perch() == VoidDragon.Perch.SITTING, "the dragon is not seen sitting at the Well");
+                    shown.set(presence.get());
+                })
+                .thenExecute(() -> deposit(helper, HIGH_WELL, HELD))
+                .thenWaitUntil(() -> helper.assertTrue(shown.get().perch() == VoidDragon.Perch.TAKING_OFF, "the dragon has not taken off: it is " + shown.get().perch()))
+                .thenExecute(() -> {
+                    var set = record(helper, dragonId.get()).trip();
+                    helper.assertTrue(set.map(Trip::leg).equals(Optional.of(Trip.Leg.TO_SOURCE)), "the dragon took off while it is " + set);
+                    helper.assertTrue(shown.get().showing() == Showing.RESTING, "the dragon taking off is already " + shown.get().showing());
+                    trip.set(set.get());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(shown.get().showing() == Showing.DIVING, "the dragon that took off has not dived"))
+                .thenExecute(() -> {
+                    helper.assertTrue(shown.get().getY() >= shaft.getY() + DragonPresences.MOUTH, "the dragon dived from " + shown.get().position() + ", low in its Well");
+                    // The dive counts on as it goes; the presence taking off leaves its leg and its end as they were.
+                    var now = record(helper, dragonId.get()).trip();
+                    helper.assertTrue(now.map(Trip::leg).equals(Optional.of(trip.get().leg())) && now.map(Trip::until).equals(Optional.of(trip.get().until())),
+                            "the dive changed while the presence took off: " + trip.get() + ", now " + now);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(shown.get().isRemoved(), "the diving presence is still here"))
+                .thenExecute(() -> {
+                    helper.assertTrue(shown.get().getY() < shaft.getY(), "the presence was gone at " + shown.get().blockPosition() + ", not down its shaft");
+                    helper.setBlock(WELL, Blocks.AIR);
+                    helper.setBlock(HIGH_WELL, Blocks.AIR);
+                })
+                .thenSucceed();
+    }
+
+    /** A presence sits on its seat, along the core's wall, its body touching no block. */
+    private static void assertSitting(GameTestHelper helper, VoidDragon presence, Vec3 seat) {
+        helper.assertTrue(presence.position().distanceTo(seat) < 0.01, "the dragon sits at " + presence.position() + ", not on its seat " + seat);
+        helper.assertTrue(Direction.fromYRot(presence.perchYaw()).getAxis() == Direction.Axis.X,
+                "the dragon sits facing " + Direction.fromYRot(presence.perchYaw()) + ", not along the core's wall");
+        helper.assertTrue(!helper.getLevel().getBlockCollisions(presence, presence.getBoundingBox()).iterator().hasNext(),
+                "the sitting dragon's body is in a block");
+    }
+
     /** Makes {@code under}, in a chunk nothing loads, {@code owner}'s reservoir holding {@link #HELD} motes of {@link #GRADE}. */
     private static void reservoir(GameTestHelper helper, ServerPlayer owner, Place under) {
         var nether = under.level(helper.getLevel().getServer());
@@ -301,11 +418,12 @@ final class PresenceTests {
         helper.setBlock(WELL, Blocks.AIR);
     }
 
-    /** At work, a presence flies close about the open air over the shaft, never in the core's wall. */
+    /** At work, a presence flies close about the open air over the shaft, never in the core's wall, and never lands. */
     private static void assertOverTheShaft(GameTestHelper helper, VoidDragon presence, VoidWellBlockEntity well) {
         var over = WellStructure.shaft(well.getBlockPos(), Direction.NORTH).above(DragonPresences.OVER_SHAFT);
         helper.assertTrue(presence.blockPosition().closerThan(over, VoidDragon.WORKING_RADIUS + 2),
                 "the presence at work is at " + presence.blockPosition() + ", not over the shaft at " + over);
+        helper.assertTrue(presence.perch() == VoidDragon.Perch.FLYING, "the presence at work is " + presence.perch() + ", not in the air");
     }
 
     /** The test's Well, whole and owned by {@code owner}, at no price, so it wakes on its first look and joins a network of its own. */

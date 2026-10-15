@@ -99,6 +99,49 @@ final class RideTests {
                 TICKS, RideTests::addedStop);
         tests.testAlone("its_owner_standing_in_a_wells_shaft_calls_a_void_dragon_there_which_waits_while_they_stay", TICKS, RideTests::calls);
         tests.testAlone("a_rider_leaving_the_game_is_set_down_first_on_the_rim_of_the_well_the_dragon_is_at_or_diving_to", TICKS, RideTests::leaves);
+        tests.testAlone("a_void_dragon_resting_at_a_well_takes_off_to_hover_as_its_owner_mounts_it_and_lands_again_once_they_get_off", TICKS,
+                RideTests::takesOffForItsRider);
+    }
+
+    /**
+     * Sitting at the test's Well, the dragon takes off as its owner mounts it and hovers over the shaft
+     * for as long as they ride; sneaking, they are set down on the rim, and it lands again.
+     */
+    private static void takesOffForItsRider(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var risen = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).above(DragonPresences.MOUTH + DragonPresences.RISE);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id()))
+                .thenWaitUntil(() -> {
+                    var shown = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(shown.isPresent() && shown.get().perch() == VoidDragon.Perch.SITTING, "the dragon is not seen sitting at the Well");
+                    presence.set(shown.get());
+                })
+                .thenExecute(() -> {
+                    presence.get().interact(owner, InteractionHand.MAIN_HAND, presence.get().position());
+                    helper.assertTrue(owner.getVehicle() == presence.get(), "its owner did not mount the sitting dragon");
+                    helper.assertTrue(presence.get().perch() == VoidDragon.Perch.TAKING_OFF, "the mounted dragon is " + presence.get().perch() + ", not taking off");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(presence.get().perch() == VoidDragon.Perch.FLYING, "the mounted dragon has not risen"))
+                .thenIdle(60)
+                .thenExecute(() -> {
+                    helper.assertTrue(presence.get().perch() == VoidDragon.Perch.FLYING && Math.abs(presence.get().getY() - risen.getY()) < 0.5,
+                            "the ridden dragon is " + presence.get().perch() + " at " + presence.get().position() + ", not hovering over the shaft at " + risen);
+                    owner.setShiftKeyDown(true);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(!owner.isPassenger(), "sneaking did not get its rider off"))
+                .thenExecute(() -> {
+                    assertOnTheRim(helper, owner, WELL);
+                    owner.setShiftKeyDown(false);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(presence.get().perch() == VoidDragon.Perch.SITTING, "the dragon its rider got off has not landed again"))
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
     }
 
     /**
@@ -341,7 +384,9 @@ final class RideTests {
                 .thenExecute(() -> {
                     helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.WAITING)),
                             "the dragon left while its owner stays in the shaft: it is " + leg(helper, dragonId.get()));
-                    helper.assertTrue(DragonPresences.presence(server, dragonId.get()).isPresent(), "the dragon waiting at the Well is not seen");
+                    var waiting = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(waiting.isPresent(), "the dragon waiting at the Well is not seen");
+                    helper.assertTrue(waiting.get().perch() == VoidDragon.Perch.FLYING, "the dragon waiting for its owner is " + waiting.get().perch() + ", not in the air");
                     var outside = helper.absoluteVec(new Vec3(4.5, 1, 0.5));
                     owner.setPos(outside.x, outside.y, outside.z);
                 })

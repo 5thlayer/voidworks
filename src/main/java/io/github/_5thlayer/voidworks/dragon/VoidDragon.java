@@ -72,10 +72,11 @@ import org.jspecify.annotations.Nullable;
  *       {@link VoidDragonRecord}, and this creature is then only the record's <b>presence</b>,
  *       {@link DragonPresences}' to show, about half the Ender Dragon's size, which holds no state of
  *       its own and is never saved. It follows what its record shows ({@link Showing}): it emerges
- *       from a Well's shaft, up out of its mouth, as its dragon stops there, flies close about the Well while it loads or
- *       unloads and wider while it rests, and dives into the shaft and is gone as its dragon sets
- *       off. Its owner rides it from a Well, where it hovers until they dive or get off, and it
- *       holds them down the shaft through the dive ({@link DragonRiding}).</li>
+ *       from a Well's shaft, up out of its mouth, as its dragon stops there, flies close about
+ *       the Well while it loads or unloads, lands and sits astride its rim while it rests
+ *       ({@link Perch}), and takes off, dives into the shaft and is gone as its dragon sets off.
+ *       Its owner rides it from a Well, where it hovers until they dive or get off, and it holds
+ *       them down the shaft through the dive ({@link DragonRiding}).</li>
  * </ul>
  *
  * <p>Nothing hurts either, but a command's kill and the void below the world, which nothing is
@@ -120,9 +121,33 @@ public final class VoidDragon extends PathfinderMob {
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
     private static final float MAX_TURN = 3.0F;
 
+    /** How fast, in blocks a tick, a presence comes down to its seat. */
+    private static final double LAND_SPEED = 0.25;
+
+    /** How fast, in blocks a tick, a presence rises off its seat. */
+    private static final double TAKE_OFF_SPEED = 0.3;
+
+    /** How far above its seat a presence comes in to land, before it comes straight down. */
+    private static final int LANDING_HEIGHT = 2;
+
+    /** How near, in blocks across, a presence coming in to land must be over its seat before it comes down onto it. */
+    private static final double OVER_THE_SEAT = 0.5;
+
+    /** The most ticks a presence takes to land, should something keep it from its seat; it flies about again and tries later. */
+    private static final int MOST_LANDING_TICKS = 200;
+
+    /** The most ticks a presence takes to take off, should something keep it down; it goes on as if it were up, so a dive is never held up. */
+    private static final int MOST_TAKE_OFF_TICKS = 40;
+
     private static final EntityDataAccessor<Boolean> DATA_GROWN = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
     /** Whether a presence carries its rider through its dragon's dive, which it holds them in until it sets them down: synced, so every client seats them down the shaft. */
     private static final EntityDataAccessor<Boolean> DATA_CARRYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
+    /** Where a presence is as to its seat ({@link Perch}): synced, so every client poses it sitting, landing or taking off. */
+    private static final EntityDataAccessor<Byte> DATA_PERCH = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
+    /** The heading, as a mob's, a presence keeps as it lands, sits and takes off: synced, since its model follows it rather than its body. */
+    private static final EntityDataAccessor<Float> DATA_PERCH_YAW = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.FLOAT);
+    /** Where a presence lands and sits, while it does: synced, for how far its model's neck has to settle. */
+    private static final EntityDataAccessor<Optional<BlockPos>> DATA_SEAT = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
 
     private static final String OWNER_KEY = "owner";
     private static final String TICKS_TO_GROW_KEY = "ticks_to_grow";
@@ -149,6 +174,14 @@ public final class VoidDragon extends PathfinderMob {
     private Showing showing = Showing.RESTING;
     /** How long a presence has been emerging or diving. */
     private int passageTicks;
+    /** How long a presence has been landing or taking off. */
+    private int perchTicks;
+    /** Whether a presence taking off dives once it is up, its dragon having set off. */
+    private boolean diveOnceUp;
+    /** Where a presence lands, sits and takes off from; null while it flies. */
+    private @Nullable Seat seat;
+    /** The heading, as a mob's, a presence sits at on its seat, along the core's wall; NaN until it is picked, over the seat. */
+    private float seatYaw = Float.NaN;
     /** Whether a presence emerging brings up the rider its dragon carried through its dive, to set them down once out. */
     private boolean bringing;
     /** The Well its rider has picked to dive to, by strafing; null until they pick one. */
@@ -171,10 +204,13 @@ public final class VoidDragon extends PathfinderMob {
                 .add(Attributes.TEMPT_RANGE, 16.0);
     }
 
-    /** It flies, up and down too, as an Allay does, at the speed its flight gives it; a presence emerging or diving goes straight through anything in its way. */
+    /**
+     * It flies, up and down too, as an Allay does, at the speed its flight gives it; a presence emerging or diving goes straight through anything
+     * in its way, and one landing, sitting or taking off moves as it is set to, never through a block.
+     */
     @Override
     public void travel(Vec3 input) {
-        if (passing()) {
+        if (passing() || perch() != Perch.FLYING) {
             move(MoverType.SELF, getDeltaMovement());
             return;
         }
@@ -194,6 +230,9 @@ public final class VoidDragon extends PathfinderMob {
         super.defineSynchedData(entityData);
         entityData.define(DATA_GROWN, false);
         entityData.define(DATA_CARRYING, false);
+        entityData.define(DATA_PERCH, (byte) Perch.FLYING.ordinal());
+        entityData.define(DATA_PERCH_YAW, 0.0F);
+        entityData.define(DATA_SEAT, Optional.empty());
     }
 
     @Override
@@ -229,9 +268,20 @@ public final class VoidDragon extends PathfinderMob {
         snapTo(at.x, at.y, at.z, getRandom().nextFloat() * 360.0F, 0.0F);
         if (showing == Showing.EMERGING) {
             pass(Showing.EMERGING);
-        } else {
-            follow(showing);
+            return;
         }
+        // Back at a Well its dragon rests at, it is sitting already.
+        var free = spot.seat().filter(this::roomToSit);
+        if (showing == Showing.RESTING && free.isPresent()) {
+            settle(Showing.RESTING);
+            perchOn(free.get(), Perch.SITTING);
+            seatYaw = free.get().headWay(getYRot()).toYRot();
+            var on = Vec3.atBottomCenterOf(free.get().pos());
+            snapTo(on.x, on.y, on.z, seatYaw, 0.0F);
+            face(seatYaw);
+            return;
+        }
+        follow(showing);
     }
 
     /** @return where the dragon whose presence it is was when it was shown; empty for a Dragonling */
@@ -246,18 +296,30 @@ public final class VoidDragon extends PathfinderMob {
 
     /**
      * Follows what its dragon's record shows now: it flies close about the Well while its dragon is at
-     * work there, wider while it rests, and dives away as its dragon dives. Emerging, it carries on
-     * until it is out, and diving, until it is gone.
+     * work there, lands on it while it rests, room allowing, else flies about wider, and dives away as
+     * its dragon dives, taking off first if it sits. Emerging, it carries on until it is out, and
+     * diving, until it is gone.
      */
     void follow(Showing next) {
         if (showing == Showing.DIVING || next == Showing.DIVING) {
             if (showing != Showing.DIVING) {
-                pass(Showing.DIVING);
+                if (perch() == Perch.FLYING) {
+                    pass(Showing.DIVING);
+                } else {
+                    takeOff(true);
+                }
             }
             return;
         }
-        if (showing != Showing.EMERGING) {
-            settle(next == Showing.RESTING ? Showing.RESTING : Showing.WORKING);
+        if (showing == Showing.EMERGING) {
+            return;
+        }
+        settle(next == Showing.RESTING ? Showing.RESTING : Showing.WORKING);
+        boolean room = showing == Showing.RESTING && spot.seat().filter(this::roomToSit).isPresent();
+        if (perch() == Perch.FLYING && room && !isVehicle()) {
+            perchOn(spot.seat().get(), Perch.LANDING);
+        } else if (perch().onTheSeat() && !room) {
+            takeOff(false);
         }
     }
 
@@ -271,6 +333,132 @@ public final class VoidDragon extends PathfinderMob {
         return showing == Showing.EMERGING || showing == Showing.DIVING;
     }
 
+    /** @return where it is as to its seat: flying, or landing on it, sitting on it or taking off from it */
+    public Perch perch() {
+        return Perch.values()[entityData.get(DATA_PERCH)];
+    }
+
+    /** @return the heading, as a mob's, it keeps as it lands, sits and takes off */
+    public float perchYaw() {
+        return entityData.get(DATA_PERCH_YAW);
+    }
+
+    /** @return where it lands and sits, while it lands, sits or takes off */
+    public Optional<BlockPos> seatPos() {
+        return entityData.get(DATA_SEAT);
+    }
+
+    private void setPerch(Perch perch) {
+        entityData.set(DATA_PERCH, (byte) perch.ordinal());
+    }
+
+    /** @return whether nothing but what can be built over, such as air and grass, fills where its body would be on {@code seat} */
+    private boolean roomToSit(Seat seat) {
+        var body = getDimensions(getPose()).makeBoundingBox(Vec3.atBottomCenterOf(seat.pos())).deflate(1.0E-4);
+        return BlockPos.betweenClosedStream(body).allMatch(pos -> level().getBlockState(pos).canBeReplaced());
+    }
+
+    /** It keeps to {@code seat}, coming in to land on it or sitting on it already, as {@code perch} says, its wandering set aside. */
+    private void perchOn(Seat seat, Perch perch) {
+        this.seat = seat;
+        seatYaw = Float.NaN;
+        perchTicks = 0;
+        entityData.set(DATA_SEAT, Optional.of(seat.pos()));
+        setPerch(perch);
+        getNavigation().stop();
+        moveControl.setWait();
+        goalSelector.disableControlFlag(Goal.Flag.MOVE);
+    }
+
+    /** It rises off its seat, then dives if {@code dive} or its dragon set off already, else hovers for its rider or flies about. */
+    private void takeOff(boolean dive) {
+        if (perch() != Perch.TAKING_OFF) {
+            perchTicks = 0;
+            diveOnceUp = false;
+        }
+        diveOnceUp |= dive;
+        setPerch(Perch.TAKING_OFF);
+    }
+
+    /**
+     * Landing, it flies to over its seat and comes straight down onto it, or gives up and flies about if
+     * it cannot get there; sitting, it stays put; taking off, it rises straight up to its spot's {@code risen},
+     * and then dives, hovers for its rider or flies about.
+     */
+    private void keepPerch() {
+        if (seat == null) {
+            return;
+        }
+        var on = Vec3.atBottomCenterOf(seat.pos());
+        switch (perch()) {
+            case LANDING -> {
+                if (++perchTicks > MOST_LANDING_TICKS) {
+                    fly();
+                    return;
+                }
+                boolean over = position().subtract(on).horizontalDistance() < OVER_THE_SEAT;
+                var way = (over ? on : on.add(0, LANDING_HEIGHT, 0)).subtract(position());
+                // It flies in head first, and once over its seat comes down along the wall, its head the way nearer its heading.
+                if (over && Float.isNaN(seatYaw)) {
+                    seatYaw = seat.headWay(getYRot()).toYRot();
+                }
+                face(over || way.horizontalDistanceSqr() < 1.0E-6 ? seatYaw : (float) (Mth.atan2(way.z, way.x) * Mth.RAD_TO_DEG) - 90.0F);
+                if (over && way.lengthSqr() < 1.0E-4) {
+                    setDeltaMovement(Vec3.ZERO);
+                    setPerch(Perch.SITTING);
+                    return;
+                }
+                setDeltaMovement(way.length() > LAND_SPEED ? way.normalize().scale(LAND_SPEED) : way);
+            }
+            case SITTING -> {
+                face(seatYaw);
+                setDeltaMovement(Vec3.ZERO);
+            }
+            case TAKING_OFF -> {
+                if (!Float.isNaN(seatYaw)) {
+                    face(seatYaw);
+                }
+                double up = spot.risen().getY() - getY();
+                if (up > TAKE_OFF_SPEED && ++perchTicks <= MOST_TAKE_OFF_TICKS) {
+                    setDeltaMovement(0, TAKE_OFF_SPEED, 0);
+                    return;
+                }
+                setDeltaMovement(Vec3.ZERO);
+                if (diveOnceUp) {
+                    pass(Showing.DIVING);
+                } else {
+                    fly();
+                }
+            }
+            case FLYING -> {
+            }
+        }
+    }
+
+    /** It turns its body and heading to {@code yaw}, as a mob's. */
+    private void face(float yaw) {
+        entityData.set(DATA_PERCH_YAW, yaw);
+        setYRot(yaw);
+        setYBodyRot(yaw);
+    }
+
+    /** It flies again, off its seat: about its spot, or hovering where it is while ridden. */
+    private void fly() {
+        leaveTheSeat();
+        if (!isVehicle()) {
+            goalSelector.enableControlFlag(Goal.Flag.MOVE);
+        }
+    }
+
+    /** It is on the wing, its seat let go. */
+    private void leaveTheSeat() {
+        setPerch(Perch.FLYING);
+        entityData.set(DATA_SEAT, Optional.empty());
+        seat = null;
+        seatYaw = Float.NaN;
+        diveOnceUp = false;
+    }
+
     /** It flies about its spot's {@code over}, close while its dragon is at work and wider while it rests. */
     private void settle(Showing showing) {
         this.showing = showing;
@@ -281,6 +469,7 @@ public final class VoidDragon extends PathfinderMob {
     private void pass(Showing passage) {
         showing = passage;
         passageTicks = 0;
+        leaveTheSeat();
         noPhysics = true;
         getNavigation().stop();
         moveControl.setWait();
@@ -417,7 +606,13 @@ public final class VoidDragon extends PathfinderMob {
             }
             if (passing()) {
                 passOn(level);
-            } else if (getFirstPassenger() instanceof ServerPlayer rider) {
+                return;
+            }
+            keepPerch();
+            if (passing()) {
+                return;
+            }
+            if (getFirstPassenger() instanceof ServerPlayer rider) {
                 DragonRiding.steer(level, this, rider);
             } else if (!grown() && owner != null && --ticksToGrow <= 0) {
                 growUp(level);
@@ -431,8 +626,8 @@ public final class VoidDragon extends PathfinderMob {
      * at most {@link #MAX_TURN} degrees a tick and the height eases toward its own.
      */
     private void recordFlight() {
-        // The Ender Dragon's model faces the other way from a mob's heading, as the Ender Dragon flies.
-        float heading = Mth.wrapDegrees(yBodyRot + 180.0F);
+        // The Ender Dragon's model faces the other way from a mob's heading, as the Ender Dragon flies; off the wing, it keeps to its perch's.
+        float heading = Mth.wrapDegrees((perch() == Perch.FLYING ? yBodyRot : perchYaw()) + 180.0F);
         if (Float.isNaN(flightYaw)) {
             flightYaw = heading;
             flightY = getY();
@@ -523,7 +718,7 @@ public final class VoidDragon extends PathfinderMob {
         return grown() && super.canAddPassenger(passenger);
     }
 
-    /** Ridden, it hovers where it is, its wandering set aside until its rider gets off. */
+    /** Ridden, it hovers where it is, its wandering set aside until its rider gets off; sitting or landing, it takes off to hover. */
     @Override
     protected void addPassenger(Entity passenger) {
         super.addPassenger(passenger);
@@ -531,12 +726,28 @@ public final class VoidDragon extends PathfinderMob {
         moveControl.setWait();
         setDeltaMovement(Vec3.ZERO);
         goalSelector.disableControlFlag(Goal.Flag.MOVE);
+        if (perch().onTheSeat()) {
+            takeOff(false);
+        }
     }
 
+    /**
+     * Its goals move it only while it flies free, neither emerging, diving, landing, sitting, taking off
+     * nor ridden, and turn its head but while it emerges or dives. A mob sets its goals free again every
+     * few ticks, so they are set by what it is doing.
+     */
+    @Override
+    protected void updateControlFlags() {
+        super.updateControlFlags();
+        goalSelector.setControlFlag(Goal.Flag.MOVE, !passing() && perch() == Perch.FLYING && !isVehicle());
+        goalSelector.setControlFlag(Goal.Flag.LOOK, !passing());
+    }
+
+    /** Its rider off, it flies about again, and lands again if its dragon still rests. */
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
-        if (!passing()) {
+        if (!passing() && perch() == Perch.FLYING) {
             goalSelector.enableControlFlag(Goal.Flag.MOVE);
         }
     }
@@ -612,6 +823,28 @@ public final class VoidDragon extends PathfinderMob {
         owner = input.read(OWNER_KEY, UUIDUtil.CODEC).orElse(null);
         // One hatched before Dragonlings grew starts growing now.
         ticksToGrow = input.getLong(TICKS_TO_GROW_KEY).orElseGet(() -> (long) VoidworksConfig.dragonlingGrowTicks());
+    }
+
+    /** Where a presence is as to its seat on a Well its dragon rests at. */
+    public enum Perch {
+        /** On the wing, as it flies about, emerges, dives or hovers for its rider. */
+        FLYING,
+        /** Coming in over its seat and down onto it. */
+        LANDING,
+        /** Sitting on its seat, in the Ender Dragon's sitting pose. */
+        SITTING,
+        /** Rising off its seat, to dive, hover for its rider or fly about. */
+        TAKING_OFF;
+
+        /** @return whether it is coming down onto its seat or sitting on it */
+        public boolean onTheSeat() {
+            return this == LANDING || this == SITTING;
+        }
+
+        /** @return whether it is landing or taking off, its neck easing between flight and sitting */
+        public boolean settling() {
+            return this == LANDING || this == TAKING_OFF;
+        }
     }
 
     /** A Dragonling's goal, which a presence never pursues. */

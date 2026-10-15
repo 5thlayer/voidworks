@@ -23,7 +23,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * no state of its own, where its dragon is while that place is loaded and ticking (ADR 0005). The
  * presence follows what the record shows ({@link Showing}) and never drives it: it emerges from a
  * Well's shaft, first seen at its mouth, as its dragon stops there, flies about the Well while it
- * loads, unloads and rests, and dives into the shaft and is gone as its dragon sets off. A dragon that rests where it grew up
+ * loads and unloads, lands and sits astride its rim while it rests, and takes off and dives into the
+ * shaft and is gone as its dragon sets off. A dragon that rests where it grew up
  * is shown there. A presence is never saved, so a chunk unloading takes it away and loses nothing,
  * and it comes back once the place is loaded again, mid-stop or resting; one dragon never shows two.
  * A presence that carried its rider through a dive is gone once its dragon has stopped, and the one
@@ -46,7 +47,7 @@ public final class DragonPresences {
     public static final int MOUTH = 3;
 
     /** How far above a Well's shaft's mouth an emerging presence climbs before it flies about at work. */
-    private static final int RISE = 4;
+    public static final int RISE = 4;
 
     /** How far below where a dragon rests away from any Well its presence dives before it is gone. */
     private static final int DIVE_DEPTH = 8;
@@ -107,7 +108,8 @@ public final class DragonPresences {
                 continue;
             }
             var level = dragon.rest().level(server);
-            if (level == null) {
+            // Reading the Well there would load its chunk, which a dragon never does (ADR 0005).
+            if (level == null || !level.isLoaded(dragon.rest().pos())) {
                 continue;
             }
             var spot = spot(level, dragon.rest().pos());
@@ -142,16 +144,20 @@ public final class DragonPresences {
         DragonRiding.handOver(carried, presence, level, spot.emerges());
     }
 
-    /** @return where a presence of a dragon at {@code pos} flies about, emerges and dives: over a Well's shaft, up out of its mouth and down into it, or where it rests elsewhere and below */
+    /**
+     * @return where a presence of a dragon at {@code pos} flies about, emerges, dives and sits: over a Well's shaft, up out of its mouth and down
+     *         into it, and astride its rim, or where it rests elsewhere and below, with nowhere to sit
+     */
     private static Spot spot(ServerLevel level, BlockPos pos) {
         var state = level.getBlockState(pos);
         if (state.is(VoidworksBlocks.VOID_WELL.get())) {
             // A dragon at a Well is at its core, set in its wall: its presence is over the shaft, never in the wall.
-            var shaft = WellStructure.shaft(pos, state.getValue(VoidWellBlock.FACING));
-            return new Spot(shaft.above(OVER_SHAFT), shaft.above(MOUTH), shaft.above(MOUTH + RISE), shaft.below());
+            var facing = state.getValue(VoidWellBlock.FACING);
+            var shaft = WellStructure.shaft(pos, facing);
+            return new Spot(shaft.above(OVER_SHAFT), shaft.above(MOUTH), shaft.above(MOUTH + RISE), shaft.below(), Optional.of(Seat.of(pos, facing)));
         }
         var below = pos.below(DIVE_DEPTH);
-        return new Spot(pos, below, pos, below);
+        return new Spot(pos, below, pos, below, Optional.empty());
     }
 
     /**
@@ -161,11 +167,12 @@ public final class DragonPresences {
      * @param emerges where it emerges, first seen
      * @param risen where it has emerged to, and starts to fly about
      * @param under where it dives to
+     * @param seat where it sits while its dragon rests, at a Well only
      */
-    record Spot(BlockPos over, BlockPos emerges, BlockPos risen, BlockPos under) {
+    record Spot(BlockPos over, BlockPos emerges, BlockPos risen, BlockPos under, Optional<Seat> seat) {
 
         /** Where a presence is shown before it is the presence of a dragon: a Dragonling's, never read. */
-        static final Spot NOWHERE = new Spot(BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO);
+        static final Spot NOWHERE = new Spot(BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, Optional.empty());
     }
 
     /** @return whether the dragon with {@code id} shows a presence its owner rides at its stop, before any dive */

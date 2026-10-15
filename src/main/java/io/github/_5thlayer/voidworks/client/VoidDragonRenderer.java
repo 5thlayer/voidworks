@@ -21,13 +21,16 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Draws a Void Dragon as the vanilla Ender Dragon's model, baked from the player's own game, at
  * {@link #DRAGONLING_SCALE} of its size for a Dragonling and {@link VoidDragon#GROWN_SCALE} times that
- * for a grown dragon's presence, posed from its flight history and wingbeat as the Ender
- * Dragon is. Nothing of Mojang's ships in the jar: it wears the vanilla texture, read from the
- * player's game, tinted the void's purple, and has no texture of its own.
+ * for a grown dragon's presence, posed from its flight history and wingbeat as the Ender Dragon is,
+ * and sitting, landing and taking off as the Ender Dragon does on its portal. Nothing of Mojang's
+ * ships in the jar: it wears the vanilla texture, read from the player's game, tinted the void's
+ * purple, and has no texture of its own.
  */
 final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRenderer.State> {
 
@@ -38,6 +41,12 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     private static final RenderType EYES = RenderTypes.eyes(Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon_eyes.png"));
     /** The void's purple, which tints the vanilla texture. */
     private static final int TINT = ARGB.color(255, 190, 130, 255);
+
+    /** How many of its flight history's latest samples its model's neck and head read. */
+    private static final int NECK = 6;
+
+    /** How far, in degrees, a sitting presence turns its head from its body toward what it looks at. */
+    private static final float MOST_LOOK = 50.0F;
 
     private final EnderDragonModel model;
 
@@ -64,6 +73,33 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
         state.flightHistory.copyFrom(dragon.flightHistory);
+        var perch = dragon.perch();
+        state.isSitting = perch == VoidDragon.Perch.SITTING;
+        state.isLandingOrTakingOff = perch.settling();
+        // How far it is from its seat, as the Ender Dragon's from its portal, at the Ender Dragon's size, which its neck eases by.
+        var at = dragon.getPosition(partialTicks);
+        state.distanceToEgg = dragon.seatPos().map(seat -> Vec3.atBottomCenterOf(seat).distanceToSqr(at)).orElse(0.0) / (state.scale * state.scale);
+        if (state.isSitting) {
+            lookFromTheSeat(state, Mth.rotLerp(partialTicks, dragon.yHeadRotO, dragon.yHeadRot));
+        }
+    }
+
+    /**
+     * Sitting, its body keeps still along the Well and its neck turns its head toward {@code look}, a mob's
+     * heading: its model reads the neck from the latest samples of its flight history, so these are made
+     * to bend from its body's heading to where it looks.
+     */
+    private static void lookFromTheSeat(State state, float look) {
+        var now = state.flightHistory.get(0);
+        float heading = now.yRot();
+        // The Ender Dragon's model faces the other way from a mob's heading.
+        float turn = Mth.clamp(Mth.wrapDegrees(look + 180.0F - heading), -MOST_LOOK, MOST_LOOK);
+        for (int i = 0; i < DragonFlightHistory.LENGTH - NECK; i++) {
+            state.flightHistory.record(now.y(), heading);
+        }
+        for (int i = 0; i < NECK; i++) {
+            state.flightHistory.record(now.y(), heading + turn * i / (NECK - 1));
+        }
     }
 
     /**
