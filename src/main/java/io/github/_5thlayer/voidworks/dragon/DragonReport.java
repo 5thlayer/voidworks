@@ -32,7 +32,7 @@ import net.minecraft.server.players.NameAndId;
  *
  * @param doing what it is doing, as its trip's leg says
  * @param bound the name of the Well it is bound for, or unnamed, its dimension and position; empty
- *        while it rests, or unloads at that Well
+ *        while it rests, unloads at that Well, waits for its owner or sets its rider down
  * @param load the motes it carries, grade to count
  * @param health its health, of {@link VoidDragonRecord#FULL_HEALTH}
  * @param owner the name of the player who owns it, empty when the server has none for them
@@ -61,7 +61,9 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
      */
     public static DragonReport of(VoidDragonRecord dragon, Function<Place, Component> labels, Optional<String> owner) {
         var doing = Doing.of(dragon.trip());
-        var bound = dragon.trip().filter(trip -> doing != Doing.UNLOADING).map(Trip::destination).map(labels);
+        // Stopped at a Well other than where it loads, it is there for that Well, or for its owner.
+        var bound = dragon.trip().filter(trip -> doing != Doing.UNLOADING && doing != Doing.WAITING && doing != Doing.SETTING_DOWN)
+                .map(Trip::destination).map(labels);
         return new DragonReport(doing, bound, dragon.load(), dragon.health(), owner);
     }
 

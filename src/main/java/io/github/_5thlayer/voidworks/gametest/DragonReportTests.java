@@ -79,12 +79,12 @@ final class DragonReportTests {
                             "loaded and weakened, the dragon shows " + changed);
                     // Bound for a named Well, read before Routing steps again, then put back to rest.
                     SavedVoidWells.of(server).put(new VoidWells.Entry(there, owner, FillTarget.QUARTER, Optional.of(Component.literal("Smeltery"))));
-                    var trip = new Trip(Optional.empty(), there, 30, false, Trip.Leg.WAITING, Long.MAX_VALUE, 0, 0, Optional.of(here));
+                    var trip = new Trip(Optional.empty(), there, 30, false, Trip.Leg.LOADING, Long.MAX_VALUE, 0, 0);
                     var now = SavedVoidDragons.of(server).get(d.id()).orElseThrow();
                     SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), now.health(), d.rest(), now.load(), Optional.of(trip), 0));
                     var bound = report(helper, presence.get());
-                    helper.assertTrue(bound.doing() == DragonReport.Doing.WAITING && bound.bound().equals(Optional.of(Component.literal("Smeltery"))),
-                            "waiting, bound for the named Well, the dragon shows " + bound);
+                    helper.assertTrue(bound.doing() == DragonReport.Doing.LOADING && bound.bound().equals(Optional.of(Component.literal("Smeltery"))),
+                            "loading, bound for the named Well, the dragon shows " + bound);
                     SavedVoidDragons.of(server).removeAt(here::equals);
                     SavedVoidWells.of(server).remove(there);
                 })

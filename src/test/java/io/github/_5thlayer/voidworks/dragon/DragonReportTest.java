@@ -74,9 +74,15 @@ class DragonReportTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Trip.Leg.class, names = {"TO_SOURCE", "LOADING", "TO_DESTINATION", "TO_CALL", "WAITING", "TO_PICKED", "SETTING_DOWN"})
+    @EnumSource(value = Trip.Leg.class, names = {"TO_SOURCE", "LOADING", "TO_DESTINATION", "TO_CALL", "TO_PICKED"})
     void onATripItIsBoundForItsDestinationByName(Trip.Leg leg) {
         assertEquals(Optional.of(THERE_NAME), report(dragon(trip(leg), new TreeMap<>(), VoidDragonRecord.FULL_HEALTH), Optional.empty()).bound());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Trip.Leg.class, names = {"WAITING", "SETTING_DOWN"})
+    void waitingForItsOwnerOrSettingItsRiderDownItShowsNoWellItIsBoundFor(Trip.Leg leg) {
+        assertEquals(Optional.empty(), report(dragon(trip(leg), new TreeMap<>(), VoidDragonRecord.FULL_HEALTH), Optional.empty()).bound());
     }
 
     @Test
