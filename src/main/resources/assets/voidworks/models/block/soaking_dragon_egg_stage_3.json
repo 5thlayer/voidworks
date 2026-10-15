@@ -1,0 +1,7 @@
+{
+  "parent": "voidworks:block/soaking_dragon_egg",
+  "textures": {
+    "shell": "voidworks:block/drained_dragon_egg",
+    "cracks": "voidworks:block/drained_dragon_egg_cracks_3"
+  }
+}

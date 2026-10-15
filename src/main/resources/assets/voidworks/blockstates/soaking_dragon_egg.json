@@ -1,10 +1,16 @@
 {
   "variants": {
-    "egg=dragon_egg": {
-      "model": "minecraft:block/dragon_egg"
+    "stage=0": {
+      "model": "voidworks:block/soaking_dragon_egg_stage_0"
     },
-    "egg=drained": {
-      "model": "voidworks:block/drained_dragon_egg"
+    "stage=1": {
+      "model": "voidworks:block/soaking_dragon_egg_stage_1"
+    },
+    "stage=2": {
+      "model": "voidworks:block/soaking_dragon_egg_stage_2"
+    },
+    "stage=3": {
+      "model": "voidworks:block/soaking_dragon_egg_stage_3"
     }
   }
 }

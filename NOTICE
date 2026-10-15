@@ -186,3 +186,19 @@ Source:  https://github.com/malcolmriley/unused-textures
          works and still dark while it is Dormant, copying the plasma's animation beside its sprite.
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
+
+Drained Dragon Egg sprites
+--------------------------
+
+Files:   data/art/log_bonetree_sides.png
+         src/main/resources/assets/voidworks/textures/block/drained_dragon_egg.png
+         src/main/resources/assets/voidworks/textures/block/drained_dragon_egg_cracks_*.png
+Author:  Malcolm Riley
+Source:  https://github.com/malcolmriley/unused-textures
+         blocks/log_bonetree_sides.png at commit 9218cb8997bf1dc83617bd7748acf44a16c19c42. The file
+         under data/art/ is the unmodified copy. The egg's shell is built from it by
+         scripts/build-textures.py, which recolours the bonetree's bark into a washed-out end stone
+         white, shades it darker toward its foot and draws its first crack in; the cracks of each of
+         its four soaking stages are drawn by the script alone.
+Licence: Creative Commons Attribution 4.0 International
+         https://creativecommons.org/licenses/by/4.0/

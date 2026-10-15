@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/dragon_egg",
   "textures": {
-    "particle": "minecraft:block/end_stone",
-    "all": "minecraft:block/end_stone"
+    "particle": "voidworks:block/drained_dragon_egg",
+    "all": "voidworks:block/drained_dragon_egg"
   }
 }

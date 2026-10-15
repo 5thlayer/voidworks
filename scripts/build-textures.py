@@ -47,6 +47,12 @@ purpur's, both tiling without a seam across the well's faces. Its core's front i
 casing, framed in the rim's tiles, with the roiling plasma churning behind it in the void's purples,
 every frame of it and its animation copied beside the sprite; Dormant, the window shows still dark.
 
+The Drained Dragon Egg's shell is the bonetree's bark recoloured into a washed-out end stone white,
+pale bone drained of void, shaded darker toward its foot. It is drawn as the vanilla egg's sprite is,
+the egg seen from the front, so it fits the egg's shape. Only an egg, its first crack shows dark;
+soaking, its cracks spread at each of the four stages and glow the brighter in amethyst, each stage's
+cracks a sprite of their own laid over the shell.
+
 Run from the repository root; it needs Pillow.
 """
 
@@ -90,6 +96,22 @@ WELL_RIM = [(0x90, 0x65, 0x90), (0xAC, 0x7B, 0xAC), (0xC7, 0xA8, 0xC7)]
 # The void behind the core's window, darkest to lightest, and the box of the window with its frame.
 WELL_VOID = [(0x0A, 0x02, 0x14), (0x3C, 0x0C, 0x6E), (0x9A, 0x4C, 0xE6), (0xE6, 0xC0, 0xFF)]
 WINDOW = (2, 2, 14, 14)
+
+# The Drained Dragon Egg's shell, darkest to lightest: end stone's yellows washed out to bone, and
+# how much darker its foot is than its crown.
+EGG_SHELL = [(0x7E, 0x7A, 0x6C), (0xCF, 0xCB, 0xB6), (0xF2, 0xF0, 0xE2)]
+EGG_FOOT = 0.18
+# The cracks' runs, each from the pixel before it, that each of the egg's four stages adds to the
+# last's: the first runs down from its crown, and the rest spread from it toward its foot.
+EGG_CRACKS = [
+    [[(8, 1), (8, 3), (7, 4), (7, 6), (8, 7)]],
+    [[(8, 7), (9, 8), (9, 10)], [(7, 5), (5, 6), (4, 7)]],
+    [[(9, 10), (8, 12), (8, 13)], [(9, 8), (11, 9), (12, 11)], [(4, 7), (3, 9), (2, 10)]],
+    [[(8, 13), (7, 15)], [(12, 11), (13, 12)], [(8, 3), (10, 4), (11, 6)], [(2, 10), (2, 12)]],
+]
+# The first crack's shade on an egg that is not soaking, and the cracks' glow at each stage.
+EGG_CRACK_DARK = (0x3E, 0x38, 0x30)
+EGG_GLOW = [(0x7A, 0x3C, 0xB0), (0xA0, 0x5A, 0xE0), (0xC8, 0x8C, 0xFF), (0xE8, 0xB0, 0xFF)]
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
@@ -244,6 +266,34 @@ def void_well():
     save(well_window(casing, rim, still), TEXTURES / "block" / "void_well_front_dormant.png")
 
 
+def crack_pixels(stage):
+    """Every pixel of the egg's cracks up to stage, each run stepped one pixel at a time."""
+    pixels = []
+    for runs in EGG_CRACKS[: stage + 1]:
+        for run in runs:
+            for (x0, y0), (x1, y1) in zip(run, run[1:]):
+                steps = max(abs(x1 - x0), abs(y1 - y0))
+                pixels += [(round(x0 + (x1 - x0) * i / steps), round(y0 + (y1 - y0) * i / steps)) for i in range(steps + 1)]
+    return pixels
+
+
+def drained_dragon_egg():
+    shell = recolour(sprite("log_bonetree_sides"), EGG_SHELL)
+    pixels = shell.load()
+    for y in range(16):
+        for x in range(16):
+            *colour, alpha = pixels[x, y]
+            pixels[x, y] = (*(round(c * (1 - EGG_FOOT * y / 15)) for c in colour), alpha)
+    for x, y in crack_pixels(0):
+        pixels[x, y] = (*EGG_CRACK_DARK, 255)
+    save(shell, TEXTURES / "block" / "drained_dragon_egg.png")
+    for stage, glow in enumerate(EGG_GLOW):
+        cracks = Image.new("RGBA", (16, 16))
+        for x, y in crack_pixels(stage):
+            cracks.putpixel((x, y), (*glow, 255))
+        save(cracks, TEXTURES / "block" / f"drained_dragon_egg_cracks_{stage}.png")
+
+
 def main():
     void_siphon()
     void_siphon("resonant_void_siphon", RESONANT_CRYSTAL)
@@ -265,6 +315,7 @@ def main():
     unmaking_chamber(abyssium)
     void_crucible(abyssium)
     void_well()
+    drained_dragon_egg()
 
 
 if __name__ == "__main__":

@@ -26,8 +26,8 @@ import net.minecraft.util.Mth;
  * Draws a Void Dragon as the vanilla Ender Dragon's model, baked from the player's own game, at
  * {@link #DRAGONLING_SCALE} of its size for a Dragonling and {@link VoidDragon#GROWN_SCALE} times that
  * for a grown dragon's presence, posed from its flight history and wingbeat as the Ender
- * Dragon is. Nothing of Mojang's ships in the jar: until it has a texture of its own, it wears the
- * vanilla texture, read from the player's game, tinted the void's purple.
+ * Dragon is. Nothing of Mojang's ships in the jar: it wears the vanilla texture, read from the
+ * player's game, tinted the void's purple, and has no texture of its own.
  */
 final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRenderer.State> {
 
@@ -36,7 +36,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
 
     private static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon.png");
     private static final RenderType EYES = RenderTypes.eyes(Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon_eyes.png"));
-    /** The placeholder's tint, the void's purple, until the dragon has a texture of its own. */
+    /** The void's purple, which tints the vanilla texture. */
     private static final int TINT = ARGB.color(255, 190, 130, 255);
 
     private final EnderDragonModel model;
