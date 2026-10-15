@@ -17,8 +17,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * What a Void Dragon's presence shows of its record: nothing while it dives, the dragon emerging
- * just after it stops at a Well, then at work there while it loads or unloads, and resting with
- * nothing to do.
+ * just after it stops at a Well, then at work there while it loads or unloads, waits for its owner
+ * or sets its rider down, and resting with nothing to do.
  */
 class ShowingTest {
 
@@ -34,20 +34,20 @@ class ShowingTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Trip.Leg.class, names = {"TO_SOURCE", "TO_DESTINATION"})
+    @EnumSource(value = Trip.Leg.class, names = {"TO_SOURCE", "TO_DESTINATION", "TO_CALL", "TO_PICKED"})
     void whileItDivesNothingShows(Trip.Leg leg) {
         assertEquals(Showing.DIVING, Showing.of(dragon(trip(leg, NOW + 50)), NOW, STOP_TICKS));
     }
 
     @ParameterizedTest
-    @EnumSource(value = Trip.Leg.class, names = {"LOADING", "UNLOADING"})
+    @EnumSource(value = Trip.Leg.class, names = {"LOADING", "UNLOADING", "WAITING", "SETTING_DOWN"})
     void justStoppedAtAWellItEmergesThere(Trip.Leg leg) {
         // Stopped 20 ticks ago: its stop ends STOP_TICKS after it began.
         assertEquals(Showing.EMERGING, Showing.of(dragon(trip(leg, NOW - 20 + STOP_TICKS)), NOW, STOP_TICKS));
     }
 
     @ParameterizedTest
-    @EnumSource(value = Trip.Leg.class, names = {"LOADING", "UNLOADING"})
+    @EnumSource(value = Trip.Leg.class, names = {"LOADING", "UNLOADING", "WAITING", "SETTING_DOWN"})
     void stoppedAWhileItIsAtWork(Trip.Leg leg) {
         long since = Showing.EMERGE_TICKS;
         assertEquals(Showing.WORKING, Showing.of(dragon(trip(leg, NOW - since + STOP_TICKS)), NOW, STOP_TICKS));

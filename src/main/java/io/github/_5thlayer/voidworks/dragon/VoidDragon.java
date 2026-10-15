@@ -21,6 +21,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
@@ -28,8 +29,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -45,6 +48,7 @@ import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -70,7 +74,8 @@ import org.jspecify.annotations.Nullable;
  *       its own and is never saved. It follows what its record shows ({@link Showing}): it emerges
  *       from a Well's shaft, up out of its mouth, as its dragon stops there, flies close about the Well while it loads or
  *       unloads and wider while it rests, and dives into the shaft and is gone as its dragon sets
- *       off.</li>
+ *       off. Its owner rides it from a Well, where it hovers until they dive or get off, and it
+ *       holds them down the shaft through the dive ({@link DragonRiding}).</li>
  * </ul>
  *
  * <p>Nothing hurts either, but a command's kill and the void below the world, which nothing is
@@ -104,10 +109,20 @@ public final class VoidDragon extends PathfinderMob {
     /** How much bigger a presence is than a Dragonling: half the Ender Dragon's size to a fifth. */
     public static final float GROWN_SCALE = 2.5F;
 
+    /**
+     * Where a presence's rider sits, in blocks from where it stands: on top of its body, where its wings
+     * meet. The Ender Dragon's model, which its flapping lifts 2 blocks, has its body's top about 3.2
+     * blocks over its feet and its wings meeting 0.3 blocks behind them toward its tail, at full size; a
+     * presence is half that size. Its box stands far higher.
+     */
+    private static final Vec3 SEAT = new Vec3(0.0, 1.6, 0.45);
+
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
     private static final float MAX_TURN = 3.0F;
 
     private static final EntityDataAccessor<Boolean> DATA_GROWN = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
+    /** Whether a presence carries its rider through its dragon's dive, which it holds them in until it sets them down: synced, so every client seats them down the shaft. */
+    private static final EntityDataAccessor<Boolean> DATA_CARRYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
 
     private static final String OWNER_KEY = "owner";
     private static final String TICKS_TO_GROW_KEY = "ticks_to_grow";
@@ -134,6 +149,12 @@ public final class VoidDragon extends PathfinderMob {
     private Showing showing = Showing.RESTING;
     /** How long a presence has been emerging or diving. */
     private int passageTicks;
+    /** Whether a presence emerging brings up the rider its dragon carried through its dive, to set them down once out. */
+    private boolean bringing;
+    /** The Well its rider has picked to dive to, by strafing; null until they pick one. */
+    @Nullable Place picked;
+    /** What its rider was pressing last tick, so each strafe and jump acts once as it is pressed. */
+    Input input = Input.EMPTY;
 
     public VoidDragon(EntityType<? extends VoidDragon> type, Level level) {
         super(type, level);
@@ -172,6 +193,7 @@ public final class VoidDragon extends PathfinderMob {
     protected void defineSynchedData(SynchedEntityData.Builder entityData) {
         super.defineSynchedData(entityData);
         entityData.define(DATA_GROWN, false);
+        entityData.define(DATA_CARRYING, false);
     }
 
     @Override
@@ -212,6 +234,11 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
+    /** @return where the dragon whose presence it is was when it was shown; empty for a Dragonling */
+    Optional<Place> shownAt() {
+        return Optional.ofNullable(shownAt);
+    }
+
     /** @return whether it is the presence of a dragon at {@code place} */
     boolean shows(Place place) {
         return place.equals(shownAt);
@@ -240,7 +267,7 @@ public final class VoidDragon extends PathfinderMob {
     }
 
     /** @return whether it is emerging or diving, flying straight through anything in its way */
-    private boolean passing() {
+    boolean passing() {
         return showing == Showing.EMERGING || showing == Showing.DIVING;
     }
 
@@ -268,7 +295,11 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** Emerging, it rises to its spot's {@code risen} and then flies about its {@code over} at work; diving, it goes down to its {@code under} and is gone into the void. */
+    /**
+     * Emerging, it rises to its spot's {@code risen} and then flies about its {@code over} at work;
+     * diving, it goes down to its {@code under} and is gone into the void, unless it carries its rider,
+     * whom it holds there, out of sight, until it sets them down.
+     */
     private void passOn(ServerLevel level) {
         var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? spot.under() : spot.risen()).subtract(position());
         double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
@@ -278,6 +309,10 @@ public final class VoidDragon extends PathfinderMob {
         }
         setDeltaMovement(Vec3.ZERO);
         if (showing == Showing.DIVING) {
+            if (carrying() && isVehicle()) {
+                setInvisible(true);
+                return;
+            }
             burst(level);
             discard();
             return;
@@ -286,6 +321,57 @@ public final class VoidDragon extends PathfinderMob {
         goalSelector.enableControlFlag(Goal.Flag.MOVE);
         goalSelector.enableControlFlag(Goal.Flag.LOOK);
         settle(Showing.WORKING);
+        if (bringing) {
+            // Out of the shaft, it sets the rider it brought down on the rim.
+            bringing = false;
+            ejectPassengers();
+        }
+    }
+
+    /** It dives now, carrying its rider, whom it holds through the dive. */
+    void carry() {
+        entityData.set(DATA_CARRYING, true);
+        pass(Showing.DIVING);
+    }
+
+    /** It brings the riders handed to it up out of its Well's shaft as it emerges, and sets them down on the rim once out. */
+    void bring() {
+        bringing = true;
+    }
+
+    /** It lets its rider go, as it sets them down. */
+    void release() {
+        entityData.set(DATA_CARRYING, false);
+        bringing = false;
+    }
+
+    /** @return whether it holds its rider, who cannot get off: through its dragon's dive, or coming up out of it */
+    boolean holding() {
+        return carrying() || bringing;
+    }
+
+    /** @return whether it carries its rider through its dragon's dive */
+    public boolean carrying() {
+        return entityData.get(DATA_CARRYING);
+    }
+
+    /**
+     * Its rider sits on its back where its wings meet, turned as its model is, and through the dive
+     * stands at its feet, down the shaft with it.
+     */
+    @Override
+    protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
+        if (carrying()) {
+            return passenger.getVehicleAttachmentPoint(this);
+        }
+        // Its model is turned by the heading its flight history keeps, half a turn from its own, so its tail lies that way.
+        float heading = Float.isNaN(flightYaw) ? yBodyRot + 180.0F : flightYaw;
+        return SEAT.yRot(-heading * Mth.DEG_TO_RAD);
+    }
+
+    /** @return whether its owner rides it at its dragon's stop, before any dive */
+    boolean ridden() {
+        return !passing() && owner != null && getFirstPassenger() instanceof Player rider && rider.getUUID().equals(owner);
     }
 
     /** The void opening where a presence emerges or is gone. */
@@ -326,8 +412,13 @@ public final class VoidDragon extends PathfinderMob {
         flapTime += 0.1F;
         recordFlight();
         if (level() instanceof ServerLevel level) {
+            if (carrying()) {
+                getPassengers().forEach(DragonRiding::hide);
+            }
             if (passing()) {
                 passOn(level);
+            } else if (getFirstPassenger() instanceof ServerPlayer rider) {
+                DragonRiding.steer(level, this, rider);
             } else if (!grown() && owner != null && --ticksToGrow <= 0) {
                 growUp(level);
             }
@@ -351,10 +442,21 @@ public final class VoidDragon extends PathfinderMob {
         flightHistory.record(flightY, flightYaw);
     }
 
-    /** Its owner, holding a Void Siphon set to empty, feeds it; anyone else, or a Siphon set to charge, does not, and a Siphon used on it never harvests. */
+    /**
+     * Grown, its owner mounts it at a Well of theirs ({@link DragonRiding}). Young, its owner, holding a
+     * Void Siphon set to empty, feeds it; anyone else, or a Siphon set to charge, does not, and a Siphon
+     * used on it never harvests.
+     */
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
+        if (grown() && !player.isSecondaryUseActive()) {
+            // Answered on the client, which does not know its owner, as feeding is.
+            if (!(level() instanceof ServerLevel level)) {
+                return InteractionResult.SUCCESS;
+            }
+            return DragonRiding.mount(level, this, player) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        }
         if (grown() || !(stack.getItem() instanceof VoidSiphonItem) || player.isSecondaryUseActive()) {
             return super.mobInteract(player, hand);
         }
@@ -413,6 +515,39 @@ public final class VoidDragon extends PathfinderMob {
     @Override
     public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
         return !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || super.isInvulnerableTo(level, source);
+    }
+
+    /** Only a presence is ridden, by one rider. */
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        return grown() && super.canAddPassenger(passenger);
+    }
+
+    /** Ridden, it hovers where it is, its wandering set aside until its rider gets off. */
+    @Override
+    protected void addPassenger(Entity passenger) {
+        super.addPassenger(passenger);
+        getNavigation().stop();
+        moveControl.setWait();
+        setDeltaMovement(Vec3.ZERO);
+        goalSelector.disableControlFlag(Goal.Flag.MOVE);
+    }
+
+    @Override
+    protected void removePassenger(Entity passenger) {
+        super.removePassenger(passenger);
+        if (!passing()) {
+            goalSelector.enableControlFlag(Goal.Flag.MOVE);
+        }
+    }
+
+    /** A rider who gets off before the dive is set down on the rim of the Well its dragon is at. */
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        if (shownAt != null && level() instanceof ServerLevel level && level.dimension().identifier().equals(shownAt.dimension())) {
+            return DragonRiding.rim(level, shownAt.pos()).at();
+        }
+        return super.getDismountLocationForPassenger(passenger);
     }
 
     /** Neither form is led on a leash: a Dragonling keeps to its home, and a presence to its dragon's resting place. */

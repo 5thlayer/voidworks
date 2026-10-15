@@ -20,12 +20,15 @@ import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
+import io.github._5thlayer.voidworks.well.VoidWells;
 import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -37,8 +40,10 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 /**
  * Runs the Void Dragons' {@link Routing} on the server, a step every {@link #INTERVAL} server ticks,
  * timed by the Overworld's game time, with no chunk loaded: a Well is found in the server's
- * {@link io.github._5thlayer.voidworks.well.VoidWells}, and what it holds in its dimension's
- * networks, which are saved data, not blocks (ADR 0005): its whole network's motes (ADR 0006).
+ * {@link VoidWells}, and what it holds in its dimension's networks, which are saved data, not blocks
+ * (ADR 0005): its whole network's motes (ADR 0006). An owner calls a dragon while they stand in the
+ * shaft of a Well of theirs, and is told above the hotbar while one is coming; they ride one while its
+ * presence carries them at its stop ({@link DragonRiding}).
  */
 public final class DragonRouting {
 
@@ -56,15 +61,53 @@ public final class DragonRouting {
         });
     }
 
-    /** One step of every dragon's routing, at the Overworld's game time now. */
+    /** One step of every dragon's routing, at the Overworld's game time now; an owner calling at a Well a dragon dives to is told it is coming. */
     public static void step(MinecraftServer server) {
+        var dragons = SavedVoidDragons.of(server);
+        var owners = new ServerOwners(server);
+        routing(server, owners).step(dragons, server.overworld().getGameTime());
+        for (var dragon : dragons.all()) {
+            var coming = dragon.trip().filter(trip -> trip.leg() == Trip.Leg.TO_CALL).flatMap(Trip::added);
+            if (coming.isPresent() && owners.calling(dragon.owner()).equals(coming)) {
+                player(server, dragon.owner()).ifPresent(player -> player.sendOverlayMessage(Component.translatable("voidworks.dragon.coming")));
+            }
+        }
+    }
+
+    /**
+     * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}:
+     * it dives there now, carrying them ({@link Routing#ride}).
+     *
+     * @return the dragon on its way; empty when it cannot dive there
+     */
+    public static Optional<VoidDragonRecord> ride(MinecraftServer server, UUID id, Place picked) {
+        return routing(server, new ServerOwners(server)).ride(SavedVoidDragons.of(server), id, picked, server.overworld().getGameTime());
+    }
+
+    /** @return the places of {@code owner}'s Wells that are whole and awake, the only ones a dragon stops at, in the order they were listed */
+    public static List<Place> wellsOf(MinecraftServer server, UUID owner) {
+        return new ServerWells(server).of(owner).stream().map(Wells.Well::place).toList();
+    }
+
+    /** @return {@code owner}, in whichever of the server's levels they are */
+    private static Optional<Player> player(MinecraftServer server, UUID owner) {
+        for (var level : server.getAllLevels()) {
+            var player = level.getPlayerByUUID(owner);
+            if (player != null) {
+                return Optional.of(player);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** @return the dragons' routing on {@code server}, its Wells read from the server and its owners from {@code owners}, at the configured numbers */
+    private static Routing routing(MinecraftServer server, Owners owners) {
         var dive = new Dive(VoidworksConfig.dragonDiveTicks(), VoidworksConfig.dragonDiveBlocksPerSecond(), dimension -> {
             var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
-        new Routing(new ServerWells(server), dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks(),
-                VoidworksConfig.dragonEggMotes())
-                .step(SavedVoidDragons.of(server), server.overworld().getGameTime());
+        return new Routing(new ServerWells(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks(),
+                VoidworksConfig.dragonEggMotes());
     }
 
     /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */
@@ -78,6 +121,36 @@ public final class DragonRouting {
     private static int wellPressure(MinecraftServer server, ResourceKey<Level> dimension) {
         // A core is set in a wall's middle course, with casing beneath it, so never over the open void.
         return VoidPressure.dimension(server.registryAccess(), dimension).pressure(() -> false);
+    }
+
+    /**
+     * The server's owners: one calls while they stand in the shaft of a Well of theirs, in no vehicle
+     * and not spectating, and rides a dragon while its presence carries them at its stop.
+     */
+    private record ServerOwners(MinecraftServer server) implements Owners {
+
+        @Override
+        public Optional<Place> calling(UUID owner) {
+            var found = player(server, owner).filter(player -> !player.isSpectator() && !player.isPassenger());
+            if (found.isEmpty()) {
+                return Optional.empty();
+            }
+            var level = found.get().level();
+            var feet = found.get().blockPosition();
+            return SavedVoidWells.of(server).owned(owner).stream()
+                    .map(VoidWells.Entry::place)
+                    .filter(place -> place.dimension().equals(level.dimension().identifier()) && level.isLoaded(place.pos()))
+                    .filter(place -> {
+                        var core = level.getBlockState(place.pos());
+                        return core.is(VoidworksBlocks.VOID_WELL.get()) && WellStructure.inShaft(place.pos(), core.getValue(VoidWellBlock.FACING), feet);
+                    })
+                    .findFirst();
+        }
+
+        @Override
+        public boolean riding(UUID dragonId) {
+            return DragonPresences.ridden(server, dragonId);
+        }
     }
 
     /**

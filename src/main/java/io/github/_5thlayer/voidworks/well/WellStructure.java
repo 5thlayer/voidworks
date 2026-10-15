@@ -85,6 +85,18 @@ public final class WellStructure {
 
     /**
      * @param core where the core stands
+     * @param facing the way the core faces, out of its wall; horizontal
+     * @param pos where something stands, by the block its feet are in
+     * @return whether {@code pos} is in the well's shaft: its open column, from its floor up to its rim's
+     *         top course
+     */
+    public static boolean inShaft(BlockPos core, Direction facing, BlockPos pos) {
+        var offset = pos.subtract(shaft(core, facing));
+        return Math.abs(offset.getX()) <= 1 && Math.abs(offset.getZ()) <= 1 && offset.getY() >= -1 && offset.getY() <= 2;
+    }
+
+    /**
+     * @param core where the core stands
      * @param facing the way the core faces, out of its wall
      * @param parts what each position holds
      * @return whether the well around {@code core} is whole: every casing, rim and open position as

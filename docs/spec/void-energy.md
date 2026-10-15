@@ -318,15 +318,21 @@ Dragonling or a Void Dragon.
   dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests near the Well
   it last stopped at, neither weakening nor healing; one that has never stopped at a Well rests
   where it grew up.
-- **Riding.** Its owner uses a dragon at one of their Wells, resting or loading, and mounts it, with
-  no harness. It hovers: strafing left and right steps through the owner's other Wells, the one
-  picked shown above the hotbar, jumping dives, and sneaking gets off before the dive. Through the
-  dive the rider sees only the void and cannot act or get off; the dragon sets them down on the rim
-  of the Well they picked. It is not free flight. A rider costs nothing and the load travels as
-  usual: the rider's Well is a stop added to the trip, which drops what that Well is short of, in
-  grades worth something there, and the rest goes on to the claimed destination.
+- **Riding.** Its owner uses a dragon stopped at one of their Wells, resting or at work there, and
+  mounts it, with no harness; anyone else cannot. It hovers, and waits at its stop for as long as
+  they ride: strafing left and right steps through the owner's other Wells, whole and awake, in the
+  order they were placed, the one picked shown above the hotbar by its name, or its dimension and
+  position; jumping dives, and sneaking gets off before the dive, onto the rim of the Well it is at.
+  Through the dive the rider sees only the void, no one sees them, and they cannot act, get off or
+  be hurt; the dragon sets them down on the rim of the Well they picked, in whatever dimension. It
+  is not free flight. A rider costs nothing and the load travels as usual: the rider's Well is a stop
+  added to the trip, which drops what that Well is short of, in grades worth something there, and
+  the rest goes on to the claimed destination.
 - **Calling.** The owner standing in a Well's shaft calls a dragon: the next of theirs to finish its
-  stop comes to that Well, carrying what it carries, and waits while the owner stays in the shaft.
+  stop, or one with nothing to do at once, comes to that Well, carrying what it carries and dropping
+  none of it there, the action bar telling them one is coming. It waits a stop's time at least, and
+  while the owner stays in the shaft, then goes on with its trip. Only one of the owner's dragons
+  answers a call.
 - **Harm.** It weakens as it dives, at a rate set by how far the Void Pressure at the worse of the
   dive's two ends is below the End's, so a trip to or from the Nether, where motes pay most, costs it
   most, and one between End Wells nothing. Stopped at a Well or resting, it does not weaken. Hurt, it

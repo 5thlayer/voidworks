@@ -6,9 +6,11 @@ package io.github._5thlayer.voidworks.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.monster.dragon.EnderDragonModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EnderDragonRenderState;
@@ -62,6 +64,18 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
         state.flightHistory.copyFrom(dragon.flightHistory);
+    }
+
+    /**
+     * Not drawn while it is invisible, holding its rider out of sight down a shaft through a dive, nor
+     * ever to the rider it carries, who sees only the void.
+     */
+    @Override
+    public boolean shouldRender(VoidDragon dragon, Frustum culler, double camX, double camY, double camZ) {
+        if (dragon.isInvisible() || dragon.carrying() && dragon.hasPassenger(entity -> entity == Minecraft.getInstance().getCameraEntity())) {
+            return false;
+        }
+        return super.shouldRender(dragon, culler, camX, camY, camZ);
     }
 
     /** The Ender Dragon's shadow, scaled as the dragon is. */
