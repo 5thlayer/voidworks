@@ -8,18 +8,25 @@ import java.util.Optional;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
+import io.github._5thlayer.voidworks.dragon.DragonPresences;
+import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
+import io.github._5thlayer.voidworks.well.FillTarget;
+import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -40,12 +47,29 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  *   <li>{@code /voidworks showcase} builds a line of Voidstone ahead of the player, motes at its
  *       near end and a Dormant Mutation Chamber at its far end, to watch motes conduct
  *       ({@link Showcase}).</li>
+ *   <li>{@code /voidworks well <pos> <target>} readies the Void Well core at {@code pos} for whoever
+ *       runs it: theirs, with that fill target, its Dormant cost paid, and in its network at once
+ *       when the well around it is whole.</li>
+ *   <li>{@code /voidworks dragon <pos>} adds a grown Void Dragon owned by whoever runs it, resting
+ *       at the Well core at {@code pos}. It is not hatched, so it doubles no egg price.</li>
+ *   <li>{@code /voidworks dragon remove <from> <to>} removes every dragon, whoever's, resting in the
+ *       box, in the runner's dimension, or on a trip to or from a place in it, with its presence.</li>
  * </ul>
+ *
+ * <p>The last three are what a Gallery pack scene builds a working dragon with (ADR 0008). A
+ * refusal is an error, as a vanilla command's is, so a function's trace names it.
  */
 public final class VoidworksCommands {
 
     /** The most motes one {@code /voidworks butterflies} shows. */
     static final int MAX_COUNT = 4096;
+
+    private static final DynamicCommandExceptionType NOT_VOIDSTONE =
+            new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.mote.not_voidstone", pos));
+    private static final DynamicCommandExceptionType WELL_NOT_A_WELL =
+            new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.well.not_a_well", pos));
+    private static final DynamicCommandExceptionType DRAGON_NOT_A_WELL =
+            new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.dragon.not_a_well", pos));
 
     private VoidworksCommands() {
     }
@@ -56,12 +80,24 @@ public final class VoidworksCommands {
     }
 
     private static void registerCommands(RegisterCommandsEvent event) {
+        var wellAt = Commands.argument("pos", BlockPosArgument.blockPos());
+        for (var target : FillTarget.values()) {
+            wellAt.then(Commands.literal(target.getSerializedName()).executes(context -> well(context, target)));
+        }
         event.getDispatcher().register(Commands.literal("voidworks")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("showcase")
                         .executes(VoidworksCommands::showcase))
                 .then(Commands.literal("pressure")
                         .executes(VoidworksCommands::pressure))
+                .then(Commands.literal("well").then(wellAt))
+                .then(Commands.literal("dragon")
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("from", BlockPosArgument.blockPos())
+                                        .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                                .executes(VoidworksCommands::removeDragons))))
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(VoidworksCommands::dragon)))
                 .then(Commands.literal("butterflies")
                         .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE, VoidEnergy.MAX_GRADE))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, MAX_COUNT))
@@ -84,8 +120,7 @@ public final class VoidworksCommands {
                 ? networks.at(pos)
                 : Optional.empty();
         if (network.isEmpty()) {
-            context.getSource().sendFailure(Component.translatable("commands.voidworks.mote.not_voidstone", pos.toShortString()));
-            return 0;
+            throw NOT_VOIDSTONE.create(pos.toShortString());
         }
         int inserted;
         try (var transaction = Transaction.openRoot()) {
@@ -97,6 +132,50 @@ public final class VoidworksCommands {
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.mote",
                 inserted, grade, pos.toShortString(), holds, capacity), false);
         return inserted;
+    }
+
+    /** Readies the Well core at {@code pos} for whoever runs it, with {@code target}. @return 1 */
+    private static int well(CommandContext<CommandSourceStack> context, FillTarget target) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        var level = context.getSource().getLevel();
+        var well = wellAt(context, WELL_NOT_A_WELL);
+        well.ready(level, player, target);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.well",
+                well.label(), target.label(), player.getName()), false);
+        return 1;
+    }
+
+    /** Gives whoever runs it a grown Void Dragon, resting at the Well core at {@code pos}. @return 1 */
+    private static int dragon(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        var level = context.getSource().getLevel();
+        var well = wellAt(context, DRAGON_NOT_A_WELL);
+        SavedVoidDragons.of(level.getServer()).add(player.getUUID(), Place.of(level, well.getBlockPos()));
+        DragonPresences.show(level.getServer());
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon", well.label(), player.getName()), false);
+        return 1;
+    }
+
+    /** @return the Void Well core at the command's {@code pos}; else it refuses with {@code notAWell} */
+    private static VoidWellBlockEntity wellAt(CommandContext<CommandSourceStack> context, DynamicCommandExceptionType notAWell) throws CommandSyntaxException {
+        var level = context.getSource().getLevel();
+        var pos = BlockPosArgument.getLoadedBlockPos(context, level, "pos");
+        if (!(level.getBlockEntity(pos) instanceof VoidWellBlockEntity well)) {
+            throw notAWell.create(pos.toShortString());
+        }
+        return well;
+    }
+
+    /** Removes every dragon resting in the box, in the runner's dimension, or on a trip to or from it. @return how many */
+    private static int removeDragons(CommandContext<CommandSourceStack> context) {
+        var level = context.getSource().getLevel();
+        var box = BoundingBox.fromCorners(BlockPosArgument.getBlockPos(context, "from"), BlockPosArgument.getBlockPos(context, "to"));
+        var dimension = level.dimension().identifier();
+        var server = level.getServer();
+        int removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos())).size();
+        DragonPresences.show(server);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed), false);
+        return removed;
     }
 
     /** Builds the conduction showcase two blocks ahead of the player, at their feet. @return how many motes went in */

@@ -336,9 +336,14 @@ public final class Routing {
             return wells.stream().anyMatch(well -> well.place().equals(place));
         }
 
-        /** @return the place of its Well a dive from {@code from} reaches soonest, {@code from} itself if it is one */
+        /**
+         * @return the place of its Well a dive from {@code from} reaches soonest, {@code from} itself if it
+         *         is one, and of those the dive takes as long to reach, the nearest
+         */
         Place nearest(Place from, Dive dive) {
-            return wells.stream().map(Wells.Well::place).min(Comparator.comparingLong(place -> dive.ticks(from, place))).orElseThrow();
+            return wells.stream().map(Wells.Well::place)
+                    .min(Comparator.comparingLong((Place place) -> dive.ticks(from, place)).thenComparingDouble(place -> dive.blocks(from, place)))
+                    .orElseThrow();
         }
 
         /** @return the highest of its Wells' targets; empty, a reservoir, when none has one */

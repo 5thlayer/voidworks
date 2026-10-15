@@ -183,6 +183,14 @@ public final class Dormancy {
         return spend.released();
     }
 
+    /** Pays the rest of the cost from nowhere, as an operator's command does; it wakes on its next tick. */
+    public void payInFull() {
+        if (paid < cost()) {
+            paid = cost();
+            machine.setChanged();
+        }
+    }
+
     /** Brings the machine's look in line once it is awake, a machine loaded awake included. */
     private void showAwake(ServerLevel level) {
         var state = machine.getBlockState();

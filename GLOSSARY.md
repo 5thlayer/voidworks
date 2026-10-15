@@ -24,6 +24,10 @@ _Avoid_: client (collides with the game's client side), dependent, integration
 The creative tab the suite's Modules share, registered by the libworks-runtime nested in the jar. Every Voidworks item shows there and in no other tab; Voidworks has no tab of its own (FactoryWorks ADR-0128).
 _Avoid_: Voidworks tab, creative tab (alone)
 
+**Gallery pack**:
+The optional datapack in the jar, "Voidworks Gallery", offered and off by default, whose functions lay the Module's features out as working scenes, one plot per scene with a sign naming it, for an operator player to see them at work (ADR 0008). Unlike `dev_pack/` and `gametest_pack/`, the datapacks only the Module's own runs load, it ships. It holds functions only, so turning it on changes nothing about how Voidworks plays.
+_Avoid_: showcase (the `/voidworks showcase` command), demo world
+
 ### Void
 
 **Void Mote**:

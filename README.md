@@ -29,6 +29,10 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 - **The Unmaking Chamber.** Breaks an item down into the ingredients of its crafting recipe for motes. Each ingredient comes back by chance, from 25% at first rising toward 75% the more the Chamber has spent.
 - **Jade support.** Jade shows a network's motes and what they are worth where you stand, a machine's upgrade, progress and what stalls it, and how much of a Dormant machine's cost is paid. Voidworks runs without Jade.
 
+## Gallery
+
+Voidworks carries an optional datapack, **Voidworks Gallery**, that builds its features as working scenes beside you. It is off in every world until you turn it on, in the world's Data Packs screen or with `/datapack enable "mod/voidworks:gallery_pack"`, then run `/function voidworks:gallery/build`, or `/function voidworks:gallery/<scene>` for one scene. It needs cheats in single player (on at creation, or Open to LAN with cheats) and operator permission on a server, and it builds only blocks and what its scenes need an owner for: run it as a player, who owns them. Its first scene is a Void Dragon carrying between two Void Wells.
+
 ## For pack authors
 
 - **Density** is item tags, `#voidworks:density/1` to `#voidworks:density/4`.

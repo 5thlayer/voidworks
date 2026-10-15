@@ -6,27 +6,44 @@ package io.github._5thlayer.voidworks.gametest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedHatchery;
+import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
+import io.github._5thlayer.voidworks.dragon.Trip;
+import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
+import io.github._5thlayer.voidworks.network.StoreKind;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
+import io.github._5thlayer.voidworks.well.FillTarget;
+import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.VoidWellBlock;
+import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.VoidWells;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
  * The {@code /voidworks} commands, run on a real server by a server player: {@code pressure} reports
  * what {@link VoidPressure} says where the player stands, and nothing to a player who is not an
- * operator; {@code mote} fills the network at a Voidstone. A message is checked by its translation key and arguments, since the server has no language loaded.
+ * operator; {@code mote} fills the network at a Voidstone; {@code well} readies a Well for whoever
+ * runs it, {@code dragon} gives them a grown Void Dragon at one and {@code dragon remove} takes
+ * every dragon out of a box, the commands a Gallery pack scene builds a dragon with. A message is checked by its translation key and arguments, since the server has no language loaded.
  */
 final class CommandTests {
 
@@ -39,6 +56,142 @@ final class CommandTests {
         tests.test("mote_command_puts_motes_into_the_network_at_a_voidstone", 1, CommandTests::motePutsMotesIn);
         tests.test("mote_command_with_no_count_fills_the_network", 1, CommandTests::moteFills);
         tests.test("mote_command_refuses_a_position_with_no_voidstone", 1, CommandTests::moteRefusesNoVoidstone);
+        tests.test("well_command_readies_a_well_for_whoever_runs_it_theirs_with_its_target_paid_and_in_its_network_at_once", 1,
+                CommandTests::wellReadies);
+        tests.test("well_command_refuses_a_position_with_no_well_core", 1, CommandTests::wellRefusesNoCore);
+        tests.test("dragon_command_adds_a_grown_dragon_owned_by_whoever_runs_it_resting_at_the_well_and_hatches_nothing", 1,
+                CommandTests::dragonAdds);
+        tests.test("dragon_command_refuses_a_position_with_no_well_core", 1, CommandTests::dragonRefusesNoCore);
+        tests.test("dragon_remove_command_removes_every_dragon_resting_in_the_box_or_on_a_trip_to_or_from_it_and_no_other", 1,
+                CommandTests::dragonRemoveRemovesInTheBox);
+        tests.test("well_dragon_and_dragon_remove_commands_refuse_a_player_who_is_not_an_operator", 1,
+                CommandTests::wellAndDragonRefuseNonOperators);
+    }
+
+    /** The Well's core, in the middle of its north wall's middle course, its floor on the platform. */
+    private static final BlockPos WELL = new BlockPos(4, 3, 2);
+
+    /** The well around {@link #WELL}, its core placed by command, Dormant and nobody's. */
+    private static VoidWellBlockEntity buildWell(GameTestHelper helper) {
+        WellTests.buildWell(helper, WELL, Direction.NORTH);
+        helper.setBlock(WELL, VoidworksBlocks.VOID_WELL.get().defaultBlockState().setValue(VoidWellBlock.FACING, Direction.NORTH));
+        return helper.getBlockEntity(WELL, VoidWellBlockEntity.class);
+    }
+
+    private static void wellReadies(GameTestHelper helper) {
+        var well = buildWell(helper);
+        var player = playerOnThePlatform(helper);
+        var message = onlyMessage(helper, run(player, true, "voidworks well " + coordinates(helper, WELL) + " full"));
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.well".equals(message.getKey())) {
+            helper.fail("the command said " + describe(message) + ", not that it readied the Well");
+            return;
+        }
+        helper.assertTrue(well.owner().map(owner -> owner.id().equals(player.getUUID())).orElse(false), "the Well is " + well.owner() + "'s, not the runner's");
+        helper.assertTrue(well.target() == FillTarget.FULL, "the Well's target is " + well.target() + ", not full");
+        helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant, " + well.dormancy().paid() + " paid");
+        var stored = VoidstoneNetworks.of(helper.getLevel()).store(helper.absolutePos(WELL));
+        helper.assertTrue(stored.filter(store -> store.kind() == StoreKind.WELL).isPresent(), "the Well is not in a network yet: " + stored);
+        var place = Place.of(helper.getLevel(), helper.absolutePos(WELL));
+        var listed = SavedVoidWells.of(helper.getLevel().getServer()).owned(player.getUUID());
+        helper.assertTrue(listed.equals(List.of(new VoidWells.Entry(place, player.getUUID(), FillTarget.FULL))), "the server lists the runner's Wells as " + listed);
+        helper.succeed();
+    }
+
+    private static void wellRefusesNoCore(GameTestHelper helper) {
+        assertRefused(helper, run(playerOnThePlatform(helper), true, "voidworks well " + coordinates(helper, WELL) + " full"), "commands.voidworks.well.not_a_well");
+    }
+
+    private static void dragonAdds(GameTestHelper helper) {
+        buildWell(helper);
+        var player = playerOnThePlatform(helper);
+        var server = helper.getLevel().getServer();
+        var message = onlyMessage(helper, run(player, true, "voidworks dragon " + coordinates(helper, WELL)));
+        var dragons = SavedVoidDragons.of(server).all().stream().filter(dragon -> dragon.owner().equals(player.getUUID())).toList();
+        SavedVoidDragons.of(server).removeAt(place -> dragons.stream().anyMatch(dragon -> dragon.rest().equals(place)));
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.dragon".equals(message.getKey())) {
+            helper.fail("the command said " + describe(message) + ", not that it added a dragon");
+            return;
+        }
+        var place = Place.of(helper.getLevel(), helper.absolutePos(WELL));
+        helper.assertTrue(dragons.size() == 1 && dragons.getFirst().rest().equals(place) && dragons.getFirst().trip().isEmpty()
+                && dragons.getFirst().health() == VoidDragonRecord.FULL_HEALTH, "the runner's dragons are " + dragons + ", not one whole one resting at the Well");
+        helper.assertTrue(SavedHatchery.of(server).dragons(player.getUUID()) == 0, "the command's dragon counts as hatched");
+        helper.succeed();
+    }
+
+    private static void dragonRefusesNoCore(GameTestHelper helper) {
+        assertRefused(helper, run(playerOnThePlatform(helper), true, "voidworks dragon " + coordinates(helper, WELL)), "commands.voidworks.dragon.not_a_well");
+    }
+
+    /** Dragons of anyone's, resting in the test's box, bound there, loading there, and one away from it, which stays. */
+    private static void dragonRemoveRemovesInTheBox(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var dragons = SavedVoidDragons.of(level.getServer());
+        var inside = Place.of(level, helper.absolutePos(new BlockPos(1, 1, 1)));
+        var alsoInside = Place.of(level, helper.absolutePos(new BlockPos(7, 2, 7)));
+        // In the Nether, far off, where nothing loads, so the dragons there show no presence.
+        var outside = new Place(Level.NETHER.identifier(), new BlockPos(100_000, 64, 100_000));
+        var resting = dragons.add(UUID.randomUUID(), inside);
+        var bound = dragons.add(UUID.randomUUID(), outside);
+        dragons.update(on(bound, new Trip(Optional.empty(), alsoInside, 10, false, Trip.Leg.TO_DESTINATION, Long.MAX_VALUE, 0, 0)));
+        var loading = dragons.add(UUID.randomUUID(), outside);
+        dragons.update(on(loading, new Trip(Optional.of(inside), outside, 10, false, Trip.Leg.TO_SOURCE, Long.MAX_VALUE, 0, 0)));
+        var away = dragons.add(UUID.randomUUID(), outside);
+
+        var message = onlyMessage(helper, run(playerOnThePlatform(helper), true,
+                "voidworks dragon remove " + coordinates(helper, new BlockPos(0, 0, 0)) + " " + coordinates(helper, new BlockPos(8, 4, 8))));
+        var left = List.of(resting, bound, loading, away).stream().filter(dragon -> dragons.get(dragon.id()).isPresent()).toList();
+        dragons.removeAt(outside::equals);
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.dragon.remove".equals(message.getKey()) || !Integer.valueOf(3).equals(message.getArgs()[0])) {
+            helper.fail("the command said " + describe(message) + ", not that it removed 3 dragons");
+            return;
+        }
+        helper.assertTrue(left.equals(List.of(away)), "the dragons left are " + left + ", not the one away from the box");
+        helper.succeed();
+    }
+
+    /** A player who is not an operator readies no Well, gets no dragon and removes none. */
+    private static void wellAndDragonRefuseNonOperators(GameTestHelper helper) {
+        var well = buildWell(helper);
+        var player = playerOnThePlatform(helper);
+        var dragons = SavedVoidDragons.of(helper.getLevel().getServer());
+        var resting = dragons.add(UUID.randomUUID(), Place.of(helper.getLevel(), helper.absolutePos(new BlockPos(1, 1, 1))));
+        run(player, false, "voidworks well " + coordinates(helper, WELL) + " full");
+        run(player, false, "voidworks dragon " + coordinates(helper, WELL));
+        run(player, false, "voidworks dragon remove " + coordinates(helper, new BlockPos(0, 0, 0)) + " " + coordinates(helper, new BlockPos(8, 4, 8)));
+        boolean kept = dragons.get(resting.id()).isPresent();
+        var given = dragons.all().stream().filter(dragon -> dragon.owner().equals(player.getUUID())).toList();
+        dragons.removeAt(resting.rest()::equals);
+        dragons.removeAt(place -> given.stream().anyMatch(dragon -> dragon.rest().equals(place)));
+        helper.assertTrue(well.owner().isEmpty() && !well.dormancy().awake(), "a player who is not an operator readied the Well");
+        helper.assertTrue(given.isEmpty(), "a player who is not an operator was given a dragon");
+        helper.assertTrue(kept, "a player who is not an operator removed a dragon");
+        helper.succeed();
+    }
+
+    /** @return {@code dragon} on {@code trip}, which it is in no hurry to finish */
+    private static VoidDragonRecord on(VoidDragonRecord dragon, Trip trip) {
+        return new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), Optional.of(trip), dragon.sinceEgg());
+    }
+
+    /** Asserts the command refused, saying {@code key}: a failure comes styled, the translation as its one sibling. */
+    private static void assertRefused(GameTestHelper helper, List<Component> messages, String key) {
+        if (messages.size() != 1 || messages.getFirst().getSiblings().size() != 1
+                || !(messages.getFirst().getSiblings().getFirst().getContents() instanceof TranslatableContents message)
+                || !key.equals(message.getKey())) {
+            helper.fail("the command should refuse with " + key + ", but said " + messages);
+            return;
+        }
+        helper.succeed();
     }
 
     /** Two Voidstone, so one network; the command names the one at the west end and the motes are at the east end too. */
@@ -91,7 +244,7 @@ final class CommandTests {
     }
 
     /** The absolute coordinates of {@code pos}, as a command takes them. */
-    private static String coordinates(GameTestHelper helper, BlockPos pos) {
+    static String coordinates(GameTestHelper helper, BlockPos pos) {
         var absolute = helper.absolutePos(pos);
         return absolute.getX() + " " + absolute.getY() + " " + absolute.getZ();
     }

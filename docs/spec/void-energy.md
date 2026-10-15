@@ -8,7 +8,9 @@ idea in FactoryWorks' [docs/ideas/mutation_system.md](https://github.com/5thlaye
 and a sixth on 2026-10-13 on the Void Dragon, which made it server state rather than an entity
 ([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)), and a seventh on
 2026-10-14 that made the Void Siphon charge other mods' FE items in place of void gear of our own
-([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)).
+([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)),
+and an eighth on 2026-10-15 that shipped a Gallery pack ahead of libworks
+([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)).
 Factorio fidelity was not a constraint.
 
 The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
@@ -299,7 +301,8 @@ Dragonling or a Void Dragon.
   something worth delivering there, a reservoir or a Well above its target, which gives its excess;
   a Well below its target never gives. A network with several of the owner's Wells is judged by the
   highest of their targets, a reservoir among them setting none, and another owner's targets never
-  bind it; it stops at whichever of them its dive reaches soonest. It loads only grades worth
+  bind it; it stops at whichever of them its dive reaches soonest, the nearest of those it reaches
+  as soon. It loads only grades worth
   something at the destination's Void Pressure, highest first, up to its load. Each trip is claimed,
   and a network's need counts the motes already on their way to it, whoever's dragon carries them,
   as what it gives counts those any dragon is on its way to load there, so several dragons share the
@@ -308,8 +311,10 @@ Dragonling or a Void Dragon.
   load on to another of the owner's Wells that needs it, else to the one with most room; with no
   room anywhere it holds the load and rests until there is.
 - **Travel.** It flies visibly near its Wells and **dives** into the void between them, emerging
-  after a travel time: a fixed dive, and a time per block of distance in Overworld blocks, the
-  Nether's counting eight and the End's one. It is the only thing that carries motes between
+  after a travel time: a time per block of distance in Overworld blocks, the Nether's counting
+  eight and the End's one, and a fixed time more for a dive between dimensions. Every dive takes at
+  least 2 seconds, so even between near Wells it is seen diving into one shaft and emerging from
+  the other. It is the only thing that carries motes between
   dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests near the Well
   it last stopped at, neither weakening nor healing; one that has never stopped at a Well rests
   where it grew up.
@@ -429,6 +434,48 @@ The shipped Families keep three rules, which a pack may break on purpose:
 
 Farming up a ladder is allowed, the farm's yield halving or worse at each step.
 
+## The Gallery pack
+
+Voidworks ships a **Gallery pack**, as FactoryWorks [#691](https://github.com/5thlayer/factoryworks/issues/691)
+plans for every Module in the FactoryWorks Showcase, ahead of libworks
+([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)): an
+optional datapack in its jar, "Voidworks Gallery", offered in the Data Packs screen and off by
+default, holding functions only. An operator player turns it on and runs `voidworks:gallery/build`,
+which lays the Module's features out as working scenes in a row, one function per scene,
+`voidworks:gallery/<scene>`, that also builds on its own.
+
+- **Layout.** On the world's axes, whichever way the player faces: a scene's plot starts 2 blocks
+  east of where it is run, at the player's feet, and `build` runs each further scene 24 blocks east
+  of the last (`execute positioned ~24 ~ ~`, then `~48`), so its plot follows.
+  A scene clears its plot, 16 blocks high, floors it with stone and builds on it, so it builds the
+  same way wherever it is run and every time. A sign at its south front names the feature, in the
+  player's language.
+- **Working.** A scene is built working, from Voidworks and vanilla alone. It places blocks, and
+  where its feature needs them, the records an operator's commands make; never time, weather,
+  gamerules or the player.
+- **The Void Dragon**, the first scene: two of the runner's Void Wells 12 blocks apart in one
+  dimension, on networks of their own. The west Well is a reservoir, filled through a Voidstone
+  beside it with motes one grade above the End's Void Pressure over the open void, so they are worth
+  something wherever it is built; the east Well's target is full, and it holds nothing. A grown
+  dragon rests at the reservoir and carries between them, about eight trips at the default numbers,
+  diving into one shaft and emerging from the other.
+- **Commands** make what the dragon scene needs, all for operators:
+  - `/voidworks well <pos> <target>` readies the Well core at `pos` for whoever runs it: theirs, with
+    that fill target, and its Dormant cost paid, so once the well around it is whole it is in its
+    network at once.
+  - `/voidworks dragon <pos>` adds a grown Void Dragon owned by whoever runs it, resting at the
+    Well core at `pos`. It is not hatched: it doubles no egg price.
+  - `/voidworks dragon remove <from> <to>` removes every dragon, whoever's, resting in the box, in
+    the runner's dimension, or on a trip to or from a place in it, and its presence with it.
+- **Tested** by the Module's game tests as #691's shared check will test it: the pack is offered and
+  off; `build`, run by an operator player, runs every command without failing, a failure naming the
+  command; and each scene's key block, the dragon scene's two Well cores, stands where the scene
+  puts it. A test of its own checks that the dragon scene's dragon sets off from the reservoir for
+  the other Well, and that building it again leaves one dragon.
+- **Later.** A scene for each of the README's other features, and libworks' helper and check in
+  place of Voidworks' own once a runtime release carries them
+  ([libworks#30](https://github.com/5thlayer/libworks/issues/30)).
+
 ## Loops
 
 Loops that come out ahead are allowed and are meant to be the endgame puzzle. What bounds them is that every harvest permanently consumes the world and every Displacer
@@ -447,8 +494,8 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   the Void Siphon's capacity per tier, the FE a void energy charges (provisional: 10, tuned against
   Gearworks' Gear, whose battery upgrade holds 100,000; a server config value), and the network pressure cap, and the Void Dragon's (provisional:
   the first egg 25,600 void energy, doubling per dragon; Dragonling growth 40 minutes, 1 minute off
-  per 1,000 void energy fed; a load of 8,192 motes; about 5 seconds a stop; a dive of 10 seconds and
-  1 second per 64 blocks; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
+  per 1,000 void energy fed; a load of 8,192 motes; about 5 seconds a stop; 1 second a dive per 64
+  blocks, and 10 seconds more between dimensions; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
   motes; an egg laid each 65,536 motes carried).
 - **Void Dragon life stages** — young, adult, senior and old, trading speed for load, and death in
   old age ([#54](https://github.com/5thlayer/voidworks/issues/54)).

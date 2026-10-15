@@ -10,9 +10,9 @@ import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 /**
- * A Void Dragon's dive between two Wells: a fixed time and a time per block of distance in Overworld
- * blocks, the Nether's counting eight and the End's one. With the provisional numbers, 10 seconds and
- * a second per 64 blocks.
+ * A Void Dragon's dive between two Wells: a time per block of distance in Overworld blocks, the
+ * Nether's counting eight and the End's one, a fixed time more between dimensions, and never less
+ * than 2 seconds. With the provisional numbers, a second per 64 blocks and 10 seconds more.
  */
 class DiveTest {
 
@@ -23,9 +23,17 @@ class DiveTest {
     private final Dive dive = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
 
     @Test
-    void aDiveTakesItsFixedTimeAndASecondPer64BlocksApart() {
+    void aDiveWithinADimensionTakesASecondPer64BlocksApart() {
         var from = new Place(OVERWORLD, new BlockPos(0, 64, 0));
         var to = new Place(OVERWORLD, new BlockPos(384, 64, 512));
+        // 640 blocks apart: 10 seconds, and no fixed time.
+        assertEquals(200, dive.ticks(from, to));
+    }
+
+    @Test
+    void aDiveBetweenDimensionsTakesItsFixedTimeMore() {
+        var from = new Place(OVERWORLD, new BlockPos(0, 64, 0));
+        var to = new Place(END, new BlockPos(384, 64, 512));
         // 640 blocks apart: 10 seconds and 10 more.
         assertEquals(400, dive.ticks(from, to));
     }
@@ -45,8 +53,20 @@ class DiveTest {
 
     @Test
     void partOfASecondRoundsUpToATick() {
-        // 1 block is 20/64 of a tick, rounded up to one.
-        assertEquals(201, dive.ticks(new Place(OVERWORLD, BlockPos.ZERO), new Place(OVERWORLD, new BlockPos(1, 0, 0))));
+        // 650 blocks are 203 and 1/8 ticks, rounded up to 204.
+        assertEquals(204, dive.ticks(new Place(OVERWORLD, BlockPos.ZERO), new Place(OVERWORLD, new BlockPos(650, 0, 0))));
+    }
+
+    @Test
+    void aDiveBetweenNearWellsTakesTwoSeconds() {
+        // 1 block is 20/64 of a tick, and a dive shown going into one shaft and out of the other takes longer.
+        assertEquals(40, dive.ticks(new Place(OVERWORLD, BlockPos.ZERO), new Place(OVERWORLD, new BlockPos(1, 0, 0))));
+    }
+
+    @Test
+    void aDiveBetweenDimensionsWithNoFixedTimeTakesTwoSecondsToo() {
+        var instant = new Dive(0, 64, dimension -> 1.0);
+        assertEquals(40, instant.ticks(new Place(OVERWORLD, BlockPos.ZERO), new Place(END, BlockPos.ZERO)));
     }
 
     @Test

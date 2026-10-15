@@ -50,6 +50,33 @@ class VoidDragonsTest {
     }
 
     @Test
+    void removingByPlaceTakesEveryDragonRestingThereOrOnATripToOrFromIt() {
+        var elsewhere = new Place(Identifier.withDefaultNamespace("overworld"), new BlockPos(100, 64, 100));
+        var resting = dragons.add(ALICE, HERE);
+        var bound = dragons.add(ALICE, elsewhere);
+        dragons.update(bound.on(Optional.of(new Trip(Optional.empty(), HERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234, 1_000, 0))));
+        var loading = dragons.add(UUID.randomUUID(), elsewhere);
+        dragons.update(loading.on(Optional.of(new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_SOURCE, 1_234, 1_000, 0))));
+        var away = dragons.add(ALICE, elsewhere);
+
+        var removed = dragons.removeAt(HERE::equals);
+
+        assertEquals(List.of(resting.id(), bound.id(), loading.id()), removed.stream().map(VoidDragonRecord::id).toList());
+        assertEquals(List.of(away), List.copyOf(dragons.all()));
+    }
+
+    @Test
+    void removingByPlaceWhereNoDragonIsChangesNothing() {
+        var dragon = dragons.add(ALICE, HERE);
+        var changes = new int[1];
+        dragons.onChange(() -> changes[0]++);
+
+        assertTrue(dragons.removeAt(THERE::equals).isEmpty());
+        assertEquals(List.of(dragon), List.copyOf(dragons.all()));
+        assertEquals(0, changes[0]);
+    }
+
+    @Test
     void aSaveAndReloadKeepsEveryDragon() {
         var first = dragons.add(ALICE, HERE);
         var second = dragons.add(UUID.randomUUID(), THERE);

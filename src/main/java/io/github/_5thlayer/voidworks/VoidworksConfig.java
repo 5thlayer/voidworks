@@ -136,11 +136,12 @@ public final class VoidworksConfig {
                 .comment("Ticks a Void Dragon stops at a Void Well to load or unload.")
                 .defineInRange("dragonStopTicks", 100, 0, 24000);
         DRAGON_DIVE_TICKS = builder
-                .comment("Ticks any dive of a Void Dragon's through the void between two Void Wells takes, however near.")
+                .comment("Ticks a Void Dragon's dive through the void between two Void Wells in different dimensions takes,",
+                        "however near; a dive within one dimension takes only its distance's time, and any dive at least 2 seconds.")
                 .defineInRange("dragonDiveTicks", 200, 0, 24000);
         DRAGON_DIVE_BLOCKS_PER_SECOND = builder
                 .comment("How many blocks apart two Void Wells are, in Overworld blocks, for each second a dive between them",
-                        "takes beyond the fixed time: a Nether block counts eight, an End block one.")
+                        "takes: a Nether block counts eight, an End block one.")
                 .defineInRange("dragonDiveBlocksPerSecond", 64, 1, 1 << 20);
         DRAGON_WEAKEN_TICKS = builder
                 .comment("Ticks in which a Void Dragon diving between Void Wells loses a point of its health for each step the",
@@ -277,12 +278,12 @@ public final class VoidworksConfig {
         return DRAGON_STOP_TICKS.getAsInt();
     }
 
-    /** @return ticks any dive takes, however near */
+    /** @return ticks a dive between dimensions takes, however near */
     public static int dragonDiveTicks() {
         return DRAGON_DIVE_TICKS.getAsInt();
     }
 
-    /** @return Overworld blocks apart for each second a dive takes beyond its fixed time */
+    /** @return Overworld blocks apart for each second a dive takes */
     public static int dragonDiveBlocksPerSecond() {
         return DRAGON_DIVE_BLOCKS_PER_SECOND.getAsInt();
     }

@@ -115,6 +115,24 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
         return owner.id().equals(player.getUUID());
     }
 
+    /**
+     * Readies it for {@code owner}, as an operator's command does: theirs, with {@code target}, its
+     * Dormant cost paid, and, when the well around it is whole, in its network now rather than after
+     * its next look at the well.
+     */
+    public void ready(ServerLevel level, Player owner, FillTarget target) {
+        this.target = target;
+        claim(owner);
+        dormancy.payInFull();
+        lookNow();
+        serverTick(level);
+    }
+
+    /** Has its next tick look whether the well around it is whole, as it does every soak interval. */
+    private void lookNow() {
+        sinceLook = VoidworksConfig.soakInterval();
+    }
+
     /** @return for a player who does not own it: whose it is */
     Component ownedBy() {
         return Component.translatable("voidworks.well.owned_by", owner == null ? "" : owner.name());

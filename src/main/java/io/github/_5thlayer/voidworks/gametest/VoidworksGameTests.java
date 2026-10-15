@@ -83,6 +83,7 @@ public final class VoidworksGameTests {
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
         FeChargingTests.register(tests);
+        GalleryTests.register(tests);
         LoadTests.register(tests);
         MoteTests.register(tests);
         MutationChamberTests.register(tests);
@@ -116,6 +117,14 @@ public final class VoidworksGameTests {
          */
         void testAlone(String name, int maxTicks, Consumer<GameTestHelper> body) {
             register(name, maxTicks, body, alone);
+        }
+
+        /**
+         * A test that runs in a batch of its own, for one that changes the whole server, such as turning
+         * a datapack on, which reloads its data under every test running with it.
+         */
+        void testOnItsOwn(String name, int maxTicks, Consumer<GameTestHelper> body) {
+            register(name, maxTicks, body, event.registerEnvironment(id("on_its_own/" + name), new TestEnvironmentDefinition.AllOf(List.of())));
         }
 
         private void register(String name, int maxTicks, Consumer<GameTestHelper> body, Holder<TestEnvironmentDefinition<?>> batch) {

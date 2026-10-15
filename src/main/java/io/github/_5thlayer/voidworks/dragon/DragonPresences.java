@@ -52,12 +52,22 @@ public final class DragonPresences {
     /**
      * Has each dragon's presence follow its record: one shown follows what the record shows, and dives
      * away once its dragon dives or is somewhere else; a dragon not diving, whose place is loaded and
-     * ticking and which shows none, its last gone, is shown there.
+     * ticking and which shows none, its last gone, is shown there; a presence whose dragon is gone
+     * is taken away.
      */
     public static void show(MinecraftServer server) {
         var saved = SavedVoidDragons.saved(server);
         long now = server.overworld().getGameTime();
-        for (var dragon : SavedVoidDragons.of(server).all()) {
+        var dragons = SavedVoidDragons.of(server);
+        // A dragon is gone only when a command takes it out.
+        saved.presences.entrySet().removeIf(shown -> {
+            if (dragons.get(shown.getKey()).isPresent()) {
+                return false;
+            }
+            shown.getValue().discard();
+            return true;
+        });
+        for (var dragon : dragons.all()) {
             var showing = Showing.of(dragon, now, VoidworksConfig.dragonStopTicks());
             var shown = presence(server, dragon.id());
             if (shown.isPresent()) {

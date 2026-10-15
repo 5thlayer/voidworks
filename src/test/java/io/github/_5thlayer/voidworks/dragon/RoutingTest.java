@@ -44,7 +44,7 @@ class RoutingTest {
     private static final int STOP = 100;
     /** The motes a dragon carries for each egg it lays. */
     private static final long EGG = 250;
-    /** A dive of 200 ticks and a second per 64 blocks, the Nether's counting eight. */
+    /** A second a dive per 64 blocks, the Nether's counting eight, and 200 ticks more between dimensions. */
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     /** No harm anywhere, so a trip's motes go only where it carries them. */
     private static final Harm HARMLESS = new Harm(dimension -> 0, 50, 16);
@@ -265,14 +265,15 @@ class RoutingTest {
     @Test
     void aHurtDragonsTripsTakeLonger() {
         harming();
-        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(50), 3, Map.of());
+        var farEndWell = new Place(END, new BlockPos(0, 64, 640));
+        wells.add(ALICE, farEndWell, OptionalLong.of(50), 3, Map.of());
         var dragon = carrying(ALICE, END_WELL, 50, Map.of(4, 50L));
-        // At full health the dive of 64 blocks takes 220 ticks; at half health, twice that. Between End
-        // Wells it never weakens, so it keeps its speed.
-        runFor(440);
-        assertEquals(Map.of(), wells.motes(OTHER_END_WELL));
+        // At full health the dive of 640 blocks within the End takes 200 ticks; at half health, twice
+        // that. Between End Wells it never weakens, so it keeps its speed.
+        runFor(400);
+        assertEquals(Map.of(), wells.motes(farEndWell));
         runFor(1);
-        assertEquals(Map.of(4, 50L), wells.motes(OTHER_END_WELL));
+        assertEquals(Map.of(4, 50L), wells.motes(farEndWell));
         assertEquals(50, dragons.get(dragon.id()).orElseThrow().health());
     }
 
@@ -377,6 +378,19 @@ class RoutingTest {
         runFor(20_000);
         assertEquals(Map.of(4, 150L), wells.motes(OVERWORLD_WELL));
         assertEquals(Map.of(4, 850L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aDragonStopsAtTheNearestWellOfANetworkThoughEveryDiveToItTakesTheLeast() {
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(4, 300L));
+        // 100 blocks and 10 from the reservoir: dives of 32 ticks and 4, each taking the least, 40.
+        var farther = new Place(OVERWORLD, OVERWORLD_WELL.pos().east(100));
+        var nearer = new Place(OVERWORLD, OVERWORLD_WELL.pos().east(10));
+        wells.add(ALICE, farther, OptionalLong.of(50), 2, Map.of());
+        wells.join(ALICE, nearer, OptionalLong.of(50), farther);
+        var dragon = dragons.add(ALICE, OVERWORLD_WELL);
+        runFor(1);
+        assertEquals(nearer, dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().destination());
     }
 
     @Test
