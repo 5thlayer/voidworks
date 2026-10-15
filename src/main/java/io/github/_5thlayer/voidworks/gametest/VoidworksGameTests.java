@@ -79,6 +79,7 @@ public final class VoidworksGameTests {
         DisplacerTests.register(tests);
         DormantTests.register(tests);
         DragonlingTests.register(tests);
+        DragonReportTests.register(tests);
         EggTests.register(tests);
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
