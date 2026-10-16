@@ -97,7 +97,12 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Sort
     }
 
     /** @return this dragon having laid eggs for {@code motes} of its count, what it carried beyond them counting on */
-    VoidDragonRecord laid(long motes) {
+    /** @return this dragon as if it had unloaded {@code cargo} in its life, owing no egg: for setting its age by command */
+    public VoidDragonRecord aged(long cargo) {
+        return new VoidDragonRecord(id, owner, health, rest, load, trip, 0, cargo);
+    }
+
+        VoidDragonRecord laid(long motes) {
         return new VoidDragonRecord(id, owner, health, rest, load, trip, towardEgg - motes, cargo);
     }
 }

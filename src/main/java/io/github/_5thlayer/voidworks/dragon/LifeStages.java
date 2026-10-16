@@ -84,6 +84,11 @@ public record LifeStages(long length, Map<LifeStage, Factors> factors) {
         return stages[(int) Math.min(stages.length - 1, cargo / length)];
     }
 
+    /** @return the cargo a dragon has unloaded as it enters {@code stage} */
+    public long start(LifeStage stage) {
+        return stage.ordinal() * length;
+    }
+
     /** @return whether a dragon that has unloaded {@code cargo} has outlived its old stage, and dies */
     public boolean outlived(long cargo) {
         return cargo / length >= LifeStage.values().length;
