@@ -1,0 +1,19 @@
+{
+  "values": {
+    "voidworks:overworld_void_displacer": {
+      "step": 16,
+      "first_price": 1600,
+      "growth": 2
+    },
+    "voidworks:nether_void_displacer": {
+      "step": 16,
+      "first_price": 1600,
+      "growth": 2
+    },
+    "voidworks:end_void_displacer": {
+      "step": 16,
+      "first_price": 1600,
+      "growth": 2
+    }
+  }
+}
