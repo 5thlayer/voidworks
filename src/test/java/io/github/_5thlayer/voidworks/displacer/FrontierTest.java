@@ -81,20 +81,20 @@ class FrontierTest {
     void aheadWidensAsAPyramid() {
         for (var facing : Direction.values()) {
             var ahead = Frontier.ahead(DISPLACER, facing);
-            var one = DISPLACER.relative(facing);
-            var two = DISPLACER.relative(facing, 2);
+            var oneAhead = DISPLACER.relative(facing);
+            var twoAhead = DISPLACER.relative(facing, 2);
             var across = Direction.Plane.HORIZONTAL.test(facing) ? facing.getClockWise() : Direction.NORTH;
             var along = facing.getAxis() == Direction.Axis.Y ? Direction.EAST : Direction.UP;
-            for (int a = -1; a <= 1; a++) {
-                for (int b = -1; b <= 1; b++) {
-                    var beside = one.relative(across, a).relative(along, b);
-                    assertEquals(a == 0 && b == 0, ahead.test(beside), facing + ": a step ahead, " + a + " and " + b + " aside");
-                    var pos = two.relative(across, a).relative(along, b);
+            for (int dAcross = -1; dAcross <= 1; dAcross++) {
+                for (int dAlong = -1; dAlong <= 1; dAlong++) {
+                    var beside = oneAhead.relative(across, dAcross).relative(along, dAlong);
+                    assertEquals(dAcross == 0 && dAlong == 0, ahead.test(beside), facing + ": a step ahead, " + dAcross + " and " + dAlong + " aside");
+                    var pos = twoAhead.relative(across, dAcross).relative(along, dAlong);
                     assertTrue(ahead.test(pos), facing + ": two steps ahead, within one aside, " + pos);
                 }
             }
-            assertFalse(ahead.test(two.relative(across, 2)), facing + ": two steps ahead and two aside");
-            assertFalse(ahead.test(two.relative(along, -2).relative(across, 1)), facing + ": two steps ahead and two aside the other way");
+            assertFalse(ahead.test(twoAhead.relative(across, 2)), facing + ": two steps ahead and two aside");
+            assertFalse(ahead.test(twoAhead.relative(along, -2).relative(across, 1)), facing + ": two steps ahead and two aside the other way");
         }
     }
 

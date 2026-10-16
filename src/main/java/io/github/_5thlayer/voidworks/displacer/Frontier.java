@@ -11,11 +11,13 @@ import java.util.stream.Stream;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 
 /**
  * Where a Void Displacer harvests next, as plain logic over positions: it grows outward from
  * itself, reaching only positions that touch it or the Voidstone it has already left, so a cave or
- * an air pocket bounds it. Of those, it takes the nearest to itself first.
+ * an air pocket bounds it. Of those, it takes the nearest to itself first. A Displacer that grows
+ * through one face reaches only the pyramid {@link #ahead} of it.
  */
 public final class Frontier {
 
@@ -36,14 +38,19 @@ public final class Frontier {
         return pos -> {
             var offset = pos.subtract(displacer);
             int ahead = offset.get(axis) * facing.getAxisDirection().getStep();
-            int aside = 0;
-            for (var other : Direction.Axis.values()) {
-                if (other != axis) {
-                    aside = Math.max(aside, Math.abs(offset.get(other)));
-                }
-            }
-            return ahead >= 1 && aside < ahead;
+            return ahead >= 1 && aside(offset, axis) < ahead;
         };
+    }
+
+    /** How far {@code offset} lies aside of {@code axis}: the larger of its two other coordinates, either way. */
+    private static int aside(Vec3i offset, Direction.Axis axis) {
+        int aside = 0;
+        for (var other : Direction.Axis.values()) {
+            if (other != axis) {
+                aside = Math.max(aside, Math.abs(offset.get(other)));
+            }
+        }
+        return aside;
     }
 
     /**
