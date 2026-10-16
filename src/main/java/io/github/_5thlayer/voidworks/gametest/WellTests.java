@@ -445,7 +445,7 @@ final class WellTests {
                 })
                 .thenWaitUntil(() -> {
                     var network = networks.at(pos).orElseThrow();
-                    var expected = ShaftFill.of(network.capacity(), network.countByGrade());
+                    var expected = ShaftFill.of(network);
                     helper.assertTrue(expected.step() > 0 && well.shaft().equals(expected),
                             "the awake Well's shaft shows " + well.shaft() + ", not its network's " + expected);
                 })

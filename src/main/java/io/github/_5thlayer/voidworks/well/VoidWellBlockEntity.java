@@ -39,6 +39,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -124,6 +125,11 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     public double shownLevel(long gameTime, float partialTick) {
         double eased = Mth.clamp((gameTime - easingSince + partialTick) / EASE_TICKS, 0, 1);
         return Mth.lerp(eased * eased * (3 - 2 * eased), easedFrom, shaft.level());
+    }
+
+    /** @return the room its shaft's fluid fills when its network is full */
+    public AABB fluidRoom() {
+        return WellStructure.fluid(worldPosition, getBlockState().getValue(VoidWellBlock.FACING));
     }
 
     /** Has a watcher do {@code tick} each tick for every Well it has loaded, as the client does for their butterflies. */
@@ -254,10 +260,10 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
             whole = whole(level);
         }
         var networks = VoidstoneNetworks.of(level);
-        boolean inNetwork = keepStore(level, networks);
+        boolean inNetwork = keepStoreAwake(level, networks);
         if (looking) {
             show(level, inNetwork
-                    ? networks.at(worldPosition).map(network -> ShaftFill.of(network.capacity(), network.countByGrade())).orElse(ShaftFill.EMPTY)
+                    ? networks.at(worldPosition).map(ShaftFill::of).orElse(ShaftFill.EMPTY)
                     : ShaftFill.EMPTY);
         }
     }
@@ -271,7 +277,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     }
 
     /** @return whether, having soaked, joined or left as the well around it is, it is awake in its network */
-    private boolean keepStore(ServerLevel level, VoidNetworks networks) {
+    private boolean keepStoreAwake(ServerLevel level, VoidNetworks networks) {
         if (!whole) {
             if (networks.store(worldPosition).isPresent()) {
                 kept = networks.withdraw(worldPosition);

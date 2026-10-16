@@ -5,9 +5,7 @@ package io.github._5thlayer.voidworks.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
-import io.github._5thlayer.voidworks.well.WellStructure;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -58,8 +56,8 @@ final class VoidWellRenderer implements BlockEntityRenderer<VoidWellBlockEntity,
             return;
         }
         var core = well.getBlockPos();
-        state.fluid = WellStructure.fluid(core, well.getBlockState().getValue(VoidWellBlock.FACING)).move(-core.getX(), -core.getY(), -core.getZ());
-        state.level = (float) shown;
+        state.fluid = well.fluidRoom().move(-core.getX(), -core.getY(), -core.getZ());
+        state.height = (float) shown;
     }
 
     @Override
@@ -69,12 +67,12 @@ final class VoidWellRenderer implements BlockEntityRenderer<VoidWellBlockEntity,
             return;
         }
         var sprite = Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS).getSprite(SURFACE);
-        float y = (float) (fluid.minY + (fluid.getYsize() - BELOW_TOP) * state.level);
+        float y = (float) (fluid.minY + (fluid.getYsize() - BELOW_TOP) * state.height);
         float x0 = (float) fluid.minX;
         float x1 = (float) fluid.maxX;
         float z0 = (float) fluid.minZ;
         float z1 = (float) fluid.maxZ;
-        // The sprite once over the whole shaft; drawn both ways, as the render type does not cull.
+        // The sprite once over the whole shaft, one quad, seen from below too as the render type does not cull.
         collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS, false), (pose, buffer) -> {
             vertex(pose, buffer, x0, y, z0, sprite.getU0(), sprite.getV0());
             vertex(pose, buffer, x0, y, z1, sprite.getU0(), sprite.getV1());
@@ -91,12 +89,13 @@ final class VoidWellRenderer implements BlockEntityRenderer<VoidWellBlockEntity,
     /** The fluid fills the shaft, so it is drawn while any of the shaft is in sight. */
     @Override
     public AABB getRenderBoundingBox(VoidWellBlockEntity well) {
-        return WellStructure.fluid(well.getBlockPos(), well.getBlockState().getValue(VoidWellBlock.FACING));
+        return well.fluidRoom();
     }
 
     static final class RenderState extends BlockEntityRenderState {
         /** The room the fluid fills when full, around the core; null when the shaft shows nothing. */
         private @Nullable AABB fluid;
-        private float level;
+        /** How high the fluid stands, as a share of the room's height. */
+        private float height;
     }
 }

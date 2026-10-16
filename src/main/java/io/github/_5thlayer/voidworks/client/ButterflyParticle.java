@@ -44,13 +44,24 @@ final class ButterflyParticle extends SingleQuadParticle {
     static final int DRIFT_LIFETIME = 100;
     /** Blocks per tick a drifting butterfly goes, at most. */
     private static final double DRIFT_SPEED = 0.03;
-    /** How far a drifting butterfly keeps from the shaft's walls, floor and the fluid's surface. */
+    /** How far a drifting butterfly keeps from the shaft's walls, floor and the fluid's surface, at most: half the fluid's depth where it is shallower. */
     private static final double DRIFT_MARGIN = 0.15;
+    /** How much a drifting butterfly's speed wanders each tick, at most, each way. */
+    private static final double DRIFT_WANDER = 0.005;
+    /** How much its flutter lifts and drops it each tick, at most. */
+    private static final double DRIFT_FLUTTER = 0.005;
+    /** How fast its flutter goes, in radians a tick. */
+    private static final double FLUTTER_RATE = 0.9;
     /** The motes a drifting butterfly is sized as, though it stands for none. */
     private static final int DRIFT_SIZE = 8;
 
     /** Where a butterfly drifts: within {@code room}, under a {@code surface} that rises and falls. */
     private record Drift(AABB room, DoubleSupplier surface) {
+
+        /** @return how far it keeps from the floor and the surface: its margin, or half the fluid's depth where that is less */
+        double margin(double surface) {
+            return Math.min(DRIFT_MARGIN, (surface - room.minY) / 2);
+        }
     }
 
     private final SpriteSet sprites;
@@ -109,19 +120,22 @@ final class ButterflyParticle extends SingleQuadParticle {
     }
 
     /**
-     * Shows one butterfly of {@code grade} drifting in a Well's shaft: somewhere in {@code room}
-     * under {@code surface}, the height its fluid stands at, which it stays under as it rises and falls.
+     * @return one butterfly of {@code grade} drifting in a Well's shaft: somewhere in {@code room}
+     *         under {@code surface}, the height its fluid stands at, which it stays under as it rises
+     *         and falls, and fading once the fluid is gone; none while there is no fluid
      */
-    static void drift(ClientLevel level, AABB room, DoubleSupplier surface, int grade, SpriteSet sprites, Consumer<ButterflyParticle> add) {
-        var random = level.getRandom();
-        double top = surface.getAsDouble() - DRIFT_MARGIN;
-        double bottom = room.minY + DRIFT_MARGIN;
-        if (top <= bottom) {
-            return;
+    static @Nullable ButterflyParticle drift(ClientLevel level, AABB room, DoubleSupplier surface, int grade, SpriteSet sprites) {
+        var drift = new Drift(room, surface);
+        double top = surface.getAsDouble();
+        if (top <= room.minY) {
+            return null;
         }
-        var at = new Vec3(Mth.lerp(random.nextDouble(), room.minX + DRIFT_MARGIN, room.maxX - DRIFT_MARGIN), Mth.lerp(random.nextDouble(), bottom, top),
+        double margin = drift.margin(top);
+        var random = level.getRandom();
+        var at = new Vec3(Mth.lerp(random.nextDouble(), room.minX + DRIFT_MARGIN, room.maxX - DRIFT_MARGIN),
+                Mth.lerp(random.nextDouble(), room.minY + margin, top - margin),
                 Mth.lerp(random.nextDouble(), room.minZ + DRIFT_MARGIN, room.maxZ - DRIFT_MARGIN));
-        add.accept(new ButterflyParticle(level, at, at, MoteFlight.NO_ENTITY, grade, DRIFT_SIZE, sprites, false, new Drift(room, surface)));
+        return new ButterflyParticle(level, at, at, MoteFlight.NO_ENTITY, grade, DRIFT_SIZE, sprites, false, drift);
     }
 
     /** Shows a flight's butterflies, one per size its count splits into. */
@@ -177,15 +191,21 @@ final class ButterflyParticle extends SingleQuadParticle {
         setSprite(frame());
     }
 
-    /** Wanders slowly about the shaft, turning back from its walls, its floor and the fluid's surface, which it never rises above. */
+    /** Wanders slowly about the shaft, turning back from its walls, its floor and the fluid's surface, which it never rises above; gone with the fluid. */
     private void drift(Drift drift) {
-        xd = Mth.clamp(xd + (random.nextDouble() - 0.5) * 0.01, -DRIFT_SPEED, DRIFT_SPEED);
-        yd = Mth.clamp(yd + (random.nextDouble() - 0.5) * 0.01 + Math.sin((age + phase) * 0.9) * 0.005, -DRIFT_SPEED, DRIFT_SPEED);
-        zd = Mth.clamp(zd + (random.nextDouble() - 0.5) * 0.01, -DRIFT_SPEED, DRIFT_SPEED);
         var room = drift.room();
-        double top = Math.max(room.minY + DRIFT_MARGIN, drift.surface().getAsDouble() - DRIFT_MARGIN);
+        double surface = drift.surface().getAsDouble();
+        if (surface <= room.minY) {
+            remove();
+            return;
+        }
+        xd = Mth.clamp(xd + (random.nextDouble() - 0.5) * 2 * DRIFT_WANDER, -DRIFT_SPEED, DRIFT_SPEED);
+        yd = Mth.clamp(yd + (random.nextDouble() - 0.5) * 2 * DRIFT_WANDER + Math.sin((age + phase) * FLUTTER_RATE) * DRIFT_FLUTTER, -DRIFT_SPEED,
+                DRIFT_SPEED);
+        zd = Mth.clamp(zd + (random.nextDouble() - 0.5) * 2 * DRIFT_WANDER, -DRIFT_SPEED, DRIFT_SPEED);
+        double margin = drift.margin(surface);
         setPos(turnBack(x, xd, room.minX + DRIFT_MARGIN, room.maxX - DRIFT_MARGIN, v -> xd = v),
-                turnBack(y, yd, room.minY + DRIFT_MARGIN, top, v -> yd = v),
+                turnBack(y, yd, room.minY + margin, surface - margin, v -> yd = v),
                 turnBack(z, zd, room.minZ + DRIFT_MARGIN, room.maxZ - DRIFT_MARGIN, v -> zd = v));
         setSprite(frame());
     }

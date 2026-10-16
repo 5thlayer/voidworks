@@ -3,19 +3,22 @@
 
 package io.github._5thlayer.voidworks.well;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github._5thlayer.voidworks.network.MoteNetwork;
 
 /**
  * What a Void Well's shaft shows of its network: a void fluid as high as the network is full, in
- * sixteenths of its capacity rounded up, so any motes at all show, the top only when it is full, and butterflies in it of the
- * grades it holds, each grade's share in sixteenths of what it holds, at least one for any grade
- * held. Coarse on purpose: the server tells a watcher only when the shaft would look different, not
- * as each mote comes or goes. A look, not a count.
+ * sixteenths of its capacity rounded up, so any motes at all show, the top only when it is full; and
+ * butterflies in it of the grades it holds, each grade's share in sixteenths of what it holds,
+ * rounded, at least one for any grade held, so the shares need not add up to sixteen. Coarse on
+ * purpose: the server tells a watcher only when the shaft would look different, not as each mote
+ * comes or goes. A look, not a count.
  *
  * @param step   how high the fluid stands, from 0, empty, to {@link #STEPS}, the top of the shaft
  * @param shares grade to its share of the butterflies; no grade the network holds none of
@@ -37,7 +40,12 @@ public record ShaftFill(int step, SortedMap<Integer, Integer> shares) {
             SHARES_CODEC.fieldOf("shares").forGetter(ShaftFill::shares)).apply(instance, ShaftFill::new));
 
     public ShaftFill {
-        shares = new TreeMap<>(shares);
+        shares = Collections.unmodifiableSortedMap(new TreeMap<>(shares));
+    }
+
+    /** @return what the shafts of {@code network}'s Wells show */
+    public static ShaftFill of(MoteNetwork network) {
+        return of(network.capacity(), network.countByGrade());
     }
 
     /**
