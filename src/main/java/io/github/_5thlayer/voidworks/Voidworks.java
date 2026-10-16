@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks;
 
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
+import io.github._5thlayer.voidworks.displacer.DensityTooltip;
 import io.github._5thlayer.voidworks.displacer.Displacement;
 import io.github._5thlayer.voidworks.displacer.ZoneUpgrade;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
@@ -30,10 +31,12 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
- * ships), Voidstone and the Void Displacers with their displacement table and server
- * config, the Dormant machines' cost map, conduction through Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the
- * Void Siphon, the dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, which carries motes between Void Wells, the {@code /voidworks} commands and the game tests, which exist only when game tests
- * are enabled.
+ * ships), Voidstone and the Void Displacers with their displacement table and server config, the
+ * Density line in a Density item's tooltip, the Dormant machines' cost map, conduction through
+ * Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the Void Siphon, the
+ * dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, which carries motes
+ * between Void Wells, the {@code /voidworks} commands and the game tests, which exist only when
+ * game tests are enabled.
  */
 @Mod(Voidworks.MOD_ID)
 public final class Voidworks {
@@ -52,6 +55,7 @@ public final class Voidworks {
         modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
         VoidTaking.register(modBus);
+        DensityTooltip.register();
         Dormancy.register(modBus);
         DiveColour.register(modBus);
         EggPrice.register(modBus);
