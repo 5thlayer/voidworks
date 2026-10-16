@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.client;
 
+import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -30,10 +31,10 @@ final class DiveOverlay {
     private static final float TURNS = 1.5F;
 
     private static final int VOID = ARGB.color(255, 0, 0, 0);
-    private static final int DEEP = ARGB.color(255, 120, 40, 200);
+    private static final int DEEP = DiveColour.VOID;
     private static final int BRIGHT = ARGB.color(255, 230, 120, 255);
 
-    /** The progress bar's width and height, and the gap between it and the label over it. */
+    /** The progress bar's width and height, the gap between it and the label over it, its empty track's colour, and the label's. */
     private static final int BAR_WIDTH = 120;
     private static final int BAR_HEIGHT = 4;
     private static final int BAR_GAP = 4;
@@ -75,7 +76,8 @@ final class DiveOverlay {
         int barTop = Math.round(centreY) + BAR_GAP / 2;
         graphics.centeredText(font, shown.label(), Math.round(centreX), barTop - BAR_GAP - font.lineHeight, LABEL);
         graphics.fill(barLeft, barTop, barLeft + BAR_WIDTH, barTop + BAR_HEIGHT, BAR_TRACK);
-        graphics.fill(barLeft, barTop, barLeft + Math.round(BAR_WIDTH * shown.progress(player.level().getGameTime(), deltaTracker.getGameTimeDeltaPartialTick(true))), barTop + BAR_HEIGHT, shown.colour());
+        float progress = shown.progress(player.level().getGameTime(), deltaTracker.getGameTimeDeltaPartialTick(true));
+        graphics.fill(barLeft, barTop, barLeft + Math.round(BAR_WIDTH * progress), barTop + BAR_HEIGHT, shown.colour());
     }
 
     /** @return a number from 0 to 1 that stays the same for {@code index} and {@code salt} */

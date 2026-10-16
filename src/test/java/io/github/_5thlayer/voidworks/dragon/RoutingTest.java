@@ -533,7 +533,7 @@ class RoutingTest {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
-        assertTrue(routing.ride(dragons, dragon.id(), OTHER_END_WELL, now).diving().isPresent(), "the rider could not dive");
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OTHER_END_WELL, now), "the rider could not dive");
         assertEquals(Optional.of(Trip.Leg.TO_PICKED), leg(dragon));
         // 64 blocks apart, a second's dive, but every dive takes at least two.
         runFor(Dive.MINIMUM_TICKS);
@@ -552,13 +552,13 @@ class RoutingTest {
         wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
         wells.add(BOB, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
         var resting = dragons.add(ALICE, END_WELL);
-        assertTrue(routing.ride(dragons, resting.id(), OTHER_END_WELL, now).diving().isEmpty(), "it dived to another owner's Well");
+        assertEquals(Routing.Ride.CANNOT, routing.ride(dragons, resting.id(), OTHER_END_WELL, now), "it dived to another owner's Well");
         var away = dragons.add(ALICE, new Place(OVERWORLD, new BlockPos(9, 70, 9)));
-        assertTrue(routing.ride(dragons, away.id(), NETHER_WELL, now).diving().isEmpty(), "it dived from where it grew up, at no Well");
+        assertEquals(Routing.Ride.CANNOT, routing.ride(dragons, away.id(), NETHER_WELL, now), "it dived from where it grew up, at no Well");
         var diving = dragons.add(ALICE, NETHER_WELL);
         runFor(1);
         assertEquals(Optional.of(Trip.Leg.TO_SOURCE), leg(diving));
-        assertTrue(routing.ride(dragons, diving.id(), NETHER_WELL, now).diving().isEmpty(), "it dived from a dive");
+        assertEquals(Routing.Ride.CANNOT, routing.ride(dragons, diving.id(), NETHER_WELL, now), "it dived from a dive");
     }
 
     @Test
@@ -570,7 +570,7 @@ class RoutingTest {
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
         assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
-        routing.ride(dragons, dragon.id(), OTHER_END_WELL, now).diving().orElseThrow();
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OTHER_END_WELL, now));
         runFor(Dive.MINIMUM_TICKS + 1);
         assertEquals(Map.of(4, 30L), wells.motes(OTHER_END_WELL));
         assertEquals(Map.of(4, 20L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
@@ -587,11 +587,23 @@ class RoutingTest {
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
         // 640 Overworld blocks and between dimensions, 400 ticks unridden.
-        routing.ride(dragons, dragon.id(), NETHER_WELL, now).diving().orElseThrow();
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
         runFor(RIDDEN);
         assertEquals(Optional.of(Trip.Leg.TO_PICKED), leg(dragon));
         runFor(1);
         assertEquals(Optional.of(Trip.Leg.SETTING_DOWN), leg(dragon));
+    }
+
+    @Test
+    void aWeakenedDragonHealingAsItLeavesStillTakesTheRiddenTime() {
+        routing = new Routing(wells, owners, RIDDEN_DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 400L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        dragons.update(dragon.weakened(60));
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        var trip = dragons.get(dragon.id()).orElseThrow().trip().orElseThrow();
+        assertEquals(RIDDEN, trip.until() - trip.countedTo());
     }
 
     @Test
@@ -602,7 +614,8 @@ class RoutingTest {
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
         assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
-        var riding = routing.ride(dragons, dragon.id(), NETHER_WELL, now).diving().orElseThrow();
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        var riding = dragons.get(dragon.id()).orElseThrow();
         // 60 ticks of 400: 15 of its 100.
         assertEquals(Map.of(4, 15L), riding.load());
         assertEquals(15, riding.trip().orElseThrow().claimed());
@@ -619,9 +632,7 @@ class RoutingTest {
         runFor(1);
         wells.put(END_WELL, 4, CAPACITY);
         var before = dragons.get(dragon.id()).orElseThrow();
-        var ride = routing.ride(dragons, dragon.id(), NETHER_WELL, now);
-        assertTrue(ride.diving().isEmpty(), "it dived with more than it may carry");
-        assertTrue(ride.noRoom());
+        assertEquals(Routing.Ride.NO_ROOM, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
         assertEquals(before, dragons.get(dragon.id()).orElseThrow());
         assertEquals(Map.of(4, CAPACITY), wells.motes(END_WELL));
     }
@@ -702,7 +713,7 @@ class RoutingTest {
         owners.riding.add(dragon.id());
         runFor(1_000);
         assertEquals(Optional.of(Trip.Leg.WAITING), leg(dragon));
-        routing.ride(dragons, dragon.id(), END_WELL, now).diving().orElseThrow();
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), END_WELL, now));
         owners.riding.remove(dragon.id());
         runFor(Dive.MINIMUM_TICKS + 1);
         assertEquals(Optional.of(Trip.Leg.SETTING_DOWN), leg(dragon));

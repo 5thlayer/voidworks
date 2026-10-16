@@ -169,13 +169,13 @@ public final class DragonRiding {
             return;
         }
         var id = presence.dragonId();
-        var ride = id.map(dragon -> DragonRouting.ride(server, dragon, presence.picked));
-        if (ride.isEmpty() || ride.get().diving().isEmpty()) {
-            var refused = ride.filter(Routing.Ride::noRoom).isPresent() ? "voidworks.dragon.ride.no_room" : "voidworks.dragon.ride.cannot";
+        var ride = id.map(dragon -> DragonRouting.ride(server, dragon, presence.picked)).orElse(Routing.Ride.CANNOT);
+        if (ride != Routing.Ride.DIVING) {
+            var refused = ride == Routing.Ride.NO_ROOM ? "voidworks.dragon.ride.no_room" : "voidworks.dragon.ride.cannot";
             rider.sendOverlayMessage(Component.translatable(refused, label(server, presence.picked)));
             return;
         }
-        var trip = ride.get().diving().get().trip().orElseThrow();
+        var trip = record(server, presence).flatMap(VoidDragonRecord::trip).orElseThrow();
         presence.carry(new DiveShown(label(server, presence.picked), trip.countedTo(), trip.until(), DiveColour.of(server, presence.picked.dimension())));
     }
 
