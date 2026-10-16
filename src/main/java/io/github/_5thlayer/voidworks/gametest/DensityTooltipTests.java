@@ -25,8 +25,10 @@ final class DensityTooltipTests {
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
-        tests.test("density_tooltip_shows_a_diamond_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.DIAMOND_BLOCK, "voidworks.density.tooltip.motes", 4, 64));
-        tests.test("density_tooltip_shows_a_copper_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.COPPER_BLOCK, "voidworks.density.tooltip.mote", 1, 1));
+        tests.test("density_tooltip_shows_a_diamond_blocks_density_and_motes", 1,
+                helper -> showsUnderTheName(helper, Items.DIAMOND_BLOCK, "voidworks.density.tooltip.motes", 4, 64));
+        tests.test("density_tooltip_shows_a_copper_blocks_density_and_motes", 1,
+                helper -> showsUnderTheName(helper, Items.COPPER_BLOCK, "voidworks.density.tooltip.mote", 1, 1));
         tests.test("density_tooltip_shows_nothing_for_cobblestone", 1, DensityTooltipTests::showsNothingForDensityZero);
     }
 

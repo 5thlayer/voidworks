@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Test;
 
-/** The Density line: the Density alone until the motes are known, then with them, one mote said as one. */
+/** The Density line: the Density alone until the motes are known, then with them, one said as one. */
 class DensityTooltipTest {
 
     @Test
