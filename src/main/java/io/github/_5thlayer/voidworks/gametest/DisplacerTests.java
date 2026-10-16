@@ -61,6 +61,7 @@ final class DisplacerTests {
         tests.test("a_displacer_on_grass_harvests_the_grass", TICKS, DisplacerTests::harvestsGrass);
         tests.test("a_displacer_that_can_reach_no_terrain_before_its_first_harvest_pops_off", TICKS, DisplacerTests::popsOffNeverHarvested);
         tests.test("a_displacer_that_can_reach_no_more_terrain_becomes_voidstone_keeping_its_motes", TICKS, DisplacerTests::exhausted);
+        tests.test("a_spent_displacer_turns_to_voidstone_once_a_hopper_has_pulled_its_last_harvest", TICKS, DisplacerTests::hopperTakesTheLastHarvest);
         tests.test("a_displacers_item_face_takes_only_a_density_above_0_and_gives_only_its_output", 1, DisplacerTests::itemFace);
         tests.test("a_displacer_whose_output_is_full_stalls", TICKS, DisplacerTests::fullOutputStalls);
         tests.test("a_displacer_whose_network_cannot_take_the_harvest_stalls", TICKS, DisplacerTests::fullNetworkStalls);
@@ -94,22 +95,30 @@ final class DisplacerTests {
         feed(displacer, Items.COPPER_BLOCK, 6);
         int grade = pressure(helper, BELOW) + 1;
         var floor = new BlockPos[] {BELOW, BELOW.north(), BELOW.south(), BELOW.east(), BELOW.west()};
-        helper.succeedWhen(() -> {
-            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), DISPLACER);
-            for (var pos : floor) {
-                helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), pos);
-            }
-            helper.assertBlockNotPresent(VoidworksBlocks.VOIDSTONE.get(), BELOW.below());
-            helper.assertBlockPresent(Blocks.STONE, BELOW.north().east());
-            helper.assertTrue(displacer.grown().getFirst().equals(helper.absolutePos(BELOW)),
-                    "it harvested " + displacer.grown().getFirst() + " first, not the position below it");
-            var motes = motes(helper, DISPLACER);
-            helper.assertTrue(motes.equals(Map.of(grade, 5 * VoidworksConfig.motes(1))),
-                    "the network holds " + motes + ", not five harvests' motes of grade " + grade);
-            // What it held when it went: the sixth copper block and the five stone.
-            helper.assertItemEntityPresent(Items.COPPER_BLOCK, DISPLACER, 2);
-            helper.assertItemEntityPresent(Items.STONE, DISPLACER, 2);
-        });
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(output(displacer, Items.STONE) == 5, "the output holds " + output(displacer, Items.STONE) + " stone, not five"))
+                .thenIdle(3 * VoidworksConfig.harvestInterval())
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), DISPLACER);
+                    emptyOutput(displacer);
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), DISPLACER);
+                    for (var pos : floor) {
+                        helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), pos);
+                    }
+                    helper.assertBlockNotPresent(VoidworksBlocks.VOIDSTONE.get(), BELOW.below());
+                    helper.assertBlockPresent(Blocks.STONE, BELOW.north().east());
+                    helper.assertTrue(displacer.grown().getFirst().equals(helper.absolutePos(BELOW)),
+                            "it harvested " + displacer.grown().getFirst() + " first, not the position below it");
+                    var motes = motes(helper, DISPLACER);
+                    helper.assertTrue(motes.equals(Map.of(grade, 5 * VoidworksConfig.motes(1))),
+                            "the network holds " + motes + ", not five harvests' motes of grade " + grade);
+                    // What it held when it went: the sixth copper block. Its five stone were taken first.
+                    helper.assertItemEntityPresent(Items.COPPER_BLOCK, DISPLACER, 2);
+                    helper.assertItemEntityNotPresent(Items.STONE, DISPLACER, 2);
+                })
+                .thenSucceed();
     }
 
     /**
@@ -125,7 +134,7 @@ final class DisplacerTests {
         feed(displacer, Items.COPPER_BLOCK, 1);
         helper.succeedWhen(() -> {
             helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), grass);
-            helper.assertItemEntityPresent(Items.GRASS_BLOCK, beside, 2);
+            helper.assertTrue(output(displacer, Items.GRASS_BLOCK) == 1, "the output holds no grass");
         });
     }
 
@@ -149,14 +158,22 @@ final class DisplacerTests {
         var displacer = place(helper, above, 64);
         feed(displacer, Items.COPPER_BLOCK, 2);
         int grade = pressure(helper, stone) + 1;
-        helper.succeedWhen(() -> {
-            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), stone);
-            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), above);
-            // Its body joined the network of the Voidstone it left, which kept the harvest's motes.
-            var motes = motes(helper, above);
-            helper.assertTrue(motes.equals(Map.of(grade, VoidworksConfig.motes(1))), "the network holds " + motes + " after its one harvest");
-            helper.assertItemEntityPresent(Items.COPPER_BLOCK, above, 2);
-        });
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), stone))
+                .thenIdle(3 * VoidworksConfig.harvestInterval())
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), above);
+                    helper.assertTrue(output(displacer, Items.STONE) == 1, "the spent Displacer's output holds " + output(displacer, Items.STONE) + " stone, not the 1 it waits on");
+                    emptyOutput(displacer);
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), above);
+                    // Its body joined the network of the Voidstone it left, which kept the harvest's motes.
+                    var motes = motes(helper, above);
+                    helper.assertTrue(motes.equals(Map.of(grade, VoidworksConfig.motes(1))), "the network holds " + motes + " after its one harvest");
+                    helper.assertItemEntityPresent(Items.COPPER_BLOCK, above, 2);
+                })
+                .thenSucceed();
     }
 
     private static void itemFace(GameTestHelper helper) {
@@ -333,6 +350,28 @@ final class DisplacerTests {
 
     private static void feed(OverworldDisplacerBlockEntity displacer, Item item, int count) {
         displacer.inventory().set(OverworldDisplacerBlockEntity.INPUT, ItemResource.of(item), count);
+    }
+
+    private static void emptyOutput(OverworldDisplacerBlockEntity displacer) {
+        for (int slot = 1; slot <= OverworldDisplacerBlockEntity.OUTPUT_SLOTS; slot++) {
+            displacer.inventory().set(slot, ItemResource.EMPTY, 0);
+        }
+    }
+
+    /** A hopper under it pulls every harvest, the last one too: it becomes Voidstone only once its output is empty. */
+    private static void hopperTakesTheLastHarvest(GameTestHelper helper) {
+        var hopper = new BlockPos(4, 1, 4);
+        var above = hopper.above();
+        var stone = above.east();
+        helper.setBlock(hopper, Blocks.HOPPER);
+        helper.setBlock(stone, Blocks.STONE);
+        var displacer = place(helper, above, 1);
+        feed(displacer, Items.COPPER_BLOCK, 1);
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), above);
+            helper.assertContainerContains(hopper, Items.STONE);
+            helper.assertItemEntityNotPresent(Items.STONE, above, 3);
+        });
     }
 
     /** How many of {@code item} the output holds, over all its slots. */

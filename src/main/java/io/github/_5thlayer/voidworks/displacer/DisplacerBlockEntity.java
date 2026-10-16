@@ -55,8 +55,8 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * popping off as its item with what it holds, so it never stands there unbreakable. A full output
  * or tank, or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
  * with an empty hand, as nothing else can extract them. When its Zone is spent, or it can reach
- * nothing more, it becomes Voidstone itself and its network keeps the motes; one that could reach
- * nothing before its first harvest pops off instead, as outside its dimension, even before it is
+ * nothing more, it waits for its output to empty, then becomes Voidstone itself and its network
+ * keeps the motes; one that could reach nothing before its first harvest pops off instead, as outside its dimension, even before it is
  * {@linkplain #ready ready}.
  */
 public abstract class DisplacerBlockEntity extends BlockEntity {
@@ -191,7 +191,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (target.isPresent() && grown.size() < zone && harvest(level, target.get())) {
             target = next(level);
         }
-        if (target.isEmpty() || grown.size() >= zone) {
+        if ((target.isEmpty() || grown.size() >= zone) && outputEmpty()) {
+            // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it.
             becomeVoidstone(level);
         }
     }
@@ -316,7 +317,16 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return ResourceHandlerUtil.insertStacking(output, ItemResource.of(result), count, transaction) == count;
     }
 
-    /** Its Zone spent or nothing left in reach: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops what it held. */
+    private boolean outputEmpty() {
+        for (int slot = 0; slot < output.size(); slot++) {
+            if (!output.getResource(slot).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Its Zone spent or nothing left in reach, and its output empty: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops its fed blocks. */
     private void becomeVoidstone(ServerLevel level) {
         level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
     }
