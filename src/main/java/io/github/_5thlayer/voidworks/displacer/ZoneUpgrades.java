@@ -32,8 +32,6 @@ final class ZoneUpgrades {
     private static final String KEY = "zone_upgrades";
     private static final String LEVELS_KEY = "levels";
     private static final String SOAKING_KEY = "soaking";
-    private static final String PRICE_KEY = "price";
-    private static final String PAID_KEY = "paid";
 
     private final BlockEntity displacer;
     /** Held only while the game runs. */
@@ -49,17 +47,20 @@ final class ZoneUpgrades {
     /**
      * The level it has committed to and is soaking.
      *
-     * @param upgrade its terms when it was committed, which raise the Zone once it is paid
+     * @param upgrade its block's terms when it was committed, kept whole so the level raises the
+     *                Zone by the step it was quoted, whatever a datapack reloaded since says
+     * @param price   its price, fixed when it was committed
      * @param paid    the void energy soaked so far, which may pass the price by part of a mote
      */
     private record Soaking(ZoneUpgrade upgrade, long price, long paid) {
 
         private static final Codec<Soaking> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ZoneUpgrade.CODEC.fieldOf("upgrade").forGetter(Soaking::upgrade),
-                Codec.LONG.fieldOf(PRICE_KEY).forGetter(Soaking::price),
-                Codec.LONG.fieldOf(PAID_KEY).forGetter(Soaking::paid)
+                Codec.LONG.fieldOf("price").forGetter(Soaking::price),
+                Codec.LONG.fieldOf("paid").forGetter(Soaking::paid)
         ).apply(instance, Soaking::new));
 
+        /** @return what it has paid of its price, never more than the price */
         DisplacerBlockEntity.Payment payment() {
             return new DisplacerBlockEntity.Payment(Math.min(paid, price), price);
         }

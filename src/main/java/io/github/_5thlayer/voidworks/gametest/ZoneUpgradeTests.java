@@ -254,7 +254,7 @@ final class ZoneUpgradeTests {
                     helper.startSequence()
                             .thenIdle(3 * VoidworksConfig.soakInterval())
                             .thenExecute(() -> {
-                                long held = DisplacerTests.motes(helper, STORE).values().stream().mapToLong(Integer::longValue).sum();
+                                long held = total(helper, STORE);
                                 helper.assertTrue(held == left, "the network holds " + held + " motes, not the " + left + " left after paying " + before.paid());
                                 helper.assertTrue(reloaded.upgradeLevels() == 0 && reloaded.harvestsLeft() == ZONE,
                                         "the cancelled upgrade was bought: level " + reloaded.upgradeLevels() + ", " + reloaded.harvestsLeft() + " harvests left");
@@ -311,10 +311,11 @@ final class ZoneUpgradeTests {
     }
 
     /**
-     * Up in the air over one stone block, its network's motes two and three Voidstone off, taken
-     * away once it has committed so the upgrade can never be paid: it harvests the stone while the
-     * upgrade soaks, then, with nothing left in reach and its output emptied, becomes Voidstone all
-     * the same, the level unbought.
+     * Up in the air over one stone block, its network's motes two and three Voidstone off, so they
+     * soak in a few at a time. Once it has paid part, they are taken away, so the rest can never be
+     * paid: it harvests the stone while the upgrade soaks, then, with nothing left in reach and its
+     * output emptied, becomes Voidstone all the same, the level unbought and what it paid not given
+     * back to its network.
      */
     private static void lostWhenNothingInReach(GameTestHelper helper) {
         var high = overOneStone(helper);
@@ -330,21 +331,35 @@ final class ZoneUpgradeTests {
         helper.useBlock(high, player);
         helper.useBlock(high, player);
         helper.assertTrue(displacer.upgradePayment().isPresent(), "the second sneak-use did not commit to the upgrade");
-        helper.setBlock(high.east(3), Blocks.AIR);
-        helper.setBlock(high.east(2), Blocks.AIR);
+        long[] held = new long[1];
         helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(displacer.upgradePayment().orElseThrow().paid() > 0, "it has paid nothing yet"))
+                .thenExecute(() -> {
+                    helper.setBlock(high.east(3), Blocks.AIR);
+                    helper.setBlock(high.east(2), Blocks.AIR);
+                })
                 .thenWaitUntil(() -> helper.assertTrue(displacer.grown().size() == 1, "it has not harvested the stone below it"))
                 .thenExecute(() -> {
                     var payment = displacer.upgradePayment();
                     helper.assertTrue(payment.isPresent() && payment.get().paid() < payment.get().price(),
                             "it harvested only once the upgrade was paid: " + payment);
+                    held[0] = total(helper, high.east()) + total(helper, high.below());
                     for (int slot = 1; slot <= DisplacerBlockEntity.OUTPUT_SLOTS; slot++) {
                         displacer.inventory().set(slot, ItemResource.EMPTY, 0);
                     }
                 })
                 .thenWaitUntil(() -> helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), high))
-                .thenExecute(() -> helper.assertTrue(displacer.upgradeLevels() == 0, "it bought the level before it became Voidstone"))
+                .thenExecute(() -> {
+                    helper.assertTrue(displacer.upgradeLevels() == 0, "it bought the level before it became Voidstone");
+                    long after = total(helper, high);
+                    helper.assertTrue(after <= held[0], "its network holds " + after + " motes, more than the " + held[0] + " before: the payment came back");
+                })
                 .thenSucceed();
+    }
+
+    /** How many motes the network of the Voidstone at {@code pos} holds, every grade together. */
+    private static long total(GameTestHelper helper, BlockPos pos) {
+        return DisplacerTests.motes(helper, pos).values().stream().mapToLong(Integer::longValue).sum();
     }
 
     /** Woken and with Voidstone holding the price beside it, an End Displacer buys its first level as the Overworld's does. */
