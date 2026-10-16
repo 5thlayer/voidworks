@@ -9,6 +9,7 @@ import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
+import io.github._5thlayer.voidworks.dragon.CallPayload;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
 import io.github._5thlayer.voidworks.mutation.KnownBreakdowns;
@@ -51,6 +52,9 @@ public final class VoidworksClient {
         // Over the world but under the hotbar: a dragon's rider sees only the void through its dive.
         modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS,
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dive"), DiveOverlay::render));
+        // Just over the action bar's word that a called dragon is coming.
+        modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.OVERLAY_MESSAGE,
+                Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "call"), CallOverlay::render));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> DiveSound.tickClient());
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
         VoidWellBlockEntity.onWatcherTick(well -> {
@@ -61,6 +65,7 @@ public final class VoidworksClient {
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             KnownPressure.forget();
             KnownBreakdowns.forget();
+            CallOverlay.forget();
         });
     }
 
@@ -94,5 +99,6 @@ public final class VoidworksClient {
         });
         event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));
         event.register(BreakdownsPayload.TYPE, (payload, context) -> KnownBreakdowns.receive(payload));
+        event.register(CallPayload.TYPE, (payload, context) -> CallOverlay.receive(payload));
     }
 }

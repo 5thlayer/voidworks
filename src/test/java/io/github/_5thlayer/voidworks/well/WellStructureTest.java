@@ -96,14 +96,15 @@ class WellStructureTest {
     }
 
     @Test
-    void itsShaftIsEveryOpenPositionInsideItsWallsAndNothingElse() {
-        var layout = WellStructure.layout(CORE, Direction.EAST);
-        var centre = WellStructure.shaft(CORE, Direction.EAST);
+    void itsRimIsStoodOnByFeetOneOrTwoAboveARimPositionAndNowhereElse() {
+        var layout = WellStructure.layout(CORE, Direction.WEST);
+        var centre = WellStructure.shaft(CORE, Direction.WEST);
         for (int dx = -3; dx <= 3; dx++) {
-            for (int dy = -3; dy <= 4; dy++) {
+            for (int dy = -3; dy <= 6; dy++) {
                 for (int dz = -3; dz <= 3; dz++) {
                     var pos = centre.offset(dx, dy, dz);
-                    assertEquals(layout.get(pos) == Part.OPEN, WellStructure.inShaft(CORE, Direction.EAST, pos), pos.toShortString());
+                    boolean overRim = layout.get(pos.below()) == Part.RIM || layout.get(pos.below(2)) == Part.RIM;
+                    assertEquals(overRim, WellStructure.onRim(CORE, Direction.WEST, pos), pos.toShortString());
                 }
             }
         }

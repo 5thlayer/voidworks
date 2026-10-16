@@ -95,6 +95,7 @@
   "voidworks.dormant.awake": "Awake",
   "voidworks.dormant.status": "Dormant: %s of %s void energy paid",
   "voidworks.dragon.coming": "A Void Dragon is coming",
+  "voidworks.dragon.waits": "A Void Dragon waits for you",
   "voidworks.dragon.ride.cannot": "The dragon cannot dive to %s now",
   "voidworks.dragon.ride.mounted": "Strafe to pick a Well, jump to dive, sneak to get off",
   "voidworks.dragon.ride.no_room": "The Well here has no room for what the dragon cannot carry with you to %s",

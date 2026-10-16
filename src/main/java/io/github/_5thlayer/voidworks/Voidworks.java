@@ -60,7 +60,7 @@ public final class Voidworks {
         NeoForge.EVENT_BUS.addListener(Conduction::onLevelTick);
         Hatching.register();
         DragonPresences.register();
-        DragonRouting.register();
+        DragonRouting.register(modBus);
         DragonRiding.register();
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);

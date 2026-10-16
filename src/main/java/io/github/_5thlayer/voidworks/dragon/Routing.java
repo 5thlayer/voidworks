@@ -33,7 +33,8 @@ import java.util.function.Predicate;
  * counts the motes other dragons are on their way to load there, so none sets off for motes another
  * will take. A destination that is gone, no longer whole or no longer short when it arrives sends the
  * load on to another of the owner's stops that needs it, else to the one with most room; with room
- * nowhere, the dragon holds its load where it is until there is. It rests at the Well it last stopped at.
+ * nowhere, the dragon holds its load where it is until there is. It rests at the Well it last stopped
+ * at; one away from its owner's Wells, with nothing to do, dives to the nearest of them to rest there.
  *
  * <p>Diving, it weakens by the worse of its two ends' pressure ({@link Harm}), as it goes; a dive is a
  * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
@@ -48,10 +49,11 @@ import java.util.function.Predicate;
  * <p>Its owner riding it at a stop holds it there, whatever it is doing, until they get off or pick
  * another Well of theirs ({@link #ride}): it dives there at once, carrying them, a stop added to its
  * trip, where it sets them down and unloads what that Well is short of, in grades worth something
- * there, before it goes on to its destination with the rest. Its owner standing in the shaft of one of
- * their Wells calls a dragon ({@link Owners#calling}): the next of theirs to finish its stop, or one
- * with nothing to do at once, dives there with what it carries, a stop added to its trip, waits while
- * they stay, and then goes on.
+ * there, before it goes on to its destination with the rest. Its owner standing on the rim of one of
+ * their Wells calls a dragon ({@link Owners#calling}): one of theirs stopped there already waits there
+ * once its stop is over; else the next of theirs to finish its stop, or the nearest with nothing
+ * to do at once, dives there as a ridden dive does, its load cut to match, a stop added to its trip, waits while they stay, and then
+ * goes on.
  */
 public final class Routing {
 
@@ -157,7 +159,20 @@ public final class Routing {
             return dragon;
         }
         return answer(dragons, dragon, Optional.empty(), now)
-                .orElseGet(() -> dragon.load().isEmpty() ? plan(dragons, dragon, now) : send(dragons, dragon, now));
+                .orElseGet(() -> dragon.load().isEmpty() ? planOrGoToRest(dragons, dragon, now) : send(dragons, dragon, now));
+    }
+
+    /** A dragon with nothing carried plans a trip; with none to plan, away from its owner's Wells, whole and awake, it dives to the nearest of them to rest. */
+    private VoidDragonRecord planOrGoToRest(VoidDragons dragons, VoidDragonRecord dragon, long now) {
+        var planned = plan(dragons, dragon, now);
+        if (!planned.equals(dragon) || stop(dragon.owner(), dragon.rest()).isPresent()) {
+            return planned;
+        }
+        return stops(dragon.owner()).stream()
+                .map(stop -> stop.nearest(dragon.rest(), dive))
+                .min(dive.soonestFrom(dragon.rest()))
+                .map(well -> setOff(dragon, alone(well), now))
+                .orElse(dragon);
     }
 
     /**
@@ -181,20 +196,38 @@ public final class Routing {
             return Ride.CANNOT;
         }
         var dragon = found.get();
-        // Timed at the speed it will dive at, healed as it leaves, which frees the room its healing takes.
-        int healing = healing(dragon, at.get());
-        int speed = stages.speed(dragon.healed(healing));
-        long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), picked) * VoidDragonRecord.WHOLE_SPEED, speed);
-        long ridden = dive.ridden(unridden);
-        long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
-        if (excess > at.get().room() + (long) healing * harm.motesPerPoint()) {
+        var trip = dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked);
+        var diving = diveAsRidden(dragon, at, trip, now);
+        if (diving.isEmpty()) {
             return Ride.NO_ROOM;
         }
-        var lightened = excess > 0 ? putBack(dragon, excess) : dragon;
-        var trip = dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked);
-        var healed = healed(lightened);
-        dragons.update(healed.on(Optional.of(trip.claiming(Math.min(trip.claimed(), healed.carried())).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
+        dragons.update(diving.get());
         return Ride.DIVING;
+    }
+
+    /**
+     * {@code dragon}, at the stop {@code at}, if any, sets off on {@code trip} to the stop added to it
+     * as a ridden dive goes: healing first as it leaves a Well, in no more than a ridden dive's time
+     * ({@link Dive#ridden}), its load cut by the share of time saved, so it carries no more motes a
+     * second than unridden. It first puts what it holds beyond that into the Well it is at, lowest grade
+     * first, which counts toward neither its ageing nor its eggs.
+     *
+     * @return the dragon on its way; empty when it holds more than its ridden load and the Well it is at,
+     *         if any, has no room for the rest
+     */
+    private Optional<VoidDragonRecord> diveAsRidden(VoidDragonRecord dragon, Optional<Stop> at, Trip trip, long now) {
+        // Timed at the speed it will dive at, healed as it leaves, which frees the room its healing takes.
+        int healing = at.map(stop -> healing(dragon, stop)).orElse(0);
+        int speed = stages.speed(dragon.healed(healing));
+        long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), trip.added().orElseThrow()) * VoidDragonRecord.WHOLE_SPEED, speed);
+        long ridden = dive.ridden(unridden);
+        long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
+        if (excess > at.map(Stop::room).orElse(0L) + (long) healing * harm.motesPerPoint()) {
+            return Optional.empty();
+        }
+        var lightened = excess > 0 ? putBack(dragon, excess) : dragon;
+        var healed = healed(lightened);
+        return Optional.of(healed.on(Optional.of(trip.claiming(Math.min(trip.claimed(), healed.carried())).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
     }
 
     /** @return {@code dragon} having put {@code motes} of its load into the Well where it is, lowest grade first */
@@ -227,17 +260,52 @@ public final class Routing {
 
     /**
      * A dragon that has finished its stop, or has nothing to do, answers its owner's call, while they
-     * call at a stop of theirs that none of their other dragons is answering: it dives there, a stop
-     * added to {@code onward}, the rest of its trip, else to a trip of that stop alone.
+     * call at a stop of theirs that none of their other dragons is answering or stopped at, and no other
+     * with nothing to do would reach sooner: it dives
+     * there, a stop added to {@code onward}, the rest of its trip, else to a trip of that stop alone,
+     * as a ridden dive goes. One already at the Well called answers by waiting there,
+     * with no dive.
      *
-     * @return the dragon on its way; empty while no call is left to answer
+     * @return the dragon on its way, or waiting; empty while no call is left to answer
      */
     private Optional<VoidDragonRecord> answer(VoidDragons dragons, VoidDragonRecord dragon, Optional<Trip> onward, long now) {
         return owners.calling(dragon.owner())
                 .filter(called -> stop(dragon.owner(), called).isPresent())
+                .filter(called -> !nearerWithNothingToDo(dragons, dragon, called))
                 .filter(called -> dragons.all().stream().noneMatch(other -> other.owner().equals(dragon.owner())
-                        && other.trip().filter(trip -> trip.answering(called)).isPresent()))
-                .map(called -> setOff(dragon, onward.orElseGet(() -> alone(called)).adding(Trip.Leg.TO_CALL, called), now));
+                        && (other.trip().filter(trip -> trip.answering(called)).isPresent()
+                                || (!other.id().equals(dragon.id()) && stoppedAt(other, called)))))
+                .map(called -> {
+                    var added = onward.orElseGet(() -> alone(called)).adding(Trip.Leg.TO_CALL, called);
+                    return called.equals(dragon.rest())
+                            ? dragon.on(Optional.of(added.then(Trip.Leg.WAITING, now + stopTicks)))
+                            : setOffToCall(dragon, added, now);
+                });
+    }
+
+    /**
+     * It sets off on {@code trip} to the Well its owner calls it to as though they rode it already
+     * ({@link #diveAsRidden}); where it has nowhere to put back what it would, it dives the whole way
+     * with all it carries.
+     */
+    private VoidDragonRecord setOffToCall(VoidDragonRecord dragon, Trip trip, long now) {
+        return diveAsRidden(dragon, stop(dragon.owner(), dragon.rest()), trip, now)
+                .orElseGet(() -> setOff(dragon, trip, now));
+    }
+
+    /**
+     * @return whether another of {@code dragon}'s owner's dragons, with nothing to do and not ridden, would
+     *         reach {@code called} sooner, or as soon from nearer, and so answers the call
+     */
+    private boolean nearerWithNothingToDo(VoidDragons dragons, VoidDragonRecord dragon, Place called) {
+        var soonest = dive.soonestFrom(called);
+        return dragons.all().stream().anyMatch(other -> other.owner().equals(dragon.owner()) && !other.id().equals(dragon.id())
+                && other.trip().isEmpty() && !owners.riding(other.id()) && soonest.compare(other.rest(), dragon.rest()) < 0);
+    }
+
+    /** @return whether {@code dragon} is at the Well at {@code place}, resting or stopped there, not diving */
+    private static boolean stoppedAt(VoidDragonRecord dragon, Place place) {
+        return dragon.rest().equals(place) && dragon.trip().flatMap(Trip::divingTo).isEmpty();
     }
 
     /** @return a trip that is only a stop added at the Well at {@code place}, claiming nothing, after which it ends */
@@ -527,7 +595,7 @@ public final class Routing {
          */
         Place nearest(Place from, Dive dive) {
             return wells.stream().map(Wells.Well::place)
-                    .min(Comparator.comparingLong((Place place) -> dive.ticks(from, place)).thenComparingDouble(place -> dive.blocks(from, place)))
+                    .min(dive.soonestFrom(from))
                     .orElseThrow();
         }
 

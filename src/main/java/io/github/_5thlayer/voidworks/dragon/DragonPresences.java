@@ -26,7 +26,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * loads and unloads, lands and sits astride its rim while it rests, and takes off and dives into the
  * shaft and is gone as its dragon sets off. A dragon that rests where it grew up
  * is shown there. A presence is never saved, so a chunk unloading takes it away and loses nothing,
- * and it comes back once the place is loaded again, mid-stop or resting; one dragon never shows two.
+ * and a new one shows once the place is loaded again, mid-stop or resting; one dragon never shows
+ * two.
  * A presence that carried its rider through a dive is gone once its dragon has stopped, and the one
  * that emerges at the Well it stopped at brings the rider up out of the shaft on its back, wherever
  * that Well is, loaded or not, and sets them down on its rim once out ({@link DragonRiding}).
@@ -84,6 +85,17 @@ public final class DragonPresences {
             } else {
                 presence.release();
                 presence.ejectPassengers();
+            }
+            presence.discard();
+            return true;
+        });
+        // A presence whose chunk unloaded is out of its level but never removed, since it is never saved,
+        // and would come back with the chunk; one frozen where nothing ticks cannot dive away from where
+        // its dragon was. Either goes, and a new one shows where its dragon is once that place ticks.
+        saved.presences.entrySet().removeIf(shown -> {
+            var presence = shown.getValue();
+            if (presence.isRemoved() || presence.isVehicle() || presence.carrying() || !stranded(presence, dragons.get(shown.getKey()).orElseThrow(), now)) {
+                return false;
             }
             presence.discard();
             return true;
@@ -210,6 +222,18 @@ public final class DragonPresences {
             return;
         }
         spawn(level, dragon, Showing.WORKING, spot, LifeStage.OLD).ifPresent(VoidDragon::dieOfOldAge);
+    }
+
+    /**
+     * @return whether {@code presence} can no longer show {@code dragon}: out of its level, or frozen
+     *         where nothing ticks while its dragon dives or is somewhere else
+     */
+    private static boolean stranded(VoidDragon presence, VoidDragonRecord dragon, long now) {
+        if (!(presence.level() instanceof ServerLevel level) || level.getEntity(presence.getUUID()) != presence) {
+            return true;
+        }
+        boolean left = !presence.shows(dragon.rest()) || Showing.of(dragon, now, VoidworksConfig.dragonStopTicks()) == Showing.DIVING;
+        return left && !level.isPositionEntityTicking(presence.blockPosition());
     }
 
     /** @return whether a presence over the shaft of the Well core at {@code pos} is entity-ticking, so shows */

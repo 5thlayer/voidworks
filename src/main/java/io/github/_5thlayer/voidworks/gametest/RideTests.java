@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dragon.CallPayload;
 import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
@@ -45,6 +46,7 @@ import net.minecraft.network.PacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
@@ -68,10 +70,10 @@ import org.jspecify.annotations.Nullable;
  * Riding and calling a Void Dragon, with a player in the level: its owner mounts one of theirs
  * at a Well and no one else can, it waits there for them, strafing picks another of their Wells and
  * jumping dives there, holding them unseen and unhurt through the dive until it sets them down on that
- * Well's rim; the Well they pick is a stop added to the dragon's trip; and standing in a Well's shaft
- * calls a dragon there, which waits while they stay. The owner's other Well stands high over the
- * test's, in its column, clear of every other test, so a dive between them is the shortest a dive
- * takes. Which trips a dragon makes is {@code RoutingTest}'s.
+ * Well's rim; the Well they pick is a stop added to the dragon's trip; and standing on a Well's rim for a
+ * second calls a dragon there, which waits while they stay, the dragon pushing no one off the rim.
+ * The owner's other Well stands high over the test's, in its column, clear of every other test, so a
+ * dive between them is the shortest a dive takes. Which trips a dragon makes is {@code RoutingTest}'s.
  */
 final class RideTests {
 
@@ -86,6 +88,8 @@ final class RideTests {
     /** The heights of the tests' Nether Wells, so two tests side by side never put theirs on one network. */
     private static final int ADDED_STOP_Y = 48;
     private static final int CALLS_Y = 80;
+    private static final int BRIEF_Y = 128;
+    private static final int OTHERS_RIM_Y = 144;
     private static final int RIDDEN_DIVE_Y = 96;
     private static final int RIDDEN_REFUSED_Y = 112;
     /** How many motes a ridden dive's Nether Well is short of its target: more than a ridden dive to it carries. */
@@ -111,7 +115,12 @@ final class RideTests {
                 TICKS, RideTests::seesTheVoidInTheShaft);
         tests.testAlone("the_well_a_rider_picks_is_a_stop_added_to_the_trip_which_gets_what_it_is_short_of_and_the_rest_goes_on",
                 TICKS, RideTests::addedStop);
-        tests.testAlone("its_owner_standing_in_a_wells_shaft_calls_a_void_dragon_there_which_waits_while_they_stay", TICKS, RideTests::calls);
+        tests.testAlone("rimcall_its_owner_standing_on_a_wells_rim_calls_a_void_dragon_there_which_waits_while_they_stay_and_its_shaft_calls_none",
+                TICKS, RideTests::calls);
+        tests.testAlone("rimcall_a_void_dragons_presence_left_where_nothing_ticks_gives_way_to_a_new_one_at_its_well", TICKS, RideTests::strandedPresence);
+        tests.testAlone("rimcall_a_step_onto_a_wells_rim_shorter_than_a_second_calls_no_dragon", TICKS, RideTests::briefStep);
+        tests.testAlone("rimcall_standing_on_the_rim_of_another_owners_well_calls_no_dragon_and_says_nothing", TICKS, RideTests::othersRim);
+        tests.testAlone("rimcall_a_player_on_a_wells_rim_beside_a_void_dragon_sitting_astride_it_is_not_pushed", TICKS, RideTests::notPushed);
         tests.testAlone("a_rider_leaving_the_game_is_set_down_first_on_the_rim_of_the_well_the_dragon_is_at_or_diving_to", TICKS, RideTests::leaves);
         tests.testAlone("ridden_dive_to_the_nether_is_short_and_carries_its_load_cut_putting_the_rest_back_where_it_is", TICKS,
                 RideTests::riddenDive);
@@ -553,6 +562,8 @@ final class RideTests {
                     var setDown = SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow();
                     helper.assertTrue(total(helper, HIGH_WELL) == target, "the high Well holds " + total(helper, HIGH_WELL) + ", not its target " + target);
                     helper.assertTrue(setDown.load().equals(Map.of(PresenceTests.GRADE, (long) SHORT)), "the dragon carries " + setDown.load() + " on");
+                    // Staying on the rim would call the dragon to wait there for them.
+                    stepOff(helper, owner);
                 })
                 .thenWaitUntil(() -> {
                     var on = SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow();
@@ -676,8 +687,9 @@ final class RideTests {
 
     /**
      * The dragon rests at a Well of its owner's in the Nether, in a chunk nothing loads; its owner
-     * stands in the test's Well's shaft, and it comes there and waits while they stay, being told it is
-     * coming; once they step out, its stop ends, and it rests there.
+     * stands in the test's Well's shaft, which calls none, then on its rim, and it comes there and waits
+     * while they stay, being told it is coming, then that it waits; once they step off, its stop ends,
+     * and it rests there.
      */
     private static void calls(GameTestHelper helper) {
         var owner = Rider.join(helper);
@@ -689,42 +701,182 @@ final class RideTests {
         var dragonId = new AtomicReference<UUID>();
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
-                .thenExecute(() -> {
-                    RoutingTests.assertUnloaded(helper, nether, under.pos());
-                    VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
-                    SavedVoidWells.of(server).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
-                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), under).id());
-                })
+                .thenExecute(() -> dragonId.set(restingInTheNether(helper, owner, under)))
                 .thenIdle(40)
                 .thenExecute(() -> {
                     helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "the dragon with nothing to do is " + leg(helper, dragonId.get()));
                     var floor = Vec3.atBottomCenterOf(WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).below());
                     owner.setPos(floor.x, floor.y, floor.z);
                 })
+                .thenIdle(100)
+                .thenExecute(() -> {
+                    helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "its owner standing in the shaft called the dragon: it is " + leg(helper, dragonId.get()));
+                    standOnTheRim(helper, owner, WELL);
+                })
                 .thenWaitUntil(() -> helper.assertTrue(owner.overlays.contains(Component.translatable("voidworks.dragon.coming")),
                         "its owner was not told a dragon is coming"))
+                .thenExecute(() -> {
+                    helper.assertTrue(!owner.calls.isEmpty(), "its owner was sent no dive to show as a bar");
+                    var call = owner.calls.getFirst();
+                    helper.assertTrue(call.until() > call.from() && call.until() - call.from() <= VoidworksConfig.dragonRiddenDiveTicks(),
+                            "the dive sent runs from " + call.from() + " to " + call.until() + ", not within a ridden dive's time");
+                    helper.assertTrue(call.colour() == DiveColour.of(server, here.dimension()), "the bar is not in the colour of the dimension the dragon comes to");
+                })
                 .thenWaitUntil(() -> {
                     var called = SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow();
                     helper.assertTrue(called.rest().equals(here) && leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.WAITING)),
                             "the dragon has not come to the Well its owner calls it to");
                 })
+                .thenWaitUntil(() -> helper.assertTrue(owner.overlays.contains(Component.translatable("voidworks.dragon.waits")),
+                        "its owner was not told the dragon waits for them"))
                 .thenIdle(VoidworksConfig.dragonStopTicks() + 40)
                 .thenExecute(() -> {
                     helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.WAITING)),
-                            "the dragon left while its owner stays in the shaft: it is " + leg(helper, dragonId.get()));
+                            "the dragon left while its owner stays on the rim: it is " + leg(helper, dragonId.get()));
                     var waiting = DragonPresences.presence(server, dragonId.get());
                     helper.assertTrue(waiting.isPresent(), "the dragon waiting at the Well is not seen");
                     helper.assertTrue(waiting.get().perch() == VoidDragon.Perch.FLYING, "the dragon waiting for its owner is " + waiting.get().perch() + ", not in the air");
-                    var outside = helper.absoluteVec(new Vec3(4.5, 1, 0.5));
-                    owner.setPos(outside.x, outside.y, outside.z);
+                    stepOff(helper, owner);
                 })
-                .thenWaitUntil(() -> helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "the dragon still waits once its owner has left the shaft"))
+                .thenWaitUntil(() -> helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "the dragon still waits once its owner has left the rim"))
                 .thenExecute(() -> {
                     var rested = SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow();
                     helper.assertTrue(rested.rest().equals(here), "the dragon rests at " + rested.rest() + ", not the Well it was called to");
                     clearAway(helper, owner, Set.of(under));
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * A dragon rests at the test's Well; its presence is moved far off, where no chunk is loaded, as
+     * one left behind in a chunk that unloaded: it is taken away, and a new one is seen at the Well.
+     */
+    private static void strandedPresence(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var dragonId = new AtomicReference<UUID>();
+        var stranded = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id()))
+                .thenWaitUntil(() -> {
+                    var shown = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(shown.isPresent() && shown.get().perch() == VoidDragon.Perch.SITTING, "the dragon is not seen sitting at the Well");
+                    stranded.set(shown.get());
+                })
+                .thenExecute(() -> {
+                    var far = helper.absoluteVec(new Vec3(0, 1, 100_000));
+                    stranded.get().setPos(far.x, far.y, far.z);
+                })
+                .thenWaitUntil(() -> {
+                    var shown = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(shown.isPresent() && shown.get() != stranded.get() && shown.get().blockPosition().closerThan(helper.absolutePos(WELL), 16),
+                            "no new presence is seen at the Well");
+                    helper.assertTrue(stranded.get().isRemoved(), "the stranded presence is still there");
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /** Its owner steps onto the test's Well's rim for half a second and off again: the dragon resting in the Nether stays there. */
+    private static void briefStep(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, BRIEF_Y);
+        var dragonId = new AtomicReference<UUID>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> dragonId.set(restingInTheNether(helper, owner, under)))
+                .thenIdle(40)
+                .thenExecute(() -> standOnTheRim(helper, owner, WELL))
+                .thenExecuteAfter(10, () -> stepOff(helper, owner))
+                .thenIdle(100)
+                .thenExecute(() -> {
+                    helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "a brief step onto the rim called the dragon: it is " + leg(helper, dragonId.get()));
+                    helper.assertTrue(SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow().rest().equals(under), "the dragon left the Nether");
+                    clearAway(helper, owner, Set.of(under));
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Another player, whose dragon rests at their Well in the Nether, stands on the rim of the owner's
+     * Well: their dragon stays there, and they are told nothing.
+     */
+    private static void othersRim(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var other = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, OTHERS_RIM_Y);
+        var dragonId = new AtomicReference<UUID>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> {
+                    dragonId.set(restingInTheNether(helper, other, under));
+                    standOnTheRim(helper, other, WELL);
+                })
+                .thenIdle(100)
+                .thenExecute(() -> {
+                    helper.assertTrue(leg(helper, dragonId.get()).isEmpty(), "standing on another's rim called the dragon: it is " + leg(helper, dragonId.get()));
+                    helper.assertTrue(other.overlays.isEmpty(), "the player on another's rim was told " + other.overlays);
+                    clearAway(helper, other, Set.of(under));
+                    clearAway(helper, owner, Set.of());
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * A dragon sits astride the test's Well's rim, resting there, and its owner stands on the rim over
+     * the core, inside its presence's box: for two seconds nothing pushes them.
+     */
+    private static void notPushed(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var dragonId = new AtomicReference<UUID>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id()))
+                .thenWaitUntil(() -> {
+                    var shown = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(shown.isPresent() && shown.get().perch() == VoidDragon.Perch.SITTING, "the dragon is not seen sitting at the Well");
+                    standOnTheRim(helper, owner, WELL);
+                    owner.setDeltaMovement(Vec3.ZERO);
+                    helper.assertTrue(shown.get().getBoundingBox().contains(owner.position()), "its owner on the rim is not inside the presence's box");
+                })
+                .thenExecuteFor(40, () -> {
+                    var pushed = owner.getDeltaMovement().horizontalDistance();
+                    helper.assertTrue(pushed == 0, "the sitting dragon pushes its owner on the rim, at " + pushed);
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /** @return the id of a new dragon of {@code owner}'s resting at their Well at {@code under} in the Nether, which nothing loads */
+    private static UUID restingInTheNether(GameTestHelper helper, ServerPlayer owner, Place under) {
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        RoutingTests.assertUnloaded(helper, nether, under.pos());
+        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
+        SavedVoidWells.of(server).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
+        return SavedVoidDragons.of(server).add(owner.getUUID(), under).id();
+    }
+
+    /** Puts {@code player} back on the platform north of the test's Well, where they joined. */
+    private static void stepOff(GameTestHelper helper, ServerPlayer player) {
+        var outside = helper.absoluteVec(new Vec3(4.5, 1, 0.5));
+        player.setPos(outside.x, outside.y, outside.z);
+    }
+
+    /** Puts {@code player} on the rim of the Well at {@code core}, over the core. */
+    private static void standOnTheRim(GameTestHelper helper, ServerPlayer player, BlockPos core) {
+        var rim = Vec3.atBottomCenterOf(helper.absolutePos(core).above(3));
+        player.setPos(rim.x, rim.y, rim.z);
     }
 
     /**
@@ -840,6 +992,8 @@ final class RideTests {
     private static final class Rider extends ServerPlayer {
 
         final List<Component> overlays = new ArrayList<>();
+        /** The called dragon's dives they were sent, for the bar their client shows. */
+        final List<CallPayload> calls = new ArrayList<>();
 
         private Rider(ServerLevel level) {
             super(level.getServer(), level, new GameProfile(UUID.randomUUID(), "dragon-rider"), ClientInformation.createDefault());
@@ -883,6 +1037,9 @@ final class RideTests {
 
         @Override
         public void send(Packet<?> packet) {
+            if (packet instanceof ClientboundCustomPayloadPacket custom && custom.payload() instanceof CallPayload call && player instanceof Rider rider) {
+                rider.calls.add(call);
+            }
         }
 
         @Override

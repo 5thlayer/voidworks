@@ -116,7 +116,7 @@ public record Trip(Optional<Place> source, Place destination, long claimed, bool
         UNLOADING("unloading"),
         /** Diving to the Well its owner calls it to, from the stop it has finished. */
         TO_CALL("to_call"),
-        /** Stopped at the Well its owner called it to, waiting while they stay in its shaft. */
+        /** Stopped at the Well its owner called it to, waiting while they stay on its rim. */
         WAITING("waiting"),
         /** Diving to the Well its rider picked, carrying them. */
         TO_PICKED("to_picked"),

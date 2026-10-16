@@ -87,13 +87,13 @@ public final class WellStructure {
     /**
      * @param core where the core stands
      * @param facing the way the core faces, out of its wall; horizontal
-     * @param pos where something stands, by the block its feet are in
-     * @return whether {@code pos} is in the well's shaft: its open column, from its floor up to its rim's
-     *         top course
+     * @param pos where someone stands, by the block their feet are in
+     * @return whether {@code pos} stands on the well's rim: just over one of its rim blocks, or a hop
+     *         above that
      */
-    public static boolean inShaft(BlockPos core, Direction facing, BlockPos pos) {
+    public static boolean onRim(BlockPos core, Direction facing, BlockPos pos) {
         var offset = pos.subtract(shaft(core, facing));
-        return Math.abs(offset.getX()) <= 1 && Math.abs(offset.getZ()) <= 1 && offset.getY() >= -1 && offset.getY() <= 2;
+        return Math.max(Math.abs(offset.getX()), Math.abs(offset.getZ())) == 2 && offset.getY() >= 3 && offset.getY() <= 4;
     }
 
     /**

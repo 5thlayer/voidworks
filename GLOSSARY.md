@@ -125,8 +125,8 @@ from are the whole network's, its core and every Voidstone together.
 _Avoid_: roost, Void Displacer
 
 **Shaft**:
-The open 3×3 column inside a Void Well's walls, where its owner calls a dragon, a dragon dives and
-emerges and laid eggs pop out. It shows the Well's fill: a void fluid as high as the network is
+The open 3×3 column inside a Void Well's walls, where a dragon dives and emerges and laid eggs
+pop out. It shows the Well's fill: a void fluid as high as the network is
 full, with butterflies of the grades it holds.
 _Avoid_: pit, well hole
 
@@ -173,6 +173,13 @@ load no Well needs is stowed: carried to the owner's Well with most room. A stop
 trip: the Well its owner calls the dragon to, or the Well its rider picks, which it fills as it sets
 them down before it goes on.
 _Avoid_: route, job
+
+**Call**:
+An owner standing on the rim of one of their Void Wells, which brings a dragon of theirs there and
+keeps it waiting while they stay. It lasts only while they stand there; one dragon answers it, the
+nearest free, diving there as a ridden dive does, its load cut to match, its progress a bar over
+the caller's action bar.
+_Avoid_: summon, whistle
 
 **Life stage**:
 How old a grown Void Dragon is: **young**, **adult**, **senior** or **old**, reached by the cargo it
