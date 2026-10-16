@@ -242,6 +242,14 @@ motes toward it draws them out of a Well whatever its pressure, only the grades 
 where it spends them, so motes it cannot spend never crowd out those it can. While it draws, a Well
 soaks up none of those grades from the Voidstone between it and the spender: they are on their way.
 
+A Well's **shaft shows its fill**, drawn and never placed, so the shaft stays open air: a
+translucent void fluid, deep purple-black with a slowly moving surface and a faint glow, as high
+as its network is full, so every Well on a network shows the same level, easing to a new level as
+motes come and go. Butterflies tinted by grade drift in it below the surface, in the grades the
+network holds, more of them the fuller it is, up to a dozen: a look, not a count. The fluid slows,
+hides and holds nothing, and a Well that is Dormant or not whole shows an empty shaft. The fill
+target is not marked on it.
+
 A Well is the **face of its network**
 ([ADR 0006](../adr/0006-a-void-well-is-the-face-of-its-network.md)): what it holds, how full it is,
 its fill target and what a dragon loads from it or heals from are the whole network's, its core and

@@ -124,6 +124,12 @@ network: what it holds, how full it is, its fill target and what a dragon takes 
 from are the whole network's, its core and every Voidstone together.
 _Avoid_: roost, Void Displacer
 
+**Shaft**:
+The open 3×3 column inside a Void Well's walls, where its owner calls a dragon, a dragon dives and
+emerges and laid eggs pop out. It shows the Well's fill: a void fluid as high as the network is
+full, with butterflies of the grades it holds.
+_Avoid_: pit, well hole
+
 **Stop**:
 An owner's Void Wells on one network, which their dragons treat as one: a dragon never carries
 between them, stops at whichever its dive reaches soonest, and judges the network by the highest of
