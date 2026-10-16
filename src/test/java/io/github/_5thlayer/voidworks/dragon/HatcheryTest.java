@@ -111,8 +111,7 @@ class HatcheryTest {
         hatchery.hatch(egg(0));
         hatchery.startSoaking(egg(1), ALICE, PRICE);
         hatchery.startSoaking(egg(2), BOB, PRICE);
-        var codec = Hatchery.CODEC;
-        var read = codec.parse(JsonOps.INSTANCE, codec.encodeStart(JsonOps.INSTANCE, hatchery).getOrThrow()).getOrThrow();
+        var read = Hatchery.CODEC.parse(JsonOps.INSTANCE, Hatchery.CODEC.encodeStart(JsonOps.INSTANCE, hatchery).getOrThrow()).getOrThrow();
         assertEquals(2, read.dragons(ALICE));
         assertEquals(1, read.dragons(BOB));
         assertTrue(read.anyHatched());

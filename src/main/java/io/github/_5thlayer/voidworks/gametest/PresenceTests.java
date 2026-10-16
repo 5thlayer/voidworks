@@ -288,8 +288,8 @@ final class PresenceTests {
                     EggTests.placeOnTheFloor(helper, other, egg.getItem(), EGG);
                     var soaking = EggTests.soaking(helper, EGG);
                     helper.assertTrue(soaking.owner().equals(Optional.of(other.getUUID())), "the laid egg soaks for " + soaking.owner() + ", not its placer");
-                    helper.assertTrue(soaking.dormancy().cost() == EggTests.firstEggPrice(),
-                            "the laid egg costs its placer " + soaking.dormancy().cost() + ", not their first price " + EggTests.firstEggPrice());
+                    helper.assertTrue(soaking.dormancy().cost() == EggTests.eggPrice().firstPrice(),
+                            "the laid egg costs its placer " + soaking.dormancy().cost() + ", not their first price " + EggTests.eggPrice().firstPrice());
                     clearAway(helper, under);
                 })
                 .thenSucceed();

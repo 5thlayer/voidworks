@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
@@ -33,6 +34,12 @@ public record EggPrice(long firstPrice, int growth) {
 
     /** An egg with no entry is free, as a Dormant machine with no cost is. */
     public static final EggPrice FREE = new EggPrice(0, 1);
+
+    /** @return the egg price of an egg of {@code state}'s block; {@link #FREE} with no entry */
+    public static EggPrice of(BlockState state) {
+        var entry = state.typeHolder().getData(DATA_MAP);
+        return entry == null ? FREE : entry;
+    }
 
     public static void register(IEventBus modBus) {
         modBus.addListener(RegisterDataMapTypesEvent.class, event -> event.register(DATA_MAP));

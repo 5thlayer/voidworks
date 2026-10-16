@@ -41,15 +41,15 @@ public final class Hatchery {
     }
 
     /**
-     * Starts the egg at {@code egg} soaking for {@code owner}, who placed it, at {@code price}.
+     * Starts the egg at {@code egg} soaking for {@code owner}, who placed it, at {@code eggPrice}.
      *
      * @return its price, fixed now, in void energy
      */
-    public long startSoaking(Place egg, UUID owner, EggPrice price) {
-        long fixed = price.of(dragons(owner));
+    public long startSoaking(Place egg, UUID owner, EggPrice eggPrice) {
+        long price = eggPrice.of(dragons(owner));
         soaking.put(egg, owner);
         onChange.run();
-        return fixed;
+        return price;
     }
 
     /** The egg at {@code egg} has hatched: its owner has one more dragon, and it soaks no longer. */

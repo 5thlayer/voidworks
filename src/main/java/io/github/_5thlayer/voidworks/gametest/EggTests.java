@@ -14,6 +14,7 @@ import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.dragon.EggKind;
 import io.github._5thlayer.voidworks.dragon.Hatching;
 import io.github._5thlayer.voidworks.dragon.SoakingEggBlock;
+import io.github._5thlayer.voidworks.dragon.EggPrice;
 import io.github._5thlayer.voidworks.dragon.SoakingEggBlockEntity;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
@@ -92,8 +93,8 @@ final class EggTests {
         placeOnTheFloor(helper, player, Items.DRAGON_EGG, EGG);
         var egg = soaking(helper, EGG);
         helper.assertTrue(egg.owner().equals(Optional.of(player.getUUID())), "the egg's owner is " + egg.owner() + ", not its placer");
-        helper.assertTrue(egg.dormancy().cost() == firstEggPrice(),
-                "the egg's price is " + egg.dormancy().cost() + ", not the first egg's " + firstEggPrice());
+        helper.assertTrue(egg.dormancy().cost() == eggPrice().firstPrice(),
+                "the egg's price is " + egg.dormancy().cost() + ", not the first egg's " + eggPrice().firstPrice());
         helper.assertTrue(helper.getBlockState(EGG).getValue(SoakingEggBlock.EGG) == EggKind.DRAGON_EGG, "the soaking egg forgot it was the vanilla egg");
         helper.assertTrue(stage(helper, EGG) == 0, "a new egg is at stage " + stage(helper, EGG));
         helper.succeed();
@@ -107,7 +108,7 @@ final class EggTests {
         var player = player(helper);
         placeOnTheFloor(helper, player, Items.DRAGON_EGG, EGG);
         int grade = DisplacerTests.pressure(helper, EGG) + 1;
-        int quarter = Math.toIntExact(firstEggPrice() / 4 / VoidEnergy.BASE);
+        int quarter = Math.toIntExact(eggPrice().firstPrice() / 4 / VoidEnergy.BASE);
         var sequence = helper.startSequence();
         for (int stage = 1; stage <= SoakingEggBlock.LAST_STAGE; stage++) {
             int expected = stage;
@@ -128,7 +129,7 @@ final class EggTests {
 
     private static void drainedEggHatches(GameTestHelper helper) {
         int grade = DisplacerTests.pressure(helper, EGG) + 1;
-        var store = new MoteStore().add(grade, Math.toIntExact(firstEggPrice() / VoidEnergy.BASE));
+        var store = new MoteStore().add(grade, Math.toIntExact(eggPrice().firstPrice() / VoidEnergy.BASE));
         SpendTests.placeStore(helper, BESIDE, store);
         helper.setBlock(NETWORK, VoidworksBlocks.VOIDSTONE.get());
         var player = player(helper);
@@ -140,9 +141,9 @@ final class EggTests {
         });
     }
 
-    /** @return an owner's first egg's price, from the egg's datapack entry */
-    static long firstEggPrice() {
-        return SoakingEggBlockEntity.price(VoidworksBlocks.SOAKING_EGG.get().defaultBlockState()).firstPrice();
+    /** @return the egg's datapack entry */
+    static EggPrice eggPrice() {
+        return EggPrice.of(VoidworksBlocks.SOAKING_EGG.get().defaultBlockState());
     }
 
     private static void twoEggsDoNotBothGetTheCheapPrice(GameTestHelper helper) {
@@ -151,10 +152,10 @@ final class EggTests {
         var player = player(helper);
         placeOnTheFloor(helper, player, Items.DRAGON_EGG, EGG);
         placeOnTheFloor(helper, player, VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get(), OTHER_EGG);
-        long first = firstEggPrice();
+        long first = eggPrice().firstPrice();
         helper.assertTrue(soaking(helper, EGG).dormancy().cost() == first, "the first egg costs " + soaking(helper, EGG).dormancy().cost());
-        helper.assertTrue(soaking(helper, OTHER_EGG).dormancy().cost() == 2 * first,
-                "the second egg costs " + soaking(helper, OTHER_EGG).dormancy().cost() + ", not twice the first's " + first);
+        helper.assertTrue(soaking(helper, OTHER_EGG).dormancy().cost() == eggPrice().of(1),
+                "the second egg costs " + soaking(helper, OTHER_EGG).dormancy().cost() + ", not the second's " + eggPrice().of(1));
         helper.setBlock(THIRD_BESIDE, VoidworksBlocks.VOIDSTONE.get());
         placeOnTheFloor(helper, player(helper), Items.DRAGON_EGG, THIRD_EGG);
         helper.assertTrue(soaking(helper, THIRD_EGG).dormancy().cost() == first,
@@ -181,7 +182,7 @@ final class EggTests {
         helper.getLevel().setBlock(helper.absolutePos(EGG), Blocks.AIR.defaultBlockState(),
                 Block.UPDATE_CLIENTS | Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS);
         placeOnTheFloor(helper, player, Items.DRAGON_EGG, EGG);
-        helper.assertTrue(soaking(helper, EGG).dormancy().cost() == firstEggPrice(),
+        helper.assertTrue(soaking(helper, EGG).dormancy().cost() == eggPrice().firstPrice(),
                 "the egg taken away still counts: the next costs " + soaking(helper, EGG).dormancy().cost());
         helper.succeed();
     }
@@ -211,7 +212,7 @@ final class EggTests {
     /** A quarter soaked, then broken: the vanilla egg drops, the quarter is lost, and the owner's next egg is cheap again. */
     private static void brokenWhileSoaking(GameTestHelper helper) {
         int grade = DisplacerTests.pressure(helper, EGG) + 1;
-        int quarter = Math.toIntExact(firstEggPrice() / 4 / VoidEnergy.BASE);
+        int quarter = Math.toIntExact(eggPrice().firstPrice() / 4 / VoidEnergy.BASE);
         var store = new MoteStore().add(grade, quarter);
         SpendTests.placeStore(helper, BESIDE, store);
         helper.setBlock(NETWORK, VoidworksBlocks.VOIDSTONE.get());
@@ -227,7 +228,7 @@ final class EggTests {
                     placeOnTheFloor(helper, player, Items.DRAGON_EGG, EGG);
                     var again = soaking(helper, EGG);
                     helper.assertTrue(again.dormancy().paid() == 0, "the egg placed again kept " + again.dormancy().paid());
-                    helper.assertTrue(again.dormancy().cost() == firstEggPrice(),
+                    helper.assertTrue(again.dormancy().cost() == eggPrice().firstPrice(),
                             "the broken egg still counts: the next costs " + again.dormancy().cost());
                 })
                 .thenSucceed();
@@ -280,7 +281,7 @@ final class EggTests {
         var reloaded = soaking(helper, EGG);
         reloaded.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), saved));
         helper.assertTrue(reloaded.owner().equals(Optional.of(player.getUUID())), "the reloaded egg's owner is " + reloaded.owner());
-        helper.assertTrue(reloaded.dormancy().cost() == firstEggPrice(), "the reloaded egg's price is " + reloaded.dormancy().cost());
+        helper.assertTrue(reloaded.dormancy().cost() == eggPrice().firstPrice(), "the reloaded egg's price is " + reloaded.dormancy().cost());
         helper.succeed();
     }
 

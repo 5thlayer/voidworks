@@ -60,14 +60,8 @@ public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy
         // Before it takes its owner, so an egg of theirs that stood here before it is forgotten too.
         hatchery.forgetGone(owner, egg -> gone(level.getServer(), egg, owner));
         this.owner = owner;
-        dormancy.setPrice(hatchery.startSoaking(egg(level), owner, price(getBlockState())));
+        dormancy.setPrice(hatchery.startSoaking(egg(level), owner, EggPrice.of(getBlockState())));
         setChanged();
-    }
-
-    /** @return the {@link EggPrice} of an egg of {@code state}'s block; {@link EggPrice#FREE} with no entry */
-    public static EggPrice price(BlockState state) {
-        var entry = state.typeHolder().getData(EggPrice.DATA_MAP);
-        return entry == null ? EggPrice.FREE : entry;
     }
 
     /** @return whether {@code owner}'s egg at {@code egg} is known to stand no longer; one in an unloaded chunk may still */
