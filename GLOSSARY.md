@@ -157,6 +157,12 @@ _Avoid_: receiver, input hatch
 A Well hatch offering whatever is put in it to its owner's requesters elsewhere; it never asks.
 _Avoid_: giver, output hatch
 
+**Toll**:
+The void energy a Matter-line dragon spends from the Well it loads at, by the stacks it takes and
+how far they climb in Void Pressure to where they go: the void's price for moving matter. The Mote
+line pays none.
+_Avoid_: fare, fee, freight cost
+
 **Owner**:
 The player a Void Dragon and a Void Well belong to: whoever placed the egg it hatched from, or the
 Well's core. A dragon serves only its owner's Wells.
