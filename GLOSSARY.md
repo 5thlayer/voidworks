@@ -148,6 +148,27 @@ half, three quarters or full. Void Dragons deliver to a stop below its target, t
 Wells', and take from one above it; a stop whose Wells have none is a reservoir, which only gives.
 _Avoid_: quota, setpoint
 
+**Well hatch**:
+A container placed against the outside of a Void Well's wall, joining that Well, where a
+Matter-line dragon loads and unloads items and hoppers, belts and pipes reach them. It is not part
+of the Well's structure, and it is either a requester or a provider.
+_Avoid_: port, dock, item core
+
+**Requester**:
+A Well hatch asking for one item, so many stacks of it: Matter-line dragons deliver it there until
+the hatch holds that many, and it never gives.
+_Avoid_: receiver, input hatch
+
+**Provider**:
+A Well hatch offering whatever is put in it to its owner's requesters elsewhere; it never asks.
+_Avoid_: giver, output hatch
+
+**Toll**:
+The void energy a Matter-line dragon spends from the Well it loads at, by the stacks it takes and
+how far they climb in Void Pressure to where they go: the void's price for moving matter. The Mote
+line pays none.
+_Avoid_: fare, fee, freight cost
+
 **Owner**:
 The player a Void Dragon and a Void Well belong to: whoever placed the egg it hatched from, or the
 Well's core. A dragon serves only its owner's Wells.
@@ -198,17 +219,24 @@ A Void Dragon before it grows, not yet in any life stage, hatched from an egg so
 it hatched, follows a player holding a Void Siphon, and grows faster for the motes a Siphon feeds it.
 
 **Drained Dragon Egg**:
-The egg an adult Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
-the founder of the Mote line, both soak motes once a player places them touching Voidstone, as a
-Dormant machine soaks its cost, and hatch once they have soaked enough; broken first, an egg loses
-what it soaked.
+The egg an adult Mote-line Void Dragon lays as it works: a dragon egg drained of void. It, the
+vanilla egg, the founder of the Mote line, and the Matter Dragon Egg all soak motes once a player
+places them touching Voidstone, as a Dormant machine soaks its cost, and hatch once they have soaked
+enough; broken first, an egg loses what it soaked.
 _Avoid_: lesser egg
+
+**Matter Dragon Egg**:
+The Matter line's egg: a Drained Dragon Egg tinted amber, made by upgrading a Mote-line egg by
+Mutation and laid by adult Matter-line dragons. Its colour tells it from a Mote-line egg in a chest;
+the dragon it hatches looks like any other until it carries.
+_Avoid_: laden egg, freight egg
 
 **Line**:
 A Void Dragon's inherited kind, fixed in its egg, which says what it carries: the Mote line carries
 motes, the Matter line items, and never both. A dragon lays eggs of its own Line. The vanilla egg
-founds the Mote line; the Matter line is founded by upgrading a Mote-line egg by Mutation, never the
-other way.
+founds the Mote line; the Matter line is founded by upgrading a Mote-line egg to a Matter Dragon Egg
+by Mutation, never the other way. A grown dragon shows its Line by what it carries: a Matter-line one
+hangs its first stack under its body, a Mote-line one trails sparks in its grades' colours.
 _Avoid_: breed, strain, class
 
 ### Mutation

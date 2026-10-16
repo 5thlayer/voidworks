@@ -10,7 +10,10 @@ and a sixth on 2026-10-13 on the Void Dragon, which made it server state rather 
 2026-10-14 that made the Void Siphon charge other mods' FE items in place of void gear of our own
 ([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)),
 and an eighth on 2026-10-15 that shipped a Gallery pack ahead of libworks
-([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)).
+([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)),
+and the [Carry matter between dimensions](https://github.com/5thlayer/voidworks/issues/86) map,
+closed on 2026-10-16, which had Matter-line Void Dragons carry items between dimensions
+([ADR 0011](../adr/0011-matter-line-void-dragons-carry-items-between-dimensions.md)).
 Factorio fidelity was not a constraint.
 
 The terms are in [`GLOSSARY.md`](../../GLOSSARY.md).
@@ -50,6 +53,10 @@ lesson the next one pays off:
 5. **Wells and the Dragon.** The first egg soaks on a network and hatches while the player raids End
    cities, whose shulker shells make the Void Well; the Void Dragon carries between Wells, and lays
    the eggs of the dragons after it.
+6. **The Matter line.** A Drained Dragon Egg upgraded by Mutation becomes a Matter Dragon Egg, whose
+   dragons carry items between Wells in any dimension, paying a Toll in void. The dense blocks an
+   End Displacer wants, made in Overworld and Nether factories, ride to the End. Until then the
+   player carries them by hand: one busy End Displacer eats about two shulker boxes an hour.
 
 Before the Nether, crying obsidian comes only from ruined portals, enough for a Displacer or two;
 after it, piglins barter it, so relocating Displacers pulls a player into the Nether.
@@ -306,21 +313,28 @@ is server state, not an entity: it routes, dives, weakens and heals with no chun
 dragon a player sees near a Well is only its presence
 ([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)). Nothing hurts a
 Dragonling or a Void Dragon, and only old age kills a Void Dragon
-([ADR 0010](../adr/0010-a-void-dragon-dies-of-old-age.md)).
+([ADR 0010](../adr/0010-a-void-dragon-dies-of-old-age.md)). Every dragon has a **Line**, fixed in
+its egg: the **Mote line** carries motes and the **Matter line** items, never both
+([ADR 0011](../adr/0011-matter-line-void-dragons-carry-items-between-dimensions.md)). This section
+says how a dragon carries motes; a Matter-line dragon does everything else here as written, and
+§ Moving matter says how it carries items.
 
-- **Eggs.** The first dragon kill gives the vanilla egg, the founder of every line. Later kills give
+- **Eggs.** The first dragon kill gives the vanilla egg, the founder of the Mote line. Later kills give
   nothing, but while no player has hatched a dragon in the world, a kill places a vanilla egg on the
-  exit portal again, so a lost founder is replaced. Every other egg is a **Drained Dragon Egg**,
-  laid by an adult Void Dragon each time it has carried a set number of motes since its last, or
+  exit portal again, so a lost founder is replaced. Every other Mote-line egg is a **Drained Dragon Egg**,
+  laid by an adult Mote-line dragon each time it has carried a set number of motes since its last, or
   since it became adult, counted as it unloads them, a stowed load too: it pops out of the shaft of the next Well it stops at, to
   load or unload, as an item, so eggs are given and traded. A Well whose chunk is not loaded lays
   none: the dragon owes the egg, with any others it comes to owe, to its next stop at a loaded Well,
   where it lays them all, so its eggs follow only the motes it carries; eggs still owed as it turns
-  senior are laid the same way, and none after. A dragon lays eggs of its own Line, so 8 in its life. Until it
-  soaks, a Drained Dragon Egg falls and teleports when hit, as the vanilla egg does.
-- **Hatching.** Either egg, placed by a player touching a Voidstone network, soaks up motes from it
-  by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling its
-  placer owns. A soaking egg neither falls nor teleports. Its price is fixed when it starts soaking
+  senior are laid the same way, and none after. A dragon lays eggs of its own Line, so 8 in its life.
+  The Matter line's egg is the **Matter Dragon Egg**: a Drained Dragon Egg upgraded by Mutation
+  (§ Families) founds the line, never the other way, and an adult Matter-line dragon lays one by
+  the same rules, counted in the stacks it unloads (§ Moving matter). Until it soaks, a Drained or
+  Matter Dragon Egg falls and teleports when hit, as the vanilla egg does.
+- **Hatching.** Any of the three eggs, placed by a player touching a Voidstone network, soaks up motes from it
+  by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling of its
+  Line that its placer owns. A soaking egg neither falls nor teleports. Its price is fixed when it starts soaking
   and grows, doubling by default, with every living dragon its owner has, Dragonling or Void Dragon of
   either Line, and every egg they are soaking, so carriers grow as fast as an owner can pay for them,
   a dead dragon's replacement costs what it did, and an egg given away starts its new owner cheap. An egg no player placed
@@ -344,7 +358,7 @@ Dragonling or a Void Dragon, and only old age kills a Void Dragon
   loaded, it lives on and dies at its next stop at a loaded one, so no egg is lost. Nothing else
   tells its owner. Dragons from before life stages start young, their count toward an egg dropped. Matching a dragon's stage to a trip, fast for far and big for large shortfalls, is left
   to routing as it is, and to a later ticket if play needs it.
-- **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension. It flies only to a
+- **Routing.** A Mote-line dragon serves all its owner's Void Wells in every dimension. It flies only to a
   Well below its fill target, and takes from the owner's Well of highest network pressure that holds
   something worth delivering there, a reservoir or a Well above its target, which gives its excess;
   a Well below its target never gives. A network with several of the owner's Wells is judged by the
@@ -417,19 +431,118 @@ Dragonling or a Void Dragon, and only old age kills a Void Dragon
   that Well has healed it, from its store, a fixed number of motes per point of health, lowest grade
   first and not by the spend rule, as far as the motes go; an empty Well heals nothing.
 - **Seen in Jade.** Anyone looking at a dragon's presence sees what its record holds: what it is
-  doing, its life stage, the Well it is bound for by name, the motes it carries by grade and in total, its health
-  and its owner; looking at a Dragonling, how far it has grown and its owner.
+  doing, its life stage, the Well it is bound for by name, what it carries (a Mote-line dragon's
+  motes by grade and in total, a Matter-line dragon's load as § Moving matter shows it), its health
+  and its owner, with no line naming its Line, since its load already shows it; looking at a
+  Dragonling, how far it has grown and its owner.
 - **In the way of no one.** A dragon's presence pushes no one: a player stands on the rim beside a
   dragon sitting astride it, or under one hovering at work, and is not moved. Nothing collides with
   it. A Dragonling pushes and is pushed as any mob does.
 - **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
-  runtime and tinted the void's purple: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
+  runtime and tinted the void's purple, whatever its Line: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
   1.1, old 1.2), the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
-  own. The Drained Dragon Egg is a pale, cracked dragon egg on the vanilla egg's shape, its cracks dark
+  own. A dragon shows its Line by what it carries: a Mote-line one trails `DUST` sparks in the
+  colours of the grades it carries, and a Matter-line one hangs its first carried stack under its
+  body (§ Moving matter), as a Matter-line Dragonling holds a chest. The Drained Dragon Egg is a pale, cracked dragon egg on the vanilla egg's shape, its cracks dark
   while it is only an egg. Soaking, either egg wears that look, the vanilla egg too, though it is still
   the vanilla egg it drops if broken; its cracks spread and glow brighter at each of its four stages,
-  glowing in the dark.
+  glowing in the dark. A soaking Mote-line egg gives off mote sparks. The Matter Dragon Egg is the
+  Drained Dragon Egg tinted amber through a `tintindex` and a block and item colour handler, soaking
+  or not, so it has no texture of its own and its colour tells it from a Mote-line egg in a chest;
+  soaking, it gives off `ITEM` flecks of itself.
+
+## Moving matter
+
+Matter-line Void Dragons carry items between their owner's Void Wells, in any dimension
+([ADR 0011](../adr/0011-matter-line-void-dragons-carry-items-between-dimensions.md)); before the
+Matter line, a player carries them by hand. A Matter-line dragon is a Void Dragon in everything but
+its cargo: it stops at its owner's whole Wells, heals from their motes, weakens by Void Pressure,
+ages, is ridden and called, rests on a rim, holds a load it has no room for and never carries
+within a network, all as § The Void Dragon says. It ignores motes as cargo, and a Mote-line dragon
+ignores Well hatches.
+
+### Well hatches
+
+A **Well hatch** is where a Matter-line dragon loads and unloads, a requester or a provider after
+Factorio's chests.
+
+- **Placing.** A full block, made from a shulker box and Well casing. It is placed against the
+  outer face of any wall casing block of a Void Well, on any course, never against the core and never
+  on top of the rim, and joins the Well it was placed against without being part of its structure.
+  A Well takes any number. Only the Well's owner places one against it, and only they control it.
+- **Holding.** 27 slots. Its contents live in saved data, as a Well's motes do, so a dragon loads
+  and unloads it with no chunk loaded. Every face is an item face, so hoppers, belts and pipes fill
+  and empty it, a hopper beneath it with nothing but vanilla. Its Well no longer whole, it is idle
+  and keeps what it holds; its core broken, it is a plain container until a new core makes the Well
+  whole again.
+- **Requester or provider.** It is placed a provider, and its owner switches it by sneak-using it
+  with an empty hand. A **provider** offers whatever it holds to its owner's requesters elsewhere,
+  and never asks; using it with a stack puts the stack in, and with an empty hand takes one out.
+  A **requester** asks for one item, so many stacks of it, and never gives; it empties only through
+  its item faces. Using an item on it sets its request to that item's kind, components ignored, and
+  adds a stack per use, up to 27, shown above the hotbar; another item replaces the request and
+  starts again at one stack; an empty hand clears it. A requester switched to a provider loses its
+  request and offers what it holds; a provider switched to a requester keeps what it holds for its
+  item faces to drain.
+- **Seen in Jade.** Its mode, its request and its contents. A provider shows how many of its stacks
+  its network can pay the Toll to lift, against what it holds: `Holds 9 stacks; its network can pay
+  the Toll for 2`; when it can pay for none, a stall line, as on Voidworks' machines: `Stalled: its
+  network can't pay the Toll for one`. The Well's own Jade shows no Toll.
+
+### The Matter line
+
+- **Routing**, mirroring the Mote line's. A stop's hatches are all those on its owner's Wells on
+  that network; another owner's are never touched. A requester is short by its request, less what it
+  holds and what is on its way to it. A dragon flies to a stop whose requesters are short, choosing
+  as a Mote-line dragon chooses its destination, and loads from the owner's stop whose providers hold
+  most of those items, the item most short first, up to its load. Trips are claimed: what is in
+  flight counts against both the request it fills and the offer it came from. A provider stop's
+  offer is capped at the stacks its network can pay the Toll for to that destination, and a stop
+  that can pay for none is never picked. On arrival, what does not fit goes to another of the
+  owner's requesters asking for it, else to the owner's providers with room, else the dragon holds
+  it and rests until there is room.
+- **Load**, counted in **stacks**, each slot full by its item's stack size: young 27, adult 54,
+  senior 94, old 162, the life stages' load multipliers on a young load. A filled container, such as
+  a shulker box, takes one stack of it. A young dragon moves about 1,600 to 2,700 stacks an hour, so
+  the Toll, not the dragon, bounds throughput.
+- **Toll.** As it loads, a Matter-line dragon pays a **Toll** from the departure Well's network, by
+  the spend rule at that Well's core. It is counted in **stack-equivalents**: a part stack pays its
+  share, its items over the item's stack size (16 ender pearls a whole one, 32 cobblestone half),
+  and a filled container pays for what it holds, counted the same way, plus one for itself. Each
+  stack-equivalent costs 256 base void energy, doubled for each step the destination Well's Void
+  Pressure stands above the departure's, both read at their Well's core, so an End Well over the open
+  void climbs one step more; a level or downhill trip pays the base. One price for every item, in
+  datapack data ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)).
+  By the spend rule, a stack lifted into the End costs the same top-grade motes from anywhere:
+
+  | Trip | Toll | Paid in Nether grade 2 | Overworld grade 3 | End grade 4 | Open void grade 5 |
+  |---|---|---|---|---|---|
+  | Nether → End | 1,024 | 1,024 motes | 512 | 256 | 128 |
+  | Overworld → End | 512 | refused | 512 | 256 | 128 |
+  | End → End, End → Nether | 256 | refused | refused | 256 | 128 |
+  | Nether → Nether | 256 | 256 | 128 | 64 | 32 |
+  | Overworld → Overworld | 256 | refused | 256 | 128 | 64 |
+
+  So a Density-2 stack lifted to the End breaks even, 256 grade-4 motes paid and 256 harvested, and
+  an End Displacer over the open void doubles that; a diamond stack yields sixteen times its Toll, a
+  copper one a quarter. Density stays the reason to ship dense blocks. The Toll is taken first, then
+  the dragon heals from what is left, as far as it goes, so a poor network sends a loaded, slow
+  dragon, and never runs into debt. It is paid once, priced to the claimed destination: a load sent
+  on to another Well, dropped in part at a rider's Well or held while the dragon rests pays nothing
+  more and gets nothing back. The Mote line pays no Toll.
+- **Riding and calling** are the Mote line's, in stacks: a rider's Well is a stop that takes what its
+  requesters are short of, a ridden dive's load shrinks by stacks, and what it holds beyond that as
+  the rider jumps goes into the Well's hatches as on arrival, the dragon not diving if they have no
+  room for it.
+- **Life**, in stacks unloaded: each life stage lasts 1,728 stacks (64 young loads), and an adult
+  lays a Matter Dragon Egg each 216 (8 young loads), so 8 in its life, as the Mote line lays. Its egg
+  hatches at the same price as any other.
+- **Seen.** Its presence hangs its first carried stack under its body, drawn with the item renderer
+  from that stack's own item model, a shulker box when it carries one, so the presence syncs that
+  first stack. Jade lists its load with item icons, one line per item, a filled container showing its
+  contents, then a line such as `6 of 27 stacks, Toll 3,072 paid`, the Toll this load paid as it
+  loaded.
 
 ## Mutation
 
@@ -505,6 +618,10 @@ What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, 
 - **Gems**: lapis → amethyst shard → quartz → emerald → diamond ⇒ netherite scrap.
   Gem blocks are left out: amethyst and quartz blocks hold four, the others nine.
 - **Dusts**: redstone → glowstone dust ⇒ blaze powder.
+- **Dragon eggs**: Drained Dragon Egg ⇒ Matter Dragon Egg, one egg for one, which founds the Matter
+  line ([ADR 0011](../adr/0011-matter-line-void-dragons-carry-items-between-dimensions.md)). The
+  vanilla egg stays out with the other boss drops, so the Matter line waits for a Mote-line adult's
+  eggs.
 - **Hostile drops**, one ladder through the dimensions, steep at each border and into each gate
   item: rotten flesh → bone → string → spider eye → gunpowder → slimeball → phantom membrane →
   breeze rod ⇒ magma cream ⇒ blaze rod ⇒ ghast tear → wither skeleton skull ⇒ ender pearl ⇒ shulker
@@ -579,7 +696,7 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Numbers** — prices are datapack data and the rest server config
   ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
-  and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
+  and dust Rungs count 1, drop Rungs 2, steep Rungs 8 but the egg Rung 1; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
   closing half the gap), the Void Crucible's speed and how near Crucibles share it, mote speed, Void Well capacity,
   the Void Siphon's capacity per tier, the FE a void energy charges (provisional: 10, tuned against
@@ -587,9 +704,10 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   the first egg 25,600 void energy, doubling per dragon; Dragonling growth 40 minutes, 1 minute off
   per 1,000 void energy fed; a young dragon's load of 8,192 motes; a life stage 524,288 motes carried; about 5 seconds a stop; 1 second a dive per 64
   blocks, and 10 seconds more between dimensions; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
-  motes; an egg laid each 65,536 motes carried).
-- **A Matter-line dragon's life** — its cargo unit, base load, stage length and egg cost, set with
-  its throughput ([#86](https://github.com/5thlayer/voidworks/issues/86)).
+  motes; an egg laid each 65,536 motes carried), and the Matter line's (provisional: a young load of
+  27 stacks; a life stage 1,728 stacks unloaded; an egg laid each 216 stacks; a Toll of 256 void
+  energy a stack-equivalent, doubling per step of Void Pressure climbed; a Well hatch's 27 slots, a
+  server config value).
 - **FE from a network** — a Voidstone network or a Void Well turning motes into FE for any mod's
   cables: base power, which balancing void energy against FE generation makes a design of its own.
 - **Teams** — after the first major version: players sharing Wells and dragons as a team, beyond
