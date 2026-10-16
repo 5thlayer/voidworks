@@ -13,8 +13,10 @@ import net.minecraft.util.Util;
 
 /**
  * What a Void Dragon's rider sees through its dive: the void, black, with motes of an Ender pearl's
- * purples swirling in from the edges toward the middle, as a portal's particles are drawn into it.
- * Each mote's place is read from the time alone, so it keeps nothing between frames.
+ * purples swirling in from the edges toward the middle, as a portal's particles are drawn into it,
+ * and in the middle the Well they picked, over a bar that fills as the dive goes, in its destination
+ * dimension's colour ({@link io.github._5thlayer.voidworks.dragon.DiveShown}). Each mote's place is
+ * read from the time alone, so it keeps nothing between frames.
  */
 final class DiveOverlay {
 
@@ -30,6 +32,13 @@ final class DiveOverlay {
     private static final int VOID = ARGB.color(255, 0, 0, 0);
     private static final int DEEP = ARGB.color(255, 120, 40, 200);
     private static final int BRIGHT = ARGB.color(255, 230, 120, 255);
+
+    /** The progress bar's width and height, and the gap between it and the label over it. */
+    private static final int BAR_WIDTH = 120;
+    private static final int BAR_HEIGHT = 4;
+    private static final int BAR_GAP = 4;
+    private static final int BAR_TRACK = ARGB.color(255, 30, 10, 50);
+    private static final int LABEL = ARGB.color(255, 255, 255, 255);
 
     private DiveOverlay() {
     }
@@ -60,6 +69,13 @@ final class DiveOverlay {
             int colour = ARGB.color(alpha, ARGB.srgbLerp(age, DEEP, BRIGHT));
             graphics.fill(x, y, x + size, y + size, colour);
         }
+        var shown = presence.diveShown();
+        var font = Minecraft.getInstance().font;
+        int barLeft = Math.round(centreX) - BAR_WIDTH / 2;
+        int barTop = Math.round(centreY) + BAR_GAP / 2;
+        graphics.centeredText(font, shown.label(), Math.round(centreX), barTop - BAR_GAP - font.lineHeight, LABEL);
+        graphics.fill(barLeft, barTop, barLeft + BAR_WIDTH, barTop + BAR_HEIGHT, BAR_TRACK);
+        graphics.fill(barLeft, barTop, barLeft + Math.round(BAR_WIDTH * shown.progress(player.level().getGameTime(), deltaTracker.getGameTimeDeltaPartialTick(true))), barTop + BAR_HEIGHT, shown.colour());
     }
 
     /** @return a number from 0 to 1 that stays the same for {@code index} and {@code salt} */

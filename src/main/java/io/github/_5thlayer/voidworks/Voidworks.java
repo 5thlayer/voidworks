@@ -7,6 +7,7 @@ import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.Displacement;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
+import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.DragonRouting;
@@ -49,6 +50,7 @@ public final class Voidworks {
         modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
         Dormancy.register(modBus);
+        DiveColour.register(modBus);
         EggPrice.register(modBus);
         Families.register(modBus);
         UnmakingRecipes.register(modBus);

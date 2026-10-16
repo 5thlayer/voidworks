@@ -74,4 +74,12 @@ class DiveTest {
         var place = new Place(NETHER, new BlockPos(5, 64, 5));
         assertEquals(0, dive.ticks(place, place));
     }
+
+    @Test
+    void aRiddenDiveTakesNoMoreThanItsRiddenTimeNorLessThanTheLeast() {
+        var ridden = new Dive(200, 64, 60, dimension -> 1.0);
+        assertEquals(60, ridden.ridden(400));
+        assertEquals(50, ridden.ridden(50), "a dive shorter than the ridden time was made longer");
+        assertEquals(Dive.MINIMUM_TICKS, new Dive(200, 64, 0, dimension -> 1.0).ridden(400));
+    }
 }

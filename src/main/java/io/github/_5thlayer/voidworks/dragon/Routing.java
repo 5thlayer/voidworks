@@ -163,17 +163,65 @@ public final class Routing {
     /**
      * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}: it
      * dives there at once, healing first as it leaves a Well, carrying them, a stop added to its trip.
+     * The dive takes no more than a ridden dive does ({@link Dive#ridden}), and its load is cut by the
+     * share of time saved, so it carries no more motes a second than unridden: it first puts what it
+     * holds beyond that into the Well it is at, lowest grade first, which counts toward neither its
+     * ageing nor its eggs.
      *
-     * @return the dragon on its way; empty, with nothing changed, while it is not stopped at one of its
-     *         owner's Wells or when {@code picked} is not one of theirs
+     * @return the dragon on its way; none, with nothing changed, while it is not stopped at one of its
+     *         owner's Wells, when {@code picked} is not one of theirs, or when the Well it is at has no
+     *         room for what it holds beyond its ridden load
      */
-    public Optional<VoidDragonRecord> ride(VoidDragons dragons, UUID id, Place picked, long now) {
-        var riding = dragons.get(id)
+    public Ride ride(VoidDragons dragons, UUID id, Place picked, long now) {
+        var found = dragons.get(id)
                 .filter(dragon -> dragon.trip().flatMap(Trip::divingTo).isEmpty())
-                .filter(dragon -> stop(dragon.owner(), dragon.rest()).isPresent() && stop(dragon.owner(), picked).isPresent())
-                .map(dragon -> setOff(dragon, dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked), now));
-        riding.ifPresent(dragons::update);
-        return riding;
+                .filter(dragon -> stop(dragon.owner(), picked).isPresent());
+        var at = found.flatMap(dragon -> stop(dragon.owner(), dragon.rest()));
+        if (at.isEmpty()) {
+            return Ride.CANNOT;
+        }
+        var dragon = found.get();
+        int speed = stages.speed(dragon);
+        long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), picked) * VoidDragonRecord.WHOLE_SPEED, speed);
+        long ridden = dive.ridden(unridden);
+        long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
+        if (excess > at.get().room()) {
+            return Ride.NO_ROOM;
+        }
+        var lightened = excess > 0 ? putBack(dragon, excess) : dragon;
+        var trip = dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked);
+        var riding = setOff(lightened, trip.claiming(Math.min(trip.claimed(), lightened.carried())), now, ridden * speed);
+        dragons.update(riding);
+        return new Ride(Optional.of(riding), false);
+    }
+
+    /** @return {@code dragon} having put {@code motes} of its load into the Well where it is, lowest grade first */
+    private VoidDragonRecord putBack(VoidDragonRecord dragon, long motes) {
+        var left = new TreeMap<>(dragon.load());
+        long rest = motes;
+        for (var grade : dragon.load().sequencedKeySet()) {
+            if (rest == 0) {
+                break;
+            }
+            long put = wells.put(dragon.rest(), grade, Math.min(rest, left.get(grade)));
+            rest -= put;
+            if (left.merge(grade, -put, Long::sum) == 0) {
+                left.remove(grade);
+            }
+        }
+        return dragon.carrying(left);
+    }
+
+    /**
+     * What came of a rider's pick.
+     *
+     * @param diving the dragon on its way, if it dived
+     * @param noRoom whether it did not, for want of room at the Well it is at for what it holds beyond its ridden load
+     */
+    public record Ride(Optional<VoidDragonRecord> diving, boolean noRoom) {
+
+        static final Ride CANNOT = new Ride(Optional.empty(), false);
+        static final Ride NO_ROOM = new Ride(Optional.empty(), true);
     }
 
     /**
@@ -361,9 +409,14 @@ public final class Routing {
      * @return {@code dragon} on its way
      */
     private VoidDragonRecord setOff(VoidDragonRecord dragon, Trip trip, long now) {
+        return setOff(dragon, trip, now, dive.ticks(dragon.rest(), trip.divingTo().orElseThrow()) * VoidDragonRecord.WHOLE_SPEED);
+    }
+
+    /** Sets off on {@code trip} as {@link #setOff(VoidDragonRecord, Trip, long)} does, with {@code toCover} of ground to cover. */
+    private VoidDragonRecord setOff(VoidDragonRecord dragon, Trip trip, long now, long toCover) {
         var to = trip.divingTo().orElseThrow();
         var healed = to.equals(dragon.rest()) ? dragon : healed(dragon);
-        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, stages.speed(healed))));
+        return healed.on(Optional.of(trip.diving(now, toCover, stages.speed(healed))));
     }
 
     /**

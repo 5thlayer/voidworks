@@ -1,0 +1,8 @@
+{
+  "values": {
+    "minecraft:overworld": "#3f76e4",
+    "minecraft:overworld_caves": "#3f76e4",
+    "minecraft:the_nether": "#b02e26",
+    "minecraft:the_end": "#dbe0a3"
+  }
+}
