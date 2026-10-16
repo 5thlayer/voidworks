@@ -44,5 +44,9 @@ dragon kill bringing back the founder egg.
 - Building the dragon scene changes server-wide records as well as blocks, unlike #691's other
   galleries, which change blocks alone. Its own Wells' records go with their cores, and its dragons
   with its `dragon remove`, so building it again leaves one dragon.
+- A scene is replayed from its own sign: a click event runs its function again, rebuilding it from
+  the start, so a scene that runs out (a Displacer's harvests, a Dormant machine waking) can be
+  watched after `build` has laid out the whole row. A sign needs no setting, where a command block
+  is off on a server until `enable-command-block` is set, and the Gallery already needs an operator.
 - A function run from the server console has no player to own the scene's Wells and dragon, so the
   dragon scene fails there; it is for an operator player.

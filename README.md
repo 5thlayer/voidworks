@@ -18,6 +18,8 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 
 ## Features
 
+- **The Void Well.** A large store of motes on a Voidstone network, built as a 5×5×5 well, and the stop where a Void Dragon loads, unloads and heals.
+- **The Void Dragon.** Raised on void from a Dragonling, it carries motes or matter between Void Wells, diving through the void between them, across dimensions.
 - **Three Void Displacers, one per dimension.** The Overworld Displacer swaps fed blocks into the terrain around it and gives you that terrain back. The End Displacer grows its body out into the air, and harvests higher over the open void. The Nether Displacer drinks lava lakes and fills its tank, which any pipe can drain. Each harvests a fixed number of times, then turns to Voidstone.
 - **Density.** What you feed sets how many motes a harvest yields: copper and coal blocks are the lightest, diamond and netherite blocks the densest.
 - **Voidstone networks.** Touching Voidstone is one network holding one pool of motes, and every Voidstone adds room.
@@ -26,12 +28,11 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 - **The Mutation Chamber.** Upgrades items up their Family for motes, with a chance per upgrade. It has no screen: hoppers and belts feed and empty it.
 - **The Unmaking Chamber.** Breaks an item down into its crafting recipe's ingredients for motes, each coming back by chance at a yield that rises as it works.
 - **The Void Crucible.** Upgrades for free, slowly. It is fastest in the End and slowest in the Nether, and Crucibles working near each other share one rate.
-- **The Unmaking Chamber.** Breaks an item down into the ingredients of its crafting recipe for motes. Each ingredient comes back by chance, from 25% at first rising toward 75% the more the Chamber has spent.
 - **Jade support.** Jade shows a network's motes and what they are worth where you stand, a machine's upgrade, progress and what stalls it, and how much of a Dormant machine's cost is paid. Voidworks runs without Jade.
 
 ## Gallery
 
-Voidworks carries an optional datapack, **Voidworks Gallery**, that builds its features as working scenes beside you. It is off in every world until you turn it on, in the world's Data Packs screen or with `/datapack enable "mod/voidworks:gallery_pack"`, then run `/function voidworks:gallery/build`, or `/function voidworks:gallery/<scene>` for one scene. It needs cheats in single player (on at creation, or Open to LAN with cheats) and operator permission on a server, and it builds only blocks and what its scenes need an owner for: run it as a player, who owns them. Its first scene is a Void Dragon carrying between two Void Wells.
+Voidworks carries an optional datapack, **Voidworks Gallery**, that builds its features as working scenes beside you. It is off in every world until you turn it on, in the world's Data Packs screen or with `/datapack enable "mod/voidworks:gallery_pack"`, then run `/function voidworks:gallery/build`, or `/function voidworks:gallery/<scene>` for one scene. It needs cheats in single player (on at creation, or Open to LAN with cheats) and operator permission on a server, and it builds only blocks and what its scenes need an owner for: run it as a player, who owns them. Clicking a scene's sign builds it again from the start, to watch it play out.
 
 ## For pack authors
 
