@@ -76,6 +76,7 @@ public final class VoidworksGameTests {
         CommandTests.register(tests);
         ConductionTests.register(tests);
         CreativeTabTests.register(tests);
+        DensityTooltipTests.register(tests);
         DisplacerTests.register(tests);
         DormantTests.register(tests);
         DragonlingTests.register(tests);
