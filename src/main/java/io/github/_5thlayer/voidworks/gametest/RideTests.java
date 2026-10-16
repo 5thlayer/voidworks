@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -434,8 +435,8 @@ final class RideTests {
 
     /**
      * Jumping on a dragon hovering over the test's Well, its rider watches it start down, still on its
-     * back and unseen, and sees the void only once their eyes have gone below the Well's rim, into the
-     * shaft, until the dragon emerging at the high Well brings them up.
+     * back and unseen, and sees the void only a set while after their eyes have gone below the Well's
+     * rim, into the shaft, until the dragon emerging at the high Well brings them up.
      */
     private static void seesTheVoidInTheShaft(GameTestHelper helper) {
         var owner = Rider.join(helper);
@@ -446,7 +447,8 @@ final class RideTests {
         int mouth = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).above(DragonPresences.MOUTH).getY();
         var dragonId = new AtomicReference<UUID>();
         var presence = new AtomicReference<VoidDragon>();
-        var seen = new AtomicReference<Double>();
+        var over = new AtomicInteger();
+        var under = new AtomicInteger();
         var unseen = new AtomicBoolean(true);
         var voided = new AtomicBoolean(true);
         helper.startSequence()
@@ -472,16 +474,20 @@ final class RideTests {
                 })
                 .thenWaitUntil(() -> {
                     if (!presence.get().inTheVoid()) {
-                        seen.set(owner.getEyeY());
+                        if (owner.getEyeY() >= mouth) {
+                            over.incrementAndGet();
+                        } else {
+                            under.incrementAndGet();
+                        }
                         unseen.compareAndSet(true, owner.hasEffect(MobEffects.INVISIBILITY));
                     }
                     helper.assertTrue(presence.get().inTheVoid(), "the rider does not see the void");
                 })
                 .thenExecute(() -> {
                     helper.assertTrue(unseen.get(), "the rider is seen as the dragon starts down");
-                    // The dragon goes down the shaft 0.6 blocks a tick: the last tick the rider saw the world, their eyes were just over the mouth.
-                    helper.assertTrue(seen.get() != null && seen.get() >= mouth && seen.get() < mouth + 1.0,
-                            "the rider last saw the world with their eyes at " + seen.get() + ", the mouth at " + mouth);
+                    helper.assertTrue(over.get() > 0, "the rider never saw the dragon start down");
+                    helper.assertTrue(under.get() == VoidDragon.VOID_DELAY_TICKS,
+                            "the rider saw the shaft for " + under.get() + " ticks with their eyes below its mouth at " + mouth + ", not " + VoidDragon.VOID_DELAY_TICKS);
                 })
                 .thenWaitUntil(() -> {
                     if (!presence.get().isRemoved()) {

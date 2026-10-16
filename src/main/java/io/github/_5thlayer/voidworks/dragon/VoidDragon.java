@@ -104,6 +104,9 @@ public final class VoidDragon extends PathfinderMob {
     /** How fast, in blocks a tick, a presence goes down into a Well's shaft as it dives. */
     private static final double DIVE_SPEED = 0.6;
 
+    /** How long, in ticks, a presence carrying its rider dives on once their eyes are below the shaft's mouth, before they see only the void. */
+    public static final int VOID_DELAY_TICKS = 10;
+
     /** The most ticks a presence takes to emerge or dive, should something keep it from getting there. */
     private static final int MOST_PASSAGE_TICKS = 100;
 
@@ -197,6 +200,8 @@ public final class VoidDragon extends PathfinderMob {
     private Showing showing = Showing.RESTING;
     /** How long a presence has been emerging or diving. */
     private int passageTicks;
+    /** How long a presence carrying its rider has dived since their eyes went below the shaft's mouth; -1 until they do. */
+    private int belowTheMouth = -1;
     /** How long a presence has been landing or taking off. */
     private int perchTicks;
     /** Whether a presence taking off dives once it is up, its dragon having set off. */
@@ -500,6 +505,7 @@ public final class VoidDragon extends PathfinderMob {
     private void pass(Showing passage) {
         showing = passage;
         passageTicks = 0;
+        belowTheMouth = -1;
         leaveTheSeat();
         noPhysics = true;
         getNavigation().stop();
@@ -519,11 +525,13 @@ public final class VoidDragon extends PathfinderMob {
      * Emerging, it rises to its spot's {@code risen} and then flies about its {@code over} at work;
      * diving, it goes down to its {@code under} and is gone into the void, unless it carries its rider,
      * whom it holds there, out of sight, until it sets them down. Its rider watches it start down, and
-     * sees the void once their eyes are below the shaft's mouth, the first open air over its rim.
+     * sees the void {@link #VOID_DELAY_TICKS} after their eyes go below the shaft's mouth, the first
+     * open air over its rim, as it dives on, straight down past its {@code under} if it gets there first.
      */
     private void passOn(ServerLevel level) {
-        if (showing == Showing.DIVING && carrying() && !inTheVoid() && getFirstPassenger() instanceof Entity rider && eyesOf(rider) < spot.emerges().getY()) {
-            takeIntoTheVoid();
+        if (showing == Showing.DIVING && carrying() && isVehicle() && !inTheVoid()) {
+            diveIntoTheVoid();
+            return;
         }
         var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? spot.under() : spot.risen()).subtract(position());
         double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
@@ -534,7 +542,6 @@ public final class VoidDragon extends PathfinderMob {
         setDeltaMovement(Vec3.ZERO);
         if (showing == Showing.DIVING) {
             if (carrying() && isVehicle()) {
-                takeIntoTheVoid();
                 setInvisible(true);
                 return;
             }
@@ -651,9 +658,23 @@ public final class VoidDragon extends PathfinderMob {
         return entityData.get(DATA_IN_THE_VOID);
     }
 
-    /** Its rider, down in the shaft, sees only the void from now. */
-    private void takeIntoTheVoid() {
-        entityData.set(DATA_IN_THE_VOID, true);
+    /**
+     * A tick of its dive with its rider still seeing the world: it goes down toward its {@code under},
+     * then on straight down, until {@link #VOID_DELAY_TICKS} after their eyes went below the shaft's
+     * mouth, when it holds still, out of sight, and they see only the void.
+     */
+    private void diveIntoTheVoid() {
+        if (belowTheMouth < 0 && getFirstPassenger() instanceof Entity rider && eyesOf(rider) < spot.emerges().getY()) {
+            belowTheMouth = 0;
+        }
+        if (belowTheMouth >= 0 && belowTheMouth++ >= VOID_DELAY_TICKS || ++passageTicks >= MOST_PASSAGE_TICKS) {
+            entityData.set(DATA_IN_THE_VOID, true);
+            setDeltaMovement(Vec3.ZERO);
+            setInvisible(true);
+            return;
+        }
+        var way = Vec3.atBottomCenterOf(spot.under()).subtract(position());
+        setDeltaMovement(way.length() > DIVE_SPEED ? way.normalize().scale(DIVE_SPEED) : new Vec3(0, -DIVE_SPEED, 0));
     }
 
     /** @return how high {@code rider}'s eyes are on its back, where it has moved to this tick, as vanilla seats a passenger */
