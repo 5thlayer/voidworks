@@ -13,6 +13,7 @@ import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.dragon.Place;
@@ -32,6 +33,8 @@ import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
@@ -48,6 +51,7 @@ final class GalleryTests {
     private static final Identifier BUILD = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/build");
     private static final Identifier VOID_DRAGON = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_dragon");
     private static final Identifier DENSITY = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/density");
+    private static final Identifier DORMANT_MACHINES = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/dormant_machines");
     private static final Identifier VOID_CRUCIBLE = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_crucible");
 
     /** How far east each scene's plot is of the one before it in its row, and how far north each row is of the last. */
@@ -84,6 +88,8 @@ final class GalleryTests {
                 GalleryTests::dragonCarries);
         tests.testOnItsOwn("the_gallery_density_scenes_displacers_each_yield_their_densitys_motes", TICKS,
                 GalleryTests::densityYields);
+        tests.testOnItsOwn("the_gallery_dormant_machines_scenes_chamber_soaks_its_cost_and_wakes", TICKS,
+                GalleryTests::dormantWakes);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
     }
@@ -105,7 +111,7 @@ final class GalleryTests {
                             Map.entry(SHORT, VoidworksBlocks.VOID_WELL.get()),
                             Map.entry(scene(1, 14, 2, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
                             // The game tests run in the Overworld, so the End and Nether scenes show
-                            // their Displacers in a frame, behind their signs.
+                            // their Displacers as item displays, over a pedestal behind their signs.
                             Map.entry(scene(2, SIGN), Blocks.OAK_SIGN),
                             Map.entry(scene(3, SIGN), Blocks.OAK_SIGN),
                             Map.entry(scene(4, 20, 1, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
@@ -115,6 +121,11 @@ final class GalleryTests {
                             Map.entry(scene(8, 14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
                             Map.entry(scene(9, 14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
                             Map.entry(scene(10, 14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get())));
+                    for (int index : new int[] {2, 3}) {
+                        var over = helper.absolutePos(ORIGIN.offset(scene(index, 14, 1, -2)));
+                        var shown = helper.getLevel().getEntitiesOfClass(Display.ItemDisplay.class, new AABB(over));
+                        helper.assertTrue(shown.size() == 1, "scene " + index + " shows " + shown.size() + " Displacers over its pedestal, not one");
+                    }
                     off.set(clearAway(helper, source));
                 })
                 .thenWaitUntil(() -> assertOff(helper, off))
@@ -170,6 +181,24 @@ final class GalleryTests {
                         helper.assertTrue(motes == yield, "Density " + density + "'s network holds " + motes + " motes, not " + yield);
                     }
                 })
+                .thenExecute(() -> off.set(clearAway(helper, source)))
+                .thenWaitUntil(() -> assertOff(helper, off))
+                .thenSucceed();
+    }
+
+    /** The Dormant machines scene: its Chamber soaks its cost from the motes along the line, and wakes. */
+    private static void dormantWakes(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var source = operator(helper);
+        var chamber = helper.absolutePos(ORIGIN).offset(14, 0, -6);
+        clearAwayIfItFails(helper, source);
+        var on = GalleryCheck.select(server, GalleryPack.ID, true);
+        var off = new AtomicReference<CompletableFuture<Void>>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
+                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DORMANT_MACHINES))
+                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockEntity(chamber) instanceof Dormancy.Holder machine
+                        && machine.dormancy().awake(), "the scene's Chamber is not awake yet"))
                 .thenExecute(() -> off.set(clearAway(helper, source)))
                 .thenWaitUntil(() -> assertOff(helper, off))
                 .thenSucceed();
