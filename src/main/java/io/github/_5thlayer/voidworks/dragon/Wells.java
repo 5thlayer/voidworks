@@ -31,7 +31,7 @@ public interface Wells {
      */
     long put(Place place, int grade, long count);
 
-    /** @return whether the Well at {@code place} has its chunk loaded and ticking, where an old dragon may die */
+    /** @return whether the Well at {@code place} and the air over its shaft are loaded and ticking, so an old dragon may die there and be seen to */
     boolean loaded(Place place);
 
     /**
