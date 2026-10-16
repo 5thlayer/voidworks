@@ -70,7 +70,7 @@ public final class DragonRouting {
         var dragons = SavedVoidDragons.of(server);
         var owners = new ServerOwners(server);
         for (var died : routing(server, owners).step(dragons, server.overworld().getGameTime())) {
-            SavedHatchery.of(server).gone(died.owner());
+            SavedHatchery.of(server).lose(died.owner());
             DragonPresences.die(server, died);
         }
         for (var dragon : dragons.all()) {
@@ -207,7 +207,8 @@ public final class DragonRouting {
         @Override
         public boolean loaded(Place place) {
             var level = place.level(server);
-            return level != null && level.isPositionEntityTicking(place.pos());
+            // Where its death shows too, so a dragon never dies unseen.
+            return level != null && level.isPositionEntityTicking(place.pos()) && DragonPresences.showsAt(level, place.pos());
         }
 
         /** Pops the egg out of the middle of the Well's shaft, while its chunk is loaded and ticking. */

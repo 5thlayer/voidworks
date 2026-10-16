@@ -74,7 +74,7 @@ public final class Hatchery {
      * A dragon of {@code owner}'s is gone, died of old age or taken out by a command: they have one
      * fewer living, though never fewer than none.
      */
-    public void gone(UUID owner) {
+    public void lose(UUID owner) {
         if (living(owner) > 0) {
             gone.merge(owner, 1, Integer::sum);
             onChange.run();

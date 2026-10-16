@@ -4,7 +4,6 @@
 package io.github._5thlayer.voidworks.command;
 
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Optional;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -115,7 +114,7 @@ public final class VoidworksCommands {
                         .then(Commands.literal("age")
                                 .then(Commands.argument("stage", StringArgumentType.word())
                                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(
-                                                Arrays.stream(LifeStage.values()).map(VoidworksCommands::stageName), builder))
+                                                Arrays.stream(LifeStage.values()).map(LifeStage::id), builder))
                                         .executes(VoidworksCommands::age)))
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("from", BlockPosArgument.blockPos())
@@ -185,13 +184,12 @@ public final class VoidworksCommands {
     private static int age(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         String name = StringArgumentType.getString(context, "stage");
-        var stage = Arrays.stream(LifeStage.values()).filter(value -> stageName(value).equals(name)).findFirst()
-                .orElseThrow(() -> NOT_A_STAGE.create(name));
+        var stage = LifeStage.byId(name).orElseThrow(() -> NOT_A_STAGE.create(name));
         var server = player.level().getServer();
         var dragons = SavedVoidDragons.of(server);
         var record = lookedAtDragon(player).flatMap(VoidDragon::dragonId).flatMap(dragons::get)
                 .orElseThrow(NOT_LOOKING_AT_A_DRAGON::create);
-        dragons.update(record.aged(VoidworksConfig.lifeStages().start(stage)));
+        dragons.update(record.agedTo(VoidworksConfig.lifeStages().start(stage)));
         DragonPresences.show(server);
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.age", name), false);
         return 1;
@@ -204,10 +202,6 @@ public final class VoidworksCommands {
         var hit = ProjectileUtil.getEntityHitResult(player, eye, end,
                 player.getBoundingBox().expandTowards(end.subtract(eye)).inflate(1), entity -> entity instanceof VoidDragon, LOOK_REACH * LOOK_REACH);
         return hit == null ? Optional.empty() : Optional.of((VoidDragon) hit.getEntity());
-    }
-
-    private static String stageName(LifeStage stage) {
-        return stage.name().toLowerCase(Locale.ROOT);
     }
 
     /** @return the Void Well core at the command's {@code pos}; else it refuses with {@code notAWell} */
@@ -228,7 +222,7 @@ public final class VoidworksCommands {
         var server = level.getServer();
         var removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos()));
         // A dragon taken out no longer counts toward its owner's next egg, as one that died does not.
-        removed.forEach(dragon -> SavedHatchery.of(server).gone(dragon.owner()));
+        removed.forEach(dragon -> SavedHatchery.of(server).lose(dragon.owner()));
         DragonPresences.show(server);
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed.size()), false);
         return removed.size();

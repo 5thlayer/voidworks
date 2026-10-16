@@ -80,12 +80,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
 
     /** @return the translation key of {@code stage}'s name, as Jade shows it */
     private static String stageKey(LifeStage stage) {
-        return switch (stage) {
-            case YOUNG -> "voidworks.jade.dragon.young";
-            case ADULT -> "voidworks.jade.dragon.adult";
-            case SENIOR -> "voidworks.jade.dragon.senior";
-            case OLD -> "voidworks.jade.dragon.old";
-        };
+        return "voidworks.jade.dragon." + stage.id();
     }
 
     /** @return the name of the player {@code id}, online or once seen on {@code server}, if it has one */

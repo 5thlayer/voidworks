@@ -205,11 +205,15 @@ public final class DragonPresences {
         if (level == null || !level.isLoaded(dragon.rest().pos())) {
             return;
         }
-        var spot = spot(level, dragon.rest().pos());
-        if (!level.isPositionEntityTicking(spot.over())) {
+        if (!showsAt(level, dragon.rest().pos())) {
             return;
         }
-        spawn(level, dragon, Showing.WORKING, spot, LifeStage.OLD).ifPresent(VoidDragon::dieOfOldAge);
+        spawn(level, dragon, Showing.WORKING, spot(level, dragon.rest().pos()), LifeStage.OLD).ifPresent(VoidDragon::dieOfOldAge);
+    }
+
+    /** @return whether a presence over the shaft of the Well core at {@code pos} is entity-ticking, so shows */
+    static boolean showsAt(ServerLevel level, BlockPos pos) {
+        return level.isPositionEntityTicking(spot(level, pos).over());
     }
 
     /** @return whether the dragon with {@code id} shows a presence its owner rides at its stop, before any dive */
