@@ -48,18 +48,9 @@ final class ZoneUpgrades {
         return levels;
     }
 
-    /** @return the level it is soaking, or empty while none is */
-    Optional<Soaking> soaking() {
-        return step == 0 ? Optional.empty() : Optional.of(new Soaking(step, price, Math.min(paid, price)));
-    }
-
-    /**
-     * A committed upgrade, soaking its price.
-     *
-     * @param step the positions it adds to the Zone once paid
-     * @param paid the void energy soaked so far, at most the price
-     */
-    record Soaking(int step, long price, long paid) {
+    /** @return what the level it is soaking has paid of its price, or empty while none is */
+    Optional<DisplacerBlockEntity.Payment> soaking() {
+        return step == 0 ? Optional.empty() : Optional.of(new DisplacerBlockEntity.Payment(Math.min(paid, price), price));
     }
 
     /** Commits to the next level, by {@code upgrade}'s terms: its step and the price of the level after those bought. */

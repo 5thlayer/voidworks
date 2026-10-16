@@ -41,8 +41,8 @@ public abstract class DisplacerBlock extends BaseEntityBlock {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        boolean dormant = displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake();
-        if (player.isSecondaryUseActive() && !dormant) {
+        var dormancy = displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake() ? machine.dormancy() : null;
+        if (player.isSecondaryUseActive() && dormancy == null) {
             player.sendOverlayMessage(displacer.sneakUse((ServerLevel) level, player));
             return InteractionResult.SUCCESS;
         }
@@ -50,8 +50,8 @@ public abstract class DisplacerBlock extends BaseEntityBlock {
         if (displacer.giveOutput(player) || displacer.giveBackFed(player)) {
             return InteractionResult.SUCCESS;
         }
-        if (dormant) {
-            player.sendOverlayMessage(((Dormancy.Holder) displacer).dormancy().status());
+        if (dormancy != null) {
+            player.sendOverlayMessage(dormancy.status());
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

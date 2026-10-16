@@ -19,9 +19,10 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * What a Void Displacer shows a player looking at it, any dimension's: its fed block, the harvests
- * left in its Zone, its Zone upgrades, and what stalls it, if anything. Read on the server, where its next position and
- * its network are, and sent to the client, which words it with {@link #lines}. A Dormant one's
- * payment is {@link io.github._5thlayer.voidworks.dormant.Dormancy#status}, shown beside it.
+ * left in its Zone, its Zone upgrades, and what stalls it, if anything. Read on the server, where its
+ * next position and its network are, and sent to the client, which words it with {@link #lines}. A
+ * Dormant one's payment is {@link io.github._5thlayer.voidworks.dormant.Dormancy#status}, shown
+ * beside it.
  *
  * @param fed what it holds to feed in, empty for nothing
  * @param levels how many Zone upgrades it has bought
@@ -60,7 +61,7 @@ public record DisplacerReport(ItemStack fed, int harvestsLeft, int levels, Optio
 
     /**
      * @return its fed block, or that it has none, then the harvests left, then its Zone upgrades:
-     *         what one soaking has paid, else those bought and the next one's price; then what stalls it in red
+     *         those bought and the next one's price, and what one soaking has paid; then what stalls it in red
      */
     public List<Component> lines() {
         var lines = new ArrayList<Component>();
@@ -68,11 +69,10 @@ public record DisplacerReport(ItemStack fed, int harvestsLeft, int levels, Optio
                 ? Component.translatable("voidworks.jade.displacer.nothing_fed").withStyle(ChatFormatting.GRAY)
                 : Component.translatable("voidworks.jade.displacer.fed", fed.getCount(), fed.getHoverName()));
         lines.add(Component.translatable("voidworks.jade.displacer.harvests_left", harvestsLeft));
-        if (upgrade.isPresent()) {
-            lines.add(Component.translatable("voidworks.jade.displacer.upgrading", upgrade.get().paid(), upgrade.get().price()));
-        } else if (nextPrice.isPresent()) {
+        if (nextPrice.isPresent()) {
             lines.add(Component.translatable("voidworks.jade.displacer.upgrades", levels, nextPrice.getAsLong()).withStyle(ChatFormatting.GRAY));
         }
+        upgrade.ifPresent(payment -> lines.add(Component.translatable("voidworks.jade.displacer.upgrading", payment.paid(), payment.price())));
         stall.ifPresent(reason -> lines.add(Component.translatable(stallKey(reason)).withStyle(ChatFormatting.RED)));
         return lines;
     }

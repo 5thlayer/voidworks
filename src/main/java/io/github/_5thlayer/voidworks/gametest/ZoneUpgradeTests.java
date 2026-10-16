@@ -56,6 +56,7 @@ final class ZoneUpgradeTests {
         tests.test("a_zone_upgrade_soaking_can_be_cancelled_and_loses_what_it_paid", TICKS, ZoneUpgradeTests::cancelled);
         tests.test("a_zone_upgrade_bought_by_a_spent_displacer_lets_it_harvest_on", 2 * TICKS, ZoneUpgradeTests::spentHarvestsOn);
         tests.test("a_zone_upgrade_costs_its_growth_more_each_level_and_its_levels_survive_a_reload", 2 * TICKS, ZoneUpgradeTests::secondLevel);
+        tests.test("a_zone_upgrade_paid_in_part_keeps_its_payment_across_a_reload_and_cancelled_loses_it", 2 * TICKS, ZoneUpgradeTests::paidInPart);
         tests.test("a_zone_upgrade_is_not_offered_by_a_dormant_end_displacer", 1, ZoneUpgradeTests::notWhileDormant);
     }
 
@@ -207,6 +208,49 @@ final class ZoneUpgradeTests {
                             "it has " + displacer(helper).harvestsLeft() + " harvests left, not " + (ZONE + 2 * step));
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * Its network's motes in Voidstone two and three blocks off, worth twice the price, the one
+     * touching it empty: they conduct to it a few at a time, so it soaks the price in part. Reloaded
+     * then, it keeps what it paid; cancelled, it gets none of it back.
+     */
+    private static void paidInPart(GameTestHelper helper) {
+        place(helper);
+        for (int i = 0; i < 3; i++) {
+            helper.setBlock(STORE.east(i), VoidworksBlocks.VOIDSTONE.get());
+        }
+        int grade = DisplacerTests.pressure(helper, DISPLACER) + 1;
+        int capacity = VoidworksConfig.voidstoneCapacity();
+        VoidstoneTests.insert(helper, STORE.east(2), grade, capacity);
+        VoidstoneTests.insert(helper, STORE.east(), grade, capacity);
+        var player = sneaking(helper);
+        helper.useBlock(DISPLACER, player);
+        helper.useBlock(DISPLACER, player);
+        helper.assertTrue(displacer(helper).upgradePayment().isPresent(), "the second sneak-use did not commit to the upgrade");
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    var payment = displacer(helper).upgradePayment().orElseThrow();
+                    helper.assertTrue(payment.paid() > 0 && payment.paid() < payment.price(), "it has paid " + payment + ", not part of it");
+                })
+                .thenExecute(() -> {
+                    var before = displacer(helper).upgradePayment().orElseThrow();
+                    var reloaded = reload(helper);
+                    helper.assertTrue(reloaded.upgradePayment().equals(Optional.of(before)), "reloaded, it soaks " + reloaded.upgradePayment() + ", not " + before);
+                    helper.useBlock(DISPLACER, player);
+                    helper.useBlock(DISPLACER, player);
+                    helper.assertTrue(reloaded.upgradePayment().isEmpty(), "the confirmed cancel left it soaking");
+                    long left = 2L * capacity - before.paid() / VoidEnergy.BASE;
+                    helper.startSequence()
+                            .thenIdle(3 * VoidworksConfig.soakInterval())
+                            .thenExecute(() -> {
+                                long held = DisplacerTests.motes(helper, STORE).values().stream().mapToLong(Integer::longValue).sum();
+                                helper.assertTrue(held == left, "the network holds " + held + " motes, not the " + left + " left after paying " + before.paid());
+                                helper.assertTrue(reloaded.upgradeLevels() == 0 && reloaded.harvestsLeft() == ZONE,
+                                        "the cancelled upgrade was bought: level " + reloaded.upgradeLevels() + ", " + reloaded.harvestsLeft() + " harvests left");
+                            })
+                            .thenSucceed();
+                });
     }
 
     /** Dormant, a sneak-use quotes nothing however much touches it, so a second commits to nothing. */

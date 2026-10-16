@@ -77,8 +77,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     private static final String ITEMS_KEY = "items";
     private static final String ZONE_KEY = "zone";
     private static final String GROWN_KEY = "grown";
-    /** How near a player is told its Zone upgrade is bought. */
-    private static final double UPGRADE_HEARD = 16;
+    /** How many blocks away a player is told its Zone upgrade is bought. */
+    private static final double UPGRADE_TOLD_WITHIN = 16;
 
     private final ItemStacksResourceHandler inventory = new ItemStacksResourceHandler(1 + OUTPUT_SLOTS) {
         @Override
@@ -423,10 +423,10 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /** @return the void energy soaked toward the Zone upgrade it is soaking and its price, or empty while none is */
     public Optional<Payment> upgradePayment() {
-        return upgrades.soaking().map(soaking -> new Payment(soaking.paid(), soaking.price()));
+        return upgrades.soaking();
     }
 
-    /** What a soaking Zone upgrade has paid of its price, in void energy. */
+    /** What a soaking Zone upgrade has paid of its price, in void energy, the paid at most the price. */
     public record Payment(long paid, long price) {
     }
 
@@ -485,7 +485,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         setZone(IntMath.saturatedAdd(zoneOrConfig(), step));
         var message = Component.translatable("voidworks.displacer.upgrade.done", step, zone);
         for (var player : level.players()) {
-            if (player.blockPosition().closerThan(worldPosition, UPGRADE_HEARD)) {
+            if (player.blockPosition().closerThan(worldPosition, UPGRADE_TOLD_WITHIN)) {
                 player.sendOverlayMessage(message);
             }
         }
