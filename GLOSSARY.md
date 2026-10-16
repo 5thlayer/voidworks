@@ -142,6 +142,21 @@ half, three quarters or full. Void Dragons deliver to a stop below its target, t
 Wells', and take from one above it; a stop whose Wells have none is a reservoir, which only gives.
 _Avoid_: quota, setpoint
 
+**Well hatch**:
+A container placed against the outside of a Void Well's wall, joining that Well, where a
+Matter-line dragon loads and unloads items and hoppers, belts and pipes reach them. It is not part
+of the Well's structure, and it is either a requester or a provider.
+_Avoid_: port, dock, item core
+
+**Requester**:
+A Well hatch asking for one item, so many stacks of it: Matter-line dragons deliver it there until
+the hatch holds that many, and it never gives.
+_Avoid_: receiver, input hatch
+
+**Provider**:
+A Well hatch offering whatever is put in it to its owner's requesters elsewhere; it never asks.
+_Avoid_: giver, output hatch
+
 **Owner**:
 The player a Void Dragon and a Void Well belong to: whoever placed the egg it hatched from, or the
 Well's core. A dragon serves only its owner's Wells.
