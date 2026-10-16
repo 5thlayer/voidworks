@@ -258,8 +258,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      * @return why it cannot harvest the next position it would, though fed: a Void Pressure there
      *         too high to grade, a network with no room for the harvest's motes, or a full output or tank;
      *         or, spent, the output it waits on before it becomes Voidstone; empty when it can, or has
-     *         nothing fed and nothing left to wait on. A
-     *         Dormant one's payment is its {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
+     *         nothing fed and nothing left to wait on. A Dormant one's payment is its
+     *         {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
         if (spent(level)) {
@@ -298,7 +298,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         OUTPUT_FULL,
         /** Its tank cannot take what the harvest displaces. */
         TANK_FULL,
-        /** Spent, it waits for its output to be emptied before it becomes Voidstone; a spent one, not a fed one. */
+        /** Spent, it waits for its output to be emptied before it becomes Voidstone. */
         OUTPUT_UNEMPTIED
     }
 
@@ -323,9 +323,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return ResourceHandlerUtil.insertStacking(output, ItemResource.of(result), count, transaction) == count;
     }
 
-    /** @return whether its Zone is spent or nothing is left in its reach, as far as its loaded frontier tells */
+    /** @return whether it becomes Voidstone once its output is empty: its Zone spent or nothing left in reach, its frontier loaded */
     private boolean spent(ServerLevel level) {
-        return grown.size() >= zoneOrConfig() || !grown.isEmpty() && frontierLoaded(level) && next(level).isEmpty();
+        return !grown.isEmpty() && frontierLoaded(level) && (grown.size() >= zoneOrConfig() || next(level).isEmpty());
     }
 
     private boolean outputEmpty() {
