@@ -15,7 +15,6 @@ import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.DragonRouting;
 import io.github._5thlayer.voidworks.dragon.EggPrice;
 import io.github._5thlayer.voidworks.dragon.Hatching;
-import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.mutation.Families;
 import io.github._5thlayer.voidworks.mutation.UnmakingRecipes;
 import io.github._5thlayer.voidworks.network.Conduction;
@@ -35,8 +34,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * Density line in a Density item's tooltip, the Dormant machines' cost map, conduction through
  * Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the Void Siphon, the
  * dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, which carries motes
- * between Void Wells, the {@code /voidworks} commands and the game tests, which exist only when
- * game tests are enabled.
+ * between Void Wells, and the {@code /voidworks} commands. The game tests hook themselves in from
+ * the {@code gametest} source set, which never ships (libworks ADR 0011).
  */
 @Mod(Voidworks.MOD_ID)
 public final class Voidworks {
@@ -71,6 +70,5 @@ public final class Voidworks {
         DragonRouting.register(modBus);
         DragonRiding.register();
         VoidworksCommands.register();
-        VoidworksGameTests.register(modBus);
     }
 }

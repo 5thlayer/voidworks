@@ -41,7 +41,7 @@ import net.neoforged.neoforge.transfer.energy.ItemAccessEnergyHandler;
 /**
  * A Void Siphon set to charge charging the FE items its holder wears or holds, through the Siphon's
  * step each interval, on a real server (ADR 0007). A vanilla item, a lightning rod, stands in for
- * another mod's FE item: the game test run alone gives it NeoForge's item energy capability, so
+ * another mod's FE item: the Module's own runs give it NeoForge's item energy capability, so
  * the tests need no FE mod. The platform is in the Overworld, where a mote one grade above the
  * pressure releases the base void energy.
  */
@@ -72,7 +72,7 @@ final class FeChargingTests {
     private FeChargingTests() {
     }
 
-    /** For the game test run alone: the stand-ins' energy and their capability. */
+    /** For the Module's own runs: the stand-ins' energy and their capability. */
     static void registerStandIns(IEventBus modBus) {
         COMPONENTS.register(modBus);
         modBus.addListener(FeChargingTests::registerCapabilities);

@@ -3,7 +3,7 @@
 // libworks convention plugin (libworks ADR 0003). Voidworks requires no other Module, so it
 // declares no upstreams, and its tags are the plugin's default, voidworks-v<version>.
 plugins {
-    id 'io.github.5thlayer.libworks.module' version '0.3.0'
+    id 'io.github.5thlayer.libworks.module' version '0.4.0'
 }
 
 libworks {
@@ -13,17 +13,6 @@ libworks {
 }
 
 repositories {
-    // libworks-runtime, from the local maven only, where its releases are published. CI builds its tag
-    // there first. Gearworks and Groundworks too, which only the dev client loads, so CI never resolves them.
-    exclusiveContent {
-        forRepository { mavenLocal() }
-        filter {
-            includeModule 'io.github.5thlayer', 'libworks-runtime'
-            includeModule 'io.github.5thlayer', 'libworks-gametest'
-            includeModule 'io.github.5thlayer', 'gearworks'
-            includeModule 'io.github.5thlayer', 'groundworks'
-        }
-    }
     // EMI for 26.1 is an unofficial port, published on CurseForge only.
     maven {
         url = 'https://cursemaven.com'
@@ -76,11 +65,6 @@ neoForge {
         // production never shows.
         configureEach {
             systemProperty 'neoforge.warnings.onlyin.hide', 'true'
-        }
-        gameTestServer {
-            // Marks this run as the Module's own, which is when it gives a vanilla block voidworks:motes
-            // (VoidworksGameTests).
-            systemProperty 'voidworks.gametest', 'true'
         }
     }
 

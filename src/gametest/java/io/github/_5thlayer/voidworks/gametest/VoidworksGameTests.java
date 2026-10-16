@@ -17,6 +17,9 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -24,16 +27,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * The Module's game tests, run by the {@code gameTestServer} Gradle run: the Minecraft-integration
  * seam, with a real player on a real server. Each test stands on the {@code gametest/platform}
  * structure, a stone floor that {@code sh ./gradlew buildGametestStructures} writes, and sets up
- * what it needs itself, so the setup is in the diff.
+ * what it needs itself, so the setup is in the diff. It lives in the {@code gametest} source set, which
+ * only the Module's own runs load, and hooks itself in, so the {@code @Mod} class names no game-test
+ * code and nothing gates it (libworks ADR 0011).
  */
+@EventBusSubscriber(modid = Voidworks.MOD_ID)
 public final class VoidworksGameTests {
-
-    /** The system property that build.gradle's {@code gameTestServer} run sets, for what only it registers. */
-    private static final String OWN_RUN = "voidworks.gametest";
-
-    /** The system property the convention plugin names each run in, which DevPacks reads too. */
-    private static final String RUN = "libworks.run";
-    private static final String DEV_CLIENT = "client";
 
     private static final Identifier PLATFORM = id("gametest/platform");
 
@@ -47,23 +46,23 @@ public final class VoidworksGameTests {
     private VoidworksGameTests() {
     }
 
+    @SubscribeEvent
+    static void construct(FMLConstructModEvent event) {
+        register(event.getContainer().getEventBus());
+    }
+
     public static void register(IEventBus modBus) {
         TEST_TYPES.register(modBus);
-        // Posted only when game tests are enabled, so a production server never registers the tests.
+        // Posted only when game tests are enabled, which a production game never is.
         modBus.addListener(VoidworksGameTests::registerTests);
-        // The capabilities that tests lean on are for the game test run alone, which build.gradle marks
-        // with voidworks.gametest. DevPacks switches on the run's datapack, gametest_pack/ (libworks ADR 0004).
-        if (Boolean.getBoolean(OWN_RUN)) {
-            // A vanilla block stands in for a void machine, so the run alone gives it voidworks:motes.
-            modBus.addListener(SpendTests::registerCapabilities);
-            // A vanilla item stands in for another mod's FE item, so the run alone gives it an energy handler.
-            FeChargingTests.registerStandIns(modBus);
-        }
+        // A vanilla block stands in for a void machine, so the Module's own runs give it voidworks:motes.
+        modBus.addListener(SpendTests::registerCapabilities);
+        // A vanilla item stands in for another mod's FE item, so the Module's own runs give it an energy handler.
+        FeChargingTests.registerStandIns(modBus);
         // A Dormant machine that ships with no Module, which the game-test pack gives a cost, and the dev
         // pack too, so the dev client can pay it by hand with a Void Siphon until a real one ships.
-        if (Boolean.getBoolean(OWN_RUN) || DEV_CLIENT.equals(System.getProperty(RUN))) {
-            DormantTestMachine.register(modBus);
-        }
+        // DevPacks switches on the run's datapack (libworks ADR 0004).
+        DormantTestMachine.register(modBus);
     }
 
     private static void registerTests(RegisterGameTestsEvent event) {

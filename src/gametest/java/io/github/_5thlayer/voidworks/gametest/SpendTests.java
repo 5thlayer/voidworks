@@ -31,7 +31,7 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
  */
 final class SpendTests {
 
-    /** The block that stands in for a void machine: the game test run gives it {@code voidworks:motes}. */
+    /** The block that stands in for a void machine: the Module's own runs give it {@code voidworks:motes}. */
     static final Block MACHINE = Blocks.LODESTONE;
 
     /** The store each placed machine holds, by its position; a machine with none provides no capability. */
@@ -53,7 +53,7 @@ final class SpendTests {
                 SpendTests::severalStoresThatCannotAffordAreUntouched);
     }
 
-    /** Gives {@link #MACHINE} the {@code voidworks:motes} capability, for the game test run only. */
+    /** Gives {@link #MACHINE} the {@code voidworks:motes} capability, in the Module's own runs. */
     static void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlock(VoidworksCapabilities.MOTES, (level, pos, state, blockEntity, side) -> MACHINES.get(pos.immutable()), MACHINE);
     }
