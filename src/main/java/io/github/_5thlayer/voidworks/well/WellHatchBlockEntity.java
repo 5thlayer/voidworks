@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-import org.jspecify.annotations.Nullable;
+import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 /**
  * A Well hatch's block entity, which holds nothing of its own: what the hatch holds is its entry in the
@@ -24,6 +24,12 @@ import org.jspecify.annotations.Nullable;
  * no Well and is anyone's; it is put there, holding nothing, the first time it is asked for.
  */
 public final class WellHatchBlockEntity extends BlockEntity {
+
+    /**
+     * A watcher's item face: it knows nothing of what the hatch holds, but has a face, so a mod there
+     * that asks whether a block holds items, as Jade does before asking the server for them, asks.
+     */
+    private static final ResourceHandler<ItemResource> WATCHED = new ItemStacksResourceHandler(0);
 
     public WellHatchBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.WELL_HATCH_ENTITY.get(), pos, state);
@@ -39,9 +45,9 @@ public final class WellHatchBlockEntity extends BlockEntity {
         return Optional.of(hatches.at(place).orElseGet(() -> hatches.put(place, Optional.empty(), Optional.empty(), VoidworksConfig.wellHatchSlots())));
     }
 
-    /** @return what it holds, the same on every face: hoppers, belts and pipes fill and empty it; null for a watcher */
-    public @Nullable ResourceHandler<ItemResource> itemFace() {
-        return hatch().<ResourceHandler<ItemResource>>map(WellHatches.Hatch::contents).orElse(null);
+    /** @return what it holds, the same on every face: hoppers, belts and pipes fill and empty it; for a watcher, a face holding nothing */
+    public ResourceHandler<ItemResource> itemFace() {
+        return hatch().<ResourceHandler<ItemResource>>map(WellHatches.Hatch::contents).orElse(WATCHED);
     }
 
     /** Broken, it leaves the server's hatches and drops what it held. */

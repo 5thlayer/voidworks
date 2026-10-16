@@ -66,6 +66,7 @@ final class WellHatchTests {
         tests.test("a_well_hatch_keeps_its_contents_while_its_well_is_not_whole_and_is_a_plain_container_once_its_core_is_broken", TICKS,
                 WellHatchTests::outlivesItsWell);
         tests.test("a_well_hatch_broken_drops_what_it_held", TICKS, WellHatchTests::brokenDrops);
+        tests.test("a_well_hatch_seen_by_a_watcher_has_an_item_face_so_jade_asks_the_server_what_it_holds", 1, WellHatchTests::watcherHasAFace);
         tests.test("a_well_hatch_placed_where_one_was_removed_unbroken_drops_what_that_one_held", TICKS, WellHatchTests::staleContentsDropped);
     }
 
@@ -263,6 +264,18 @@ final class WellHatchTests {
         helper.assertTrue(placeHatch(helper, owner, HATCH_AGAINST, Direction.EAST), "no hatch was placed again");
         helper.assertTrue(held(itemFace(helper), Items.LAPIS_LAZULI) == 0, "the new hatch holds what the old one left");
         helper.assertItemEntityCountIs(Items.LAPIS_LAZULI, HATCH, 2, 9);
+        helper.succeed();
+    }
+
+    /**
+     * A watcher's hatch, in no server level, still has an item face, holding nothing: Jade asks a block's
+     * item face on the client before it asks the server for what it holds.
+     */
+    private static void watcherHasAFace(GameTestHelper helper) {
+        var watched = new WellHatchBlockEntity(helper.absolutePos(HATCH), VoidworksBlocks.WELL_HATCH.get().defaultBlockState());
+        helper.assertTrue(watched.hatch().isEmpty(), "a watcher's hatch has the server's entry");
+        var face = watched.itemFace();
+        helper.assertTrue(face != null && face.size() == 0, "a watcher's hatch has no item face, or one that claims to hold something");
         helper.succeed();
     }
 
