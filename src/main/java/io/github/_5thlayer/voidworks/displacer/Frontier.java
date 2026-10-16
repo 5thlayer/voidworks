@@ -37,8 +37,8 @@ public final class Frontier {
         var axis = facing.getAxis();
         return pos -> {
             var offset = pos.subtract(displacer);
-            int reach = offset.get(axis) * facing.getAxisDirection().getStep();
-            return reach >= 1 && aside(offset, axis) < reach;
+            int depth = offset.get(axis) * facing.getAxisDirection().getStep();
+            return depth >= 1 && aside(offset, axis) < depth;
         };
     }
 
