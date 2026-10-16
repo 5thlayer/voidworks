@@ -69,7 +69,7 @@ final class EndDisplacerTests {
                 helper -> inTheEnd(helper, 2, EndDisplacerTests::dormantUntilPaid));
         tests.test("a_dormant_end_displacer_that_can_reach_no_air_pops_off_before_soaking_its_cost", 1,
                 helper -> inTheEnd(helper, 3, EndDisplacerTests::popsOffBeforeSoaking));
-        tests.test("an_end_displacer_grows_only_ahead_of_its_front_face_leaving_its_other_faces_open", 1,
+        tests.test("an_end_displacer_grows_only_ahead_of_its_front_face_as_a_pyramid_leaving_its_other_faces_open", 1,
                 helper -> inTheEnd(helper, 4, EndDisplacerTests::growsOnlyAhead));
         tests.test("an_end_displacer_placed_faces_where_its_player_looks", 1, EndDisplacerTests::facesWhereThePlayerLooks);
         tests.test("an_end_displacer_where_the_harvest_kind_is_not_end_harvests_nothing_and_pops_off", 40, EndDisplacerTests::refusesOutsideTheEnd);
@@ -157,7 +157,10 @@ final class EndDisplacerTests {
                 "it soaked motes before it popped off: the Voidstone holds " + site.motes(DISPLACER.north()));
     }
 
-    /** Facing east in open air, with eight harvests to make: every one lies east of it, and its other five faces stay open. */
+    /**
+     * Facing east in open air, with eight harvests to make: every one lies in the pyramid widening
+     * east of it, so the ring around the position ahead stays open, as do its other five faces.
+     */
     private static void growsOnlyAhead(DimensionSite site) {
         var displacer = place(site, 8, Direction.EAST);
         site.feed(displacer, 8);
@@ -167,10 +170,13 @@ final class EndDisplacerTests {
         site.assertTrue(site.abs(DISPLACER.east()).equals(displacer.grown().getFirst()),
                 "it harvested " + displacer.grown().getFirst() + " first, not the air ahead of its front face");
         for (var pos : displacer.grown()) {
-            site.assertTrue(pos.getX() > site.abs(DISPLACER).getX(), "it harvested " + pos + ", not ahead of its east face");
+            var offset = pos.subtract(site.abs(DISPLACER));
+            site.assertTrue(offset.getX() > Math.max(Math.abs(offset.getY()), Math.abs(offset.getZ())),
+                    "it harvested " + pos + ", outside the pyramid ahead of its east face");
         }
-        for (var side : new BlockPos[] {DISPLACER.above(), DISPLACER.below(), DISPLACER.north(), DISPLACER.south(), DISPLACER.west()}) {
-            site.assertTrue(site.state(side).isAir(), "it walled in its face at " + side + " with " + site.state(side));
+        for (var side : new BlockPos[] {DISPLACER.above(), DISPLACER.below(), DISPLACER.north(), DISPLACER.south(), DISPLACER.west(),
+                DISPLACER.east().above(), DISPLACER.east().below(), DISPLACER.east().north(), DISPLACER.east().south()}) {
+            site.assertTrue(site.state(side).isAir(), "it filled " + side + " beside it" + " with " + site.state(side));
         }
     }
 

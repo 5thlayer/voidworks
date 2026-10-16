@@ -23,17 +23,27 @@ public final class Frontier {
     }
 
     /**
-     * The space a Displacer that grows through one face reaches: everything past that face, so its
-     * other faces, and all that is level with it or behind it, stay as they were.
+     * The space a Displacer that grows through one face reaches: a square pyramid opening out from
+     * that face, one position a step ahead, a 3×3 two steps ahead and so on, never further aside than
+     * it is ahead. Its other faces, all that is level with it or behind it, and the ring around it a
+     * step ahead stay as they were, so on the ground a player can still stand beside it.
      *
      * @param facing the way its front face looks
      * @return whether a position lies ahead of the Displacer at {@code displacer}
      */
     public static Predicate<BlockPos> ahead(BlockPos displacer, Direction facing) {
-        var step = facing.getUnitVec3i();
-        return pos -> (pos.getX() - displacer.getX()) * step.getX()
-                + (pos.getY() - displacer.getY()) * step.getY()
-                + (pos.getZ() - displacer.getZ()) * step.getZ() >= 1;
+        var axis = facing.getAxis();
+        return pos -> {
+            var offset = pos.subtract(displacer);
+            int ahead = axis.choose(offset.getX(), offset.getY(), offset.getZ()) * facing.getAxisDirection().getStep();
+            int aside = 0;
+            for (var other : Direction.Axis.values()) {
+                if (other != axis) {
+                    aside = Math.max(aside, Math.abs(other.choose(offset.getX(), offset.getY(), offset.getZ())));
+                }
+            }
+            return ahead >= 1 && aside < ahead;
+        };
     }
 
     /**

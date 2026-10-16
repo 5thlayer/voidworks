@@ -132,7 +132,9 @@ starts. A spent Displacer becoming Voidstone shows the same, its own casing eate
 unloads drops the effect, and nothing of it is saved.
 
 - **End**: places fed blocks into the empty air of its zone. It faces the way its placer looked and
-  grows only into the space ahead of that face, so it never walls in its other faces.
+  grows only into a square pyramid widening out ahead of that face, one block a step ahead, a 3×3 two
+  steps ahead, and so on, so it never walls in its other faces, and on the ground it leaves the ring
+  around it clear for a player to stand at its sides.
 - **Overworld**: swaps fed blocks with natural terrain in its zone — the blocks in a natural-block
   tag (stone, deepslate, dirt, ores…), which placed stone also matches. The terrain block goes to
   the Displacer's output, through a data table keyed by the terrain block and the fed block's

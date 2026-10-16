@@ -15,8 +15,9 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 /**
  * The End Void Displacer: it places fed blocks into the air ahead of its front face, touching it or
- * the Voidstone it has left, so its body grows outward that way and never walls in its other faces,
- * and nothing comes back to its output. Over the open void its
+ * the Voidstone it has left, so its body grows outward that way as a pyramid widening from that face,
+ * never walling in its other faces nor roofing over the ground around it, and nothing comes back to
+ * its output. Over the open void its
  * harvests grade one step higher, as the Void Pressure there is, and each Voidstone it leaves closes
  * the column above it. It is placed Dormant, and harvests only once it has soaked its cost.
  */
