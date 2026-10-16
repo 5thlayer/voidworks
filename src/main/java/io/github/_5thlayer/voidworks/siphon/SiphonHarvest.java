@@ -13,9 +13,8 @@ import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
+import io.github._5thlayer.voidworks.taking.VoidTaking;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -42,7 +41,8 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * One harvest by hand: the Void Siphon in the main hand, a block of Density above 0 in the off hand,
  * aimed like placing a block. It behaves by the dimension's harvest kind, yields one Density step
  * below a Displacer ({@link SiphonMotes#handYield}) at one grade above the Void Pressure where it
- * harvests, credits the Siphon, consumes the fed block, and leaves Voidstone where it harvested:
+ * harvests, credits the Siphon, consumes the fed block, and leaves Voidstone where it harvested, the
+ * void seen taking what was there ({@link VoidTaking}):
  *
  * <ul>
  *   <li>{@code end}: the fed block goes into the air aimed at and becomes Voidstone;</li>
@@ -130,9 +130,8 @@ public final class SiphonHarvest {
             if (!natural.isEmpty()) {
                 player.getInventory().placeItemBackInInventory(natural);
             }
-            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, harvested),
-                    target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 30, 0.3, 0.3, 0.3, 0.05);
         }
+        VoidTaking.show(level, target, harvested);
         MoteFlight.toEntity(level, target.getCenter(), player, grade, motes);
         level.playSound(null, target, SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 0.6F, 0.9F + level.getRandom().nextFloat() * 0.2F);
         return Outcome.HARVESTED;
