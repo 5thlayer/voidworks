@@ -143,8 +143,12 @@ public final class VoidWellBlock extends BaseEntityBlock {
 
     @Override
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (!(level instanceof ServerLevel) || type != VoidworksBlocks.VOID_WELL_ENTITY.get()) {
+        if (type != VoidworksBlocks.VOID_WELL_ENTITY.get()) {
             return null;
+        }
+        if (!(level instanceof ServerLevel)) {
+            // A watcher's Well only shows its shaft.
+            return (world, pos, blockState, entity) -> ((VoidWellBlockEntity) entity).watcherTick();
         }
         return (world, pos, blockState, entity) -> ((VoidWellBlockEntity) entity).serverTick((ServerLevel) world);
     }

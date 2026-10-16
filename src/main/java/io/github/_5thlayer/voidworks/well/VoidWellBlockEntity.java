@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.mojang.serialization.Codec;
@@ -15,16 +16,27 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.network.StoreKind;
+import io.github._5thlayer.voidworks.network.VoidNetworks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.NameAndId;
+import net.minecraft.util.Mth;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
@@ -42,6 +54,10 @@ import org.jspecify.annotations.Nullable;
  * A core from before owners existed has none, and is claimed by the first player to set its target or
  * name it ({@link #ownsOrClaims}). Once it has an owner, it keeps itself in the server's
  * {@link VoidWells} with its target, so its owner's Void Dragons find it with no chunk loaded.
+ *
+ * <p>Its shaft shows its network's fill ({@link ShaftFill}): looking over the well, it works out
+ * what the shaft shows, nothing while it is Dormant or not whole, and tells a watcher only when that
+ * changes. A watcher eases the fluid to a new level ({@link #shownLevel}).
  */
 public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.Holder {
 
@@ -49,6 +65,12 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     private static final String OWNER_KEY = "owner";
     private static final String TARGET_KEY = "target";
     private static final String NAME_KEY = "name";
+    private static final String SHAFT_KEY = "shaft";
+    /** Ticks a watcher takes to ease its shaft's fluid to a new level. */
+    private static final int EASE_TICKS = 20;
+    /** What a watcher does each tick for a Well it has loaded: has its shaft's butterflies drift, once the client says how. */
+    private static Consumer<VoidWellBlockEntity> watcherTick = well -> {
+    };
     private static final Codec<Map<Integer, Long>> KEPT_CODEC = Codec.unboundedMap(Codec.STRING.xmap(Integer::parseInt, String::valueOf), Codec.LONG);
 
     private final Dormancy dormancy = new Dormancy(this);
@@ -63,6 +85,11 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     private boolean joinedWithParts;
     /** Whether, since it loaded, it has put itself in the server's {@link VoidWells}, which a Well saved before them lacks. */
     private boolean listed;
+    /** What its shaft shows: on the server, what it last worked out; for a watcher, what it was last told. */
+    private ShaftFill shaft = ShaftFill.EMPTY;
+    /** For a watcher: the level its fluid eases from, and the game time it began to. */
+    private double easedFrom;
+    private long easingSince;
 
     public VoidWellBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.VOID_WELL_ENTITY.get(), pos, state);
@@ -81,6 +108,31 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
     /** @return how full it asks to be kept */
     public FillTarget target() {
         return target;
+    }
+
+    /** @return what its shaft shows of its network: what it last worked out, or, for a watcher, what it was told */
+    public ShaftFill shaft() {
+        return shaft;
+    }
+
+    /**
+     * @param gameTime    the game time now
+     * @param partialTick how far through the tick it is
+     * @return for a watcher, how high its shaft's fluid stands now, as a share of the shaft's height:
+     *         easing from where it stood toward what it was last told
+     */
+    public double shownLevel(long gameTime, float partialTick) {
+        double eased = Mth.clamp((gameTime - easingSince + partialTick) / EASE_TICKS, 0, 1);
+        return Mth.lerp(eased * eased * (3 - 2 * eased), easedFrom, shaft.level());
+    }
+
+    /** Has a watcher do {@code tick} each tick for every Well it has loaded, as the client does for their butterflies. */
+    public static void onWatcherTick(Consumer<VoidWellBlockEntity> tick) {
+        watcherTick = tick;
+    }
+
+    void watcherTick() {
+        watcherTick.accept(this);
     }
 
     /** @return the name a name tag gave it, if one has */
@@ -196,20 +248,39 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
         if (!listed) {
             list();
         }
-        if (++sinceLook >= VoidworksConfig.soakInterval()) {
+        boolean looking = ++sinceLook >= VoidworksConfig.soakInterval();
+        if (looking) {
             sinceLook = 0;
             whole = whole(level);
         }
         var networks = VoidstoneNetworks.of(level);
+        boolean inNetwork = keepStore(level, networks);
+        if (looking) {
+            show(level, inNetwork
+                    ? networks.at(worldPosition).map(network -> ShaftFill.of(network.capacity(), network.countByGrade())).orElse(ShaftFill.EMPTY)
+                    : ShaftFill.EMPTY);
+        }
+    }
+
+    /** Has its shaft show {@code fill}, telling watchers when that changes what they see. */
+    private void show(ServerLevel level, ShaftFill fill) {
+        if (!fill.equals(shaft)) {
+            shaft = fill;
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
+    }
+
+    /** @return whether, having soaked, joined or left as the well around it is, it is awake in its network */
+    private boolean keepStore(ServerLevel level, VoidNetworks networks) {
         if (!whole) {
             if (networks.store(worldPosition).isPresent()) {
                 kept = networks.withdraw(worldPosition);
                 setChanged();
             }
-            return;
+            return false;
         }
         if (!dormancy.soak(level)) {
-            return;
+            return false;
         }
         if (networks.store(worldPosition).isEmpty()) {
             networks.rejoin(worldPosition, StoreKind.WELL, parts(), kept);
@@ -219,6 +290,7 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
             networks.rejoin(worldPosition, StoreKind.WELL, parts(), networks.withdraw(worldPosition));
         }
         joinedWithParts = true;
+        return true;
     }
 
     @Override
@@ -241,5 +313,34 @@ public final class VoidWellBlockEntity extends BlockEntity implements Dormancy.H
         owner = input.read(OWNER_KEY, NameAndId.CODEC).orElse(null);
         target = input.read(TARGET_KEY, FillTarget.CODEC).orElse(FillTarget.NONE);
         name = parseCustomNameSafe(input, NAME_KEY);
+    }
+
+    /** A watcher is sent only what its shaft shows, as the chunk arrives. */
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, registries);
+        output.store(SHAFT_KEY, ShaftFill.CODEC, shaft);
+        return output.buildResult();
+    }
+
+    @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /** A watcher reads only what {@link #getUpdateTag} sends, as the chunk arrives: no easing, as nothing stood there before. */
+    @Override
+    public void handleUpdateTag(ValueInput input) {
+        shaft = input.read(SHAFT_KEY, ShaftFill.CODEC).orElse(ShaftFill.EMPTY);
+        easedFrom = shaft.level();
+    }
+
+    /** A watcher reads only what {@link #getUpdateTag} sends, as it changes, easing its fluid from where it stands. */
+    @Override
+    public void onDataPacket(Connection connection, ValueInput input) {
+        long now = level == null ? 0 : level.getGameTime();
+        easedFrom = shownLevel(now, 0);
+        easingSince = now;
+        shaft = input.read(SHAFT_KEY, ShaftFill.CODEC).orElse(ShaftFill.EMPTY);
     }
 }

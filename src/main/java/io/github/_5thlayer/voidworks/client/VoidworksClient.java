@@ -14,6 +14,7 @@ import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
 import io.github._5thlayer.voidworks.mutation.KnownBreakdowns;
 import io.github._5thlayer.voidworks.pressure.KnownPressure;
 import io.github._5thlayer.voidworks.pressure.PressurePayload;
+import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.world.phys.Vec3;
@@ -32,7 +33,8 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
- * result floating over a Void Crucible ({@link VoidCrucibleRenderer}) and the Void Dragon
+ * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
+ * ({@link VoidWellRenderer}, {@link ShaftButterflies}) and the Void Dragon
  * ({@link VoidDragonRenderer}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
@@ -51,6 +53,11 @@ public final class VoidworksClient {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dive"), DiveOverlay::render));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> DiveSound.tickClient());
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
+        VoidWellBlockEntity.onWatcherTick(well -> {
+            if (sprites != null) {
+                ShaftButterflies.tick(well, sprites);
+            }
+        });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             KnownPressure.forget();
             KnownBreakdowns.forget();
@@ -68,6 +75,7 @@ public final class VoidworksClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(VoidworksBlocks.VOID_CRUCIBLE_ENTITY.get(), context -> new VoidCrucibleRenderer());
+        event.registerBlockEntityRenderer(VoidworksBlocks.VOID_WELL_ENTITY.get(), context -> new VoidWellRenderer());
         event.registerEntityRenderer(VoidworksEntities.VOID_DRAGON.get(), VoidDragonRenderer::new);
     }
 

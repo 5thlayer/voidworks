@@ -21,6 +21,7 @@ import io.github._5thlayer.voidworks.siphon.SiphonMotes;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.ShaftFill;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import io.github._5thlayer.voidworks.well.VoidWells;
@@ -53,7 +54,8 @@ import net.neoforged.neoforge.common.util.FakePlayer;
  * target and name; a name tag names it and is used up; and a Well with no owner is claimed by the
  * first player to name it or set its target. All of it is kept while the Well is not whole and across
  * a reload. A Void Siphon used on its core pays it once whole, and Voidstone touching any block of
- * the well, casing, rim or core, reaches it, so its core's face stays free.
+ * the well, casing, rim or core, reaches it, so its core's face stays free. Its shaft shows its
+ * network's fill to a watcher, but only while it is awake and whole.
  */
 final class WellTests {
 
@@ -90,6 +92,8 @@ final class WellTests {
                 WellTests::savedWellRejoinsThroughItsCasing);
         tests.test("a_void_well_keeps_its_owner_target_and_name_while_not_whole_and_across_a_save_and_reload", TICKS, WellTests::keptWhileNotWholeAndReloaded);
         tests.test("a_void_well_is_listed_for_its_owner_s_dragons_with_its_target_until_its_core_is_broken", TICKS, WellTests::listedForDragons);
+        tests.test("a_void_well_s_shaft_shows_its_network_s_fill_to_a_watcher_only_while_it_is_awake_and_whole", TICKS * 2,
+                WellTests::shaftShowsFill);
     }
 
     private static void placerOwnsIt(GameTestHelper helper) {
@@ -413,6 +417,52 @@ final class WellTests {
         helper.setBlock(WELL, Blocks.AIR);
         helper.assertTrue(wells.owned(owner.getUUID()).isEmpty(), "the broken Well is still listed: " + wells.owned(owner.getUUID()));
         helper.succeed();
+    }
+
+    /**
+     * Dormant, its shaft shows nothing; awake, its network's fill, Voidstone and core together, which
+     * a watcher reads from what it is sent; no longer whole, nothing again. Its shaft stays open air.
+     */
+    private static void shaftShowsFill(GameTestHelper helper) {
+        buildWell(helper);
+        var owner = new Listener(helper, "well-owner");
+        var well = placeCore(helper, owner);
+        helper.setBlock(BESIDE_CASING, VoidworksBlocks.VOIDSTONE.get());
+        int pressure = DisplacerTests.pressure(helper, WELL);
+        var networks = VoidstoneNetworks.of(helper.getLevel());
+        var pos = helper.absolutePos(WELL);
+        helper.startSequence()
+                .thenIdle(2 * VoidworksConfig.soakInterval())
+                .thenExecute(() -> {
+                    helper.assertTrue(!well.dormancy().awake(), "the unpaid Well is awake");
+                    helper.assertTrue(well.shaft().equals(ShaftFill.EMPTY), "the Dormant Well's shaft shows " + well.shaft());
+                    VoidstoneTests.insert(helper, BESIDE_CASING, pressure + COST_STEPS, costInMotes(helper, well));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(well.dormancy().awake(), "the Well is still Dormant, paid " + well.dormancy().paid()))
+                .thenExecute(() -> {
+                    VoidstoneTests.insert(helper, BESIDE_CASING, pressure + 1, 40);
+                    VoidstoneTests.insert(helper, BESIDE_CASING, pressure + 2, 20);
+                })
+                .thenWaitUntil(() -> {
+                    var network = networks.at(pos).orElseThrow();
+                    var expected = ShaftFill.of(network.capacity(), network.countByGrade());
+                    helper.assertTrue(expected.step() > 0 && well.shaft().equals(expected),
+                            "the awake Well's shaft shows " + well.shaft() + ", not its network's " + expected);
+                })
+                .thenExecute(() -> {
+                    var level = helper.getLevel();
+                    var watched = new VoidWellBlockEntity(pos, level.getBlockState(pos));
+                    watched.handleUpdateTag(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), well.getUpdateTag(level.registryAccess())));
+                    helper.assertTrue(watched.shaft().equals(well.shaft()), "a watcher is told the shaft shows " + watched.shaft() + ", not " + well.shaft());
+                    WellStructure.layout(pos, Direction.NORTH).forEach((part, kind) -> {
+                        if (kind == WellStructure.Part.OPEN) {
+                            helper.assertTrue(level.getBlockState(part).isAir(), "the shaft at " + part + " is not open air");
+                        }
+                    });
+                    helper.setBlock(WELL.east(), Blocks.AIR);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(well.shaft().equals(ShaftFill.EMPTY), "the Well no longer whole shows " + well.shaft()))
+                .thenSucceed();
     }
 
     private static void buildWell(GameTestHelper helper) {

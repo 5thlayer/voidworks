@@ -13,6 +13,7 @@ import java.util.Map;
 import io.github._5thlayer.voidworks.well.WellStructure.Part;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -30,6 +31,13 @@ class WellStructureTest {
     void aWholeWellFacingAnyWayIsWhole(Direction facing) {
         var world = build(CORE, facing);
         assertTrue(WellStructure.whole(CORE, facing, pos -> world.getOrDefault(pos, Part.OPEN)));
+    }
+
+    @Test
+    void itsFluidFillsTheShaftFromItsFloorToTheTopOfItsWalls() {
+        var centre = CORE.south(2);
+        assertEquals(new AABB(centre.getX() - 1, centre.getY() - 1, centre.getZ() - 1, centre.getX() + 2, centre.getY() + 2, centre.getZ() + 2),
+                WellStructure.fluid(CORE, Direction.NORTH));
     }
 
     @Test

@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
 
 /**
  * The Void Well's structure, as plain logic over positions: 5 by 5 by 5 around its core. Its 3×3
@@ -93,6 +94,17 @@ public final class WellStructure {
     public static boolean inShaft(BlockPos core, Direction facing, BlockPos pos) {
         var offset = pos.subtract(shaft(core, facing));
         return Math.abs(offset.getX()) <= 1 && Math.abs(offset.getZ()) <= 1 && offset.getY() >= -1 && offset.getY() <= 2;
+    }
+
+    /**
+     * @param core where the core stands
+     * @param facing the way the core faces, out of its wall; horizontal
+     * @return the room its shaft's fluid fills when its network is full: the shaft inside the walls,
+     *         from its floor up to the top of the walls, under the rim
+     */
+    public static AABB fluid(BlockPos core, Direction facing) {
+        var centre = shaft(core, facing);
+        return new AABB(centre.getX() - 1, centre.getY() - 1, centre.getZ() - 1, centre.getX() + 2, centre.getY() + 2, centre.getZ() + 2);
     }
 
     /**
