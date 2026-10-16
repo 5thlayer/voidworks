@@ -89,6 +89,54 @@ public final class TouchingMotes {
     }
 
     /**
+     * @return what the stores touching {@code pos} are worth spent there with every store of their
+     *         networks, in void energy: what they can pay over time, as their networks' motes conduct
+     *         to them, where {@link #totalWorth} is what they hold now; a network or store reached on
+     *         several faces counts once
+     */
+    public static long networkWorth(ServerLevel level, BlockPos pos) {
+        int pressure = VoidPressure.at(level, pos);
+        var networks = VoidstoneNetworks.of(level);
+        var counted = Collections.newSetFromMap(new IdentityHashMap<>());
+        long worth = 0;
+        for (var store : distinct(at(level, pos))) {
+            var network = networks.at(store.pos());
+            if (network.isPresent()) {
+                if (counted.add(network.get())) {
+                    worth = LongMath.saturatedAdd(worth, VoidEnergy.worth(network.get().countByGrade(), pressure));
+                }
+            } else {
+                worth = LongMath.saturatedAdd(worth, worth(store.motes(), pressure));
+            }
+        }
+        return worth;
+    }
+
+    /**
+     * Soaks what it can, up to {@code most} void energy, from the stores touching a machine at
+     * {@code pos} or any of its {@code parts}, store by store, by the spend rule at {@code pos}, each
+     * store's motes flying in from it as butterflies, and marks them wanted so their networks' motes
+     * come to it: what a Dormant machine, or a Displacer's Zone upgrade, soaks each time.
+     *
+     * @return the void energy soaked, which may pass {@code most} by part of a mote
+     */
+    public static long soak(ServerLevel level, BlockPos pos, Set<BlockPos> parts, long most) {
+        var stores = at(level, pos, parts);
+        want(level, pos, stores);
+        long soaked = 0;
+        for (var store : stores) {
+            if (soaked >= most) {
+                break;
+            }
+            var spend = VoidSpender.spendUpTo(store.motes(), level, pos, most - soaked);
+            soaked += spend.released();
+            var from = store.pos().getCenter();
+            spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+        }
+        return soaked;
+    }
+
+    /**
      * Spends at least {@code required} void energy from the stores touching {@code pos} together, by
      * the spend rule there ({@link VoidSpender#spendTogether}), each store's motes flying in from it
      * as butterflies. All or nothing; a cost of nothing is paid with no store touching it.

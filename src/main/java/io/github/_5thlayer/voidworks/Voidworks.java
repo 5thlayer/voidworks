@@ -12,6 +12,7 @@ import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.DragonRouting;
 import io.github._5thlayer.voidworks.dragon.EggPrice;
+import io.github._5thlayer.voidworks.displacer.ZoneUpgrade;
 import io.github._5thlayer.voidworks.dragon.Hatching;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
 import io.github._5thlayer.voidworks.mutation.Families;
@@ -52,6 +53,7 @@ public final class Voidworks {
         Dormancy.register(modBus);
         DiveColour.register(modBus);
         EggPrice.register(modBus);
+        ZoneUpgrade.register(modBus);
         Families.register(modBus);
         UnmakingRecipes.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);

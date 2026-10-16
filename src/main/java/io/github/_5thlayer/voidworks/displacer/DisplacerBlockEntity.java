@@ -7,12 +7,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 
+import com.google.common.math.IntMath;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
+import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.inventory.ItemFace;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -22,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -58,6 +62,10 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * nothing more, it waits for its output to empty, then becomes Voidstone itself and its network
  * keeps the motes; one that could reach nothing before its first harvest pops off instead, as
  * outside its dimension, even before it is {@linkplain #ready ready}.
+ *
+ * <p>Sneak-used, an awake one buys Zone upgrades ({@link #sneakUse}), each raising its Zone by its
+ * block's {@link ZoneUpgrade} step once it has soaked the price. Its Zone spent with an upgrade still
+ * soaking, it waits for it, as for its output, and harvests on.
  */
 public abstract class DisplacerBlockEntity extends BlockEntity {
 
@@ -69,6 +77,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     private static final String ITEMS_KEY = "items";
     private static final String ZONE_KEY = "zone";
     private static final String GROWN_KEY = "grown";
+    /** How near a player is told its Zone upgrade is bought. */
+    private static final double UPGRADE_HEARD = 16;
 
     private final ItemStacksResourceHandler inventory = new ItemStacksResourceHandler(1 + OUTPUT_SLOTS) {
         @Override
@@ -84,6 +94,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     /** How many positions it harvests in its life; 0 until its first tick sets it from the config. */
     private int zone;
     private int sinceHarvest;
+    private final ZoneUpgrades upgrades = new ZoneUpgrades(this);
 
     protected DisplacerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
@@ -179,7 +190,11 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
             popOff(level);
             return;
         }
-        if (!ready(level) || ++sinceHarvest < VoidworksConfig.harvestInterval()) {
+        if (!ready(level)) {
+            return;
+        }
+        upgrades.soak(level).ifPresent(step -> upgraded(level, step));
+        if (++sinceHarvest < VoidworksConfig.harvestInterval()) {
             return;
         }
         sinceHarvest = 0;
@@ -191,8 +206,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (target.isPresent() && grown.size() < zone && harvest(level, target.get())) {
             target = next(level);
         }
-        // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it.
-        if ((target.isEmpty() || grown.size() >= zone) && outputEmpty()) {
+        // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it,
+        // and one whose Zone upgrade is soaking waits for it, to harvest on.
+        if ((target.isEmpty() || grown.size() >= zone && upgrades.soaking().isEmpty()) && outputEmpty()) {
             becomeVoidstone(level);
         }
     }
@@ -262,6 +278,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      *         {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
+        if (zoneSpent() && upgrades.soaking().isPresent() && frontierLoaded(level) && next(level).isPresent()) {
+            return Optional.of(Stall.UPGRADE_UNPAID);
+        }
         if (spent(level)) {
             return outputEmpty() ? Optional.empty() : Optional.of(Stall.OUTPUT_UNEMPTIED);
         }
@@ -299,7 +318,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         /** Its tank cannot take what the harvest displaces. */
         TANK_FULL,
         /** Spent, it waits for its output to be emptied before it becomes Voidstone. */
-        OUTPUT_UNEMPTIED
+        OUTPUT_UNEMPTIED,
+        /** Its Zone spent, it waits for the Zone upgrade it is soaking, to harvest on. */
+        UPGRADE_UNPAID
     }
 
     /**
@@ -325,7 +346,11 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /** @return whether it becomes Voidstone once its output is empty: its Zone spent or nothing left in reach, its frontier loaded */
     private boolean spent(ServerLevel level) {
-        return !grown.isEmpty() && frontierLoaded(level) && (grown.size() >= zoneOrConfig() || next(level).isEmpty());
+        return !grown.isEmpty() && frontierLoaded(level) && (zoneSpent() || next(level).isEmpty());
+    }
+
+    private boolean zoneSpent() {
+        return grown.size() >= zoneOrConfig();
     }
 
     private boolean outputEmpty() {
@@ -384,6 +409,89 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return true;
     }
 
+    // -- Zone upgrades -------------------------------------------------------------------------
+
+    /** @return how many Zone upgrades it has bought */
+    public int upgradeLevels() {
+        return upgrades.levels();
+    }
+
+    /** @return the price of its next Zone upgrade, in void energy, or empty when its block buys none */
+    public OptionalLong nextUpgradePrice() {
+        return ZoneUpgrade.of(getBlockState()).map(upgrade -> OptionalLong.of(upgrade.price(upgrades.levels()))).orElse(OptionalLong.empty());
+    }
+
+    /** @return the void energy soaked toward the Zone upgrade it is soaking and its price, or empty while none is */
+    public Optional<Payment> upgradePayment() {
+        return upgrades.soaking().map(soaking -> new Payment(soaking.paid(), soaking.price()));
+    }
+
+    /** What a soaking Zone upgrade has paid of its price, in void energy. */
+    public record Payment(long paid, long price) {
+    }
+
+    /**
+     * What a player sneak-using it with an empty hand does, the awake Displacer's one gesture: a
+     * first quotes its next Zone upgrade, and the same player's second within
+     * {@link Confirmation#TICKS} ticks commits to it, the Displacer then soaking its price from the
+     * stores touching it. While one soaks, a first offers to cancel it and a second cancels it.
+     *
+     * @return what the player is told, above the hotbar
+     */
+    public Component sneakUse(ServerLevel level, Player player) {
+        var confirmation = upgrades.confirmation;
+        long now = level.getGameTime();
+        var soaking = upgrades.soaking();
+        if (soaking.isPresent()) {
+            if (confirmation.confirms(player.getUUID(), Confirmation.Offer.CANCEL, now)) {
+                upgrades.cancel();
+                return Component.translatable("voidworks.displacer.upgrade.cancelled");
+            }
+            confirmation.arm(player.getUUID(), Confirmation.Offer.CANCEL, now);
+            return Component.translatable("voidworks.displacer.upgrade.cancel", soaking.get().paid(), soaking.get().price());
+        }
+        var upgrade = ZoneUpgrade.of(getBlockState());
+        if (upgrade.isEmpty()) {
+            confirmation.lapse();
+            return Component.translatable("voidworks.displacer.upgrade.none");
+        }
+        if (!frontierLoaded(level) || next(level).isEmpty()) {
+            confirmation.lapse();
+            return Component.translatable("voidworks.displacer.upgrade.unreachable");
+        }
+        int from = zoneOrConfig();
+        int to = upgrade.get().raise(from);
+        long price = upgrade.get().price(upgrades.levels());
+        boolean confirmed = confirmation.confirms(player.getUUID(), Confirmation.Offer.BUY, now);
+        long worth = TouchingMotes.networkWorth(level, worldPosition);
+        if (worth < price) {
+            return Component.translatable("voidworks.displacer.upgrade.unaffordable", from, to, price, worth);
+        }
+        if (confirmed) {
+            upgrades.commit(upgrade.get());
+            return Component.translatable("voidworks.displacer.upgrade.committed", from, to, price);
+        }
+        confirmation.arm(player.getUUID(), Confirmation.Offer.BUY, now);
+        return Component.translatable("voidworks.displacer.upgrade.quote", from, to, price);
+    }
+
+    /** Drops any quote waiting on a confirmation, as any use but a sneak-use does. */
+    public void lapseQuote() {
+        upgrades.confirmation.lapse();
+    }
+
+    /** Its Zone upgrade paid, its Zone grows by {@code step}, and the players near it hear and are told so. */
+    private void upgraded(ServerLevel level, int step) {
+        setZone(IntMath.saturatedAdd(zoneOrConfig(), step));
+        var message = Component.translatable("voidworks.displacer.upgrade.done", step, zone);
+        for (var player : level.players()) {
+            if (player.blockPosition().closerThan(worldPosition, UPGRADE_HEARD)) {
+                player.sendOverlayMessage(message);
+            }
+        }
+        level.playSound(null, worldPosition, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 0.8F, 1.2F);
+    }
+
     // -- persistence ----------------------------------------------------------------------------
 
     @Override
@@ -392,6 +500,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         inventory.serialize(output.child(ITEMS_KEY));
         output.putInt(ZONE_KEY, zone);
         output.store(GROWN_KEY, BlockPos.CODEC.listOf(), List.copyOf(grown));
+        upgrades.save(output);
     }
 
     @Override
@@ -401,6 +510,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         zone = input.getIntOr(ZONE_KEY, 0);
         grown.clear();
         input.read(GROWN_KEY, BlockPos.CODEC.listOf()).ifPresent(grown::addAll);
+        upgrades.load(input);
     }
 
     /** Going, by turning to Voidstone, a creative player or a command, it drops what it holds. */

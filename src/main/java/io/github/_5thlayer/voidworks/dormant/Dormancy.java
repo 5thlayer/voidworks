@@ -150,13 +150,10 @@ public final class Dormancy {
     }
 
     private void soakFromNeighbours(ServerLevel level) {
-        var stores = TouchingMotes.at(level, machine.getBlockPos(), parts());
-        TouchingMotes.want(level, machine.getBlockPos(), stores);
-        for (var store : stores) {
-            if (paid >= cost()) {
-                return;
-            }
-            payFrom(level, store.motes(), store.pos().getCenter());
+        long soaked = TouchingMotes.soak(level, machine.getBlockPos(), parts(), cost() - paid);
+        if (soaked > 0) {
+            paid += soaked;
+            machine.setChanged();
         }
     }
 
