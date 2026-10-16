@@ -3,9 +3,12 @@
 
 package io.github._5thlayer.voidworks.displacer;
 
+import java.util.OptionalInt;
+
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
@@ -18,21 +21,33 @@ public final class DensityTooltip {
     private DensityTooltip() {
     }
 
-    /** Puts {@code event}'s item's Density line right under its name, when it has a Density. */
-    public static void onItemTooltip(ItemTooltipEvent event) {
+    /** Adds the line to every item tooltip built, which only a client builds outside the game tests. */
+    public static void register() {
+        NeoForge.EVENT_BUS.addListener(DensityTooltip::onItemTooltip);
+    }
+
+    private static void onItemTooltip(ItemTooltipEvent event) {
         int density = Density.of(ItemResource.of(event.getItemStack()));
         if (density > 0) {
-            event.getToolTip().add(1, line(density));
+            // Known on a client only once a server has sent its config.
+            var motes = VoidworksConfig.loaded() ? OptionalInt.of(VoidworksConfig.motes(density)) : OptionalInt.empty();
+            event.getToolTip().add(1, line(density, motes));
         }
     }
 
-    /** @return the line an item of {@code density}, above 0, shows */
-    private static Component line(int density) {
-        // Known on a client only once a server has sent its config.
-        if (!VoidworksConfig.loaded()) {
-            return Component.translatable("voidworks.density.tooltip", density).withStyle(ChatFormatting.GRAY);
+    /**
+     * @param motes what one yields fed to a Displacer, or empty when that is not known
+     * @return the line an item of {@code density}, above 0, shows
+     */
+    static Component line(int density, OptionalInt motes) {
+        Component line;
+        if (motes.isEmpty()) {
+            line = Component.translatable("voidworks.density.tooltip", density);
+        } else if (motes.getAsInt() == 1) {
+            line = Component.translatable("voidworks.density.tooltip.mote", density, 1);
+        } else {
+            line = Component.translatable("voidworks.density.tooltip.motes", density, motes.getAsInt());
         }
-        return Component.translatable("voidworks.density.tooltip.motes", density, VoidworksConfig.motes(density))
-                .withStyle(ChatFormatting.GRAY);
+        return line.copy().withStyle(ChatFormatting.GRAY);
     }
 }

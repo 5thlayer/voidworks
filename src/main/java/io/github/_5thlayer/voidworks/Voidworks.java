@@ -30,10 +30,12 @@ import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * The Module's entry point. It registers the Void Pressure data map (and checks the defaults it
- * ships), Voidstone and the Void Displacers with their displacement table and server
- * config, the Density line in a fed block's tooltip, the Dormant machines' cost map, conduction through Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the
- * Void Siphon, the dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, which carries motes between Void Wells, the {@code /voidworks} commands and the game tests, which exist only when game tests
- * are enabled.
+ * ships), Voidstone and the Void Displacers with their displacement table and server config, the
+ * Density line in a fed block's tooltip, the Dormant machines' cost map, conduction through
+ * Voidstone networks, the Families, the Unmaking Chamber's breakdown map, the Void Siphon, the
+ * dragon eggs, the Dragonling they hatch and the Void Dragon it grows into, which carries motes
+ * between Void Wells, the {@code /voidworks} commands and the game tests, which exist only when
+ * game tests are enabled.
  */
 @Mod(Voidworks.MOD_ID)
 public final class Voidworks {
@@ -51,7 +53,7 @@ public final class Voidworks {
         VoidworksEntities.register(modBus);
         modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
-        NeoForge.EVENT_BUS.addListener(DensityTooltip::onItemTooltip);
+        DensityTooltip.register();
         Dormancy.register(modBus);
         DiveColour.register(modBus);
         EggPrice.register(modBus);

@@ -21,20 +21,18 @@ import net.minecraft.world.level.GameType;
  */
 final class DensityTooltipTests {
 
-    private static final String LINE = "voidworks.density.tooltip.motes";
-
     private DensityTooltipTests() {
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
-        tests.test("density_tooltip_shows_a_diamond_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.DIAMOND_BLOCK, 4, 64));
-        tests.test("density_tooltip_shows_a_copper_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.COPPER_BLOCK, 1, 1));
+        tests.test("density_tooltip_shows_a_diamond_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.DIAMOND_BLOCK, "voidworks.density.tooltip.motes", 4, 64));
+        tests.test("density_tooltip_shows_a_copper_blocks_density_and_motes", 1, helper -> showsUnderTheName(helper, Items.COPPER_BLOCK, "voidworks.density.tooltip.mote", 1, 1));
         tests.test("density_tooltip_shows_nothing_for_cobblestone", 1, DensityTooltipTests::showsNothingForDensityZero);
     }
 
-    private static void showsUnderTheName(GameTestHelper helper, Item item, int density, int motes) {
+    private static void showsUnderTheName(GameTestHelper helper, Item item, String key, int density, int motes) {
         var lines = tooltip(helper, item);
-        if (lines.size() < 2 || !(lines.get(1).getContents() instanceof TranslatableContents line) || !LINE.equals(line.getKey())
+        if (lines.size() < 2 || !(lines.get(1).getContents() instanceof TranslatableContents line) || !key.equals(line.getKey())
                 || !List.of(density, motes).equals(List.of(line.getArgs()))) {
             helper.fail(item + " should show Density " + density + " and " + motes + " motes right under its name, showed " + lines);
             return;
