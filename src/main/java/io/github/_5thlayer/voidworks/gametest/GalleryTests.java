@@ -41,6 +41,7 @@ import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -59,6 +60,7 @@ final class GalleryTests {
     private static final Identifier VOID_DRAGON = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_dragon");
     private static final Identifier DENSITY = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/density");
     private static final Identifier DORMANT_MACHINES = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/dormant_machines");
+    private static final Identifier OVERWORLD_DISPLACER = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/overworld_displacer");
     private static final Identifier VOID_CRUCIBLE = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_crucible");
 
     /** How far east each scene's plot is of the one before it in its row, and how far north each row is of the last. */
@@ -85,6 +87,9 @@ final class GalleryTests {
     /** Two reloads, the build, and the dragon's first stop, with room to spare. */
     private static final int TICKS = 1_200;
 
+    /** A reload, the scene's 64 harvests a second apart, and room to spare. */
+    private static final int DISPLACER_TICKS = 2_400;
+
     private GalleryTests() {
     }
 
@@ -97,6 +102,8 @@ final class GalleryTests {
                 GalleryTests::densityYields);
         tests.testOnItsOwn("the_gallery_dormant_machines_scenes_chamber_soaks_its_cost_and_wakes", TICKS,
                 GalleryTests::dormantWakes);
+        tests.testOnItsOwn("the_gallery_overworld_displacer_scenes_chest_gets_every_harvest_and_nothing_is_left_loose", DISPLACER_TICKS,
+                GalleryTests::overworldDisplacerDelivers);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
     }
@@ -116,7 +123,7 @@ final class GalleryTests {
                     GalleryCheck.assertKeyBlocks(helper, helper.absolutePos(ORIGIN), Map.ofEntries(
                             Map.entry(RESERVOIR, VoidworksBlocks.VOID_WELL.get()),
                             Map.entry(SHORT, VoidworksBlocks.VOID_WELL.get()),
-                            Map.entry(scene(1, 14, 2, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
+                            Map.entry(scene(1, 14, 2, -4), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
                             // The game tests run in the Overworld, so the End and Nether scenes show
                             // their Displacers as item displays, over a pedestal behind their signs.
                             Map.entry(scene(2, SIGN), Blocks.OAK_SIGN),
@@ -217,6 +224,33 @@ final class GalleryTests {
                 .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockEntity(chamber) instanceof Dormancy.Holder machine
                         && machine.dormancy().awake(), "the scene's Chamber is not awake yet"))
                 .thenExecute(() -> off.set(clearAway(helper, source)))
+                .thenWaitUntil(() -> assertOff(helper, off))
+                .thenSucceed();
+    }
+
+    /** The Overworld Displacer scene: its chest gets the stone of every harvest, the last one too, and nothing lies loose. */
+    private static void overworldDisplacerDelivers(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var source = operator(helper);
+        var displacer = helper.absolutePos(ORIGIN).offset(14, 2, -4);
+        var chest = helper.absolutePos(ORIGIN).offset(14, 0, -4);
+        var plot = new AABB(helper.absolutePos(ORIGIN).offset(10, -1, -10).getCenter(), helper.absolutePos(ORIGIN).offset(18, 6, -2).getCenter());
+        clearAwayIfItFails(helper, source);
+        var on = GalleryCheck.select(server, GalleryPack.ID, true);
+        var off = new AtomicReference<CompletableFuture<Void>>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
+                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, OVERWORLD_DISPLACER))
+                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockState(displacer).is(VoidworksBlocks.VOIDSTONE.get()),
+                        "the scene's Displacer is not Voidstone yet"))
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    int stone = helper.getLevel().getBlockEntity(chest) instanceof ChestBlockEntity box ? box.countItem(Items.STONE) : -1;
+                    var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, plot).stream().map(ItemEntity::getItem).toList();
+                    helper.assertTrue(stone == VoidworksConfig.zone() && loose.isEmpty(),
+                            "the chest holds " + stone + " stone, not " + VoidworksConfig.zone() + ", and the plot holds loose " + loose);
+                    off.set(clearAway(helper, source));
+                })
                 .thenWaitUntil(() -> assertOff(helper, off))
                 .thenSucceed();
     }

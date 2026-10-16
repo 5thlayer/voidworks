@@ -19,8 +19,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * What every Void Displacer's block shares: once placed it cannot be broken or moved, and it ends as
- * Voidstone ({@link DisplacerBlockEntity}). An empty hand takes back its fed blocks, or, with none,
- * is told how much of a Dormant one's cost is paid; a hand holding something, a Void Siphon paying
+ * Voidstone ({@link DisplacerBlockEntity}). An empty hand takes its output, or, with that empty, its
+ * fed blocks back, or, with none, is told how much of a Dormant one's cost is paid; a hand holding something, a Void Siphon paying
  * it above all, passes to its item.
  */
 public abstract class DisplacerBlock extends BaseEntityBlock {
@@ -40,7 +40,7 @@ public abstract class DisplacerBlock extends BaseEntityBlock {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        if (displacer.giveBackFed(player)) {
+        if (displacer.giveOutput(player) || displacer.giveBackFed(player)) {
             return InteractionResult.SUCCESS;
         }
         if (displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake()) {

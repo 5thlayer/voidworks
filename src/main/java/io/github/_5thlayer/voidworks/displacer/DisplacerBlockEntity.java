@@ -53,11 +53,11 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  *
  * <p>It works only where the harvest kind is its own: anywhere else it refuses on its first tick,
  * popping off as its item with what it holds, so it never stands there unbreakable. A full output
- * or tank, or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
- * with an empty hand, as nothing else can extract them. When its Zone is spent, or it can reach
- * nothing more, it becomes Voidstone itself and its network keeps the motes; one that could reach
- * nothing before its first harvest pops off instead, as outside its dimension, even before it is
- * {@linkplain #ready ready}.
+ * or tank, or a network that cannot take the harvest's motes, stalls it; an empty hand takes its output, then,
+ * with the output empty, the fed blocks, as nothing else can extract them. When its Zone is spent, or it can reach
+ * nothing more, it waits for its output to empty, then becomes Voidstone itself and its network
+ * keeps the motes; one that could reach nothing before its first harvest pops off instead, as
+ * outside its dimension, even before it is {@linkplain #ready ready}.
  */
 public abstract class DisplacerBlockEntity extends BlockEntity {
 
@@ -191,7 +191,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (target.isPresent() && grown.size() < zone && harvest(level, target.get())) {
             target = next(level);
         }
-        if (target.isEmpty() || grown.size() >= zone) {
+        // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it.
+        if ((target.isEmpty() || grown.size() >= zone) && outputEmpty()) {
             becomeVoidstone(level);
         }
     }
@@ -256,12 +257,16 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     /**
      * @return why it cannot harvest the next position it would, though fed: a Void Pressure there
      *         too high to grade, a network with no room for the harvest's motes, or a full output or tank;
-     *         empty when it can, or has nothing fed, nothing left in reach or its Zone spent. A
-     *         Dormant one's payment is its {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
+     *         or, spent, the output it waits on before it becomes Voidstone; empty when it can, or has
+     *         nothing fed and nothing left to wait on. A Dormant one's payment is its
+     *         {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
+        if (spent(level)) {
+            return outputEmpty() ? Optional.empty() : Optional.of(Stall.OUTPUT_UNEMPTIED);
+        }
         int density = Density.of(inventory.getResource(INPUT));
-        if (density == 0 || grown.size() >= zoneOrConfig()) {
+        if (density == 0) {
             return Optional.empty();
         }
         return next(level).flatMap(target -> stallBeforeOutput(level, target, density).or(() -> {
@@ -283,7 +288,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return Optional.empty();
     }
 
-    /** What stops a fed Displacer harvesting its next position. */
+    /** What stops a fed Displacer harvesting its next position, or a spent one becoming Voidstone. */
     public enum Stall {
         /** The Void Pressure there is the highest, so a harvest would have no grade. */
         PRESSURE_TOO_HIGH,
@@ -292,7 +297,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         /** Its output cannot take what the harvest displaces. */
         OUTPUT_FULL,
         /** Its tank cannot take what the harvest displaces. */
-        TANK_FULL
+        TANK_FULL,
+        /** Spent, it waits for its output to be emptied before it becomes Voidstone. */
+        OUTPUT_UNEMPTIED
     }
 
     /**
@@ -316,7 +323,21 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return ResourceHandlerUtil.insertStacking(output, ItemResource.of(result), count, transaction) == count;
     }
 
-    /** Its Zone spent or nothing left in reach: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops what it held. */
+    /** @return whether it becomes Voidstone once its output is empty: its Zone spent or nothing left in reach, its frontier loaded */
+    private boolean spent(ServerLevel level) {
+        return !grown.isEmpty() && frontierLoaded(level) && (grown.size() >= zoneOrConfig() || next(level).isEmpty());
+    }
+
+    private boolean outputEmpty() {
+        for (int slot = 0; slot < output.size(); slot++) {
+            if (!output.getResource(slot).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Its Zone spent or nothing left in reach, and its output empty: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops its fed blocks. */
     private void becomeVoidstone(ServerLevel level) {
         level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
     }
@@ -328,19 +349,38 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     }
 
     /**
+     * Gives {@code player} what its output holds, the hand's way to empty it, as a hopper's or
+     * pipe's is its item face; a spent one then becomes Voidstone.
+     *
+     * @return whether there was anything to give
+     */
+    public boolean giveOutput(Player player) {
+        boolean gave = false;
+        for (int slot = INPUT + 1; slot <= INPUT + OUTPUT_SLOTS; slot++) {
+            gave |= give(slot, player);
+        }
+        return gave;
+    }
+
+    /**
      * Gives {@code player} the fed blocks back, the one way out of its input: a Displacer fed blocks
      * whose harvest its network cannot hold would otherwise stall for good.
      *
      * @return whether there was anything to give
      */
     public boolean giveBackFed(Player player) {
-        var fed = inventory.getResource(INPUT);
-        int count = inventory.getAmountAsInt(INPUT);
-        if (fed.isEmpty() || count == 0) {
+        return give(INPUT, player);
+    }
+
+    /** @return whether {@code slot} held anything, now in {@code player}'s inventory */
+    private boolean give(int slot, Player player) {
+        var resource = inventory.getResource(slot);
+        int count = inventory.getAmountAsInt(slot);
+        if (resource.isEmpty() || count == 0) {
             return false;
         }
-        inventory.set(INPUT, ItemResource.EMPTY, 0);
-        player.getInventory().placeItemBackInInventory(fed.toStack(count));
+        inventory.set(slot, ItemResource.EMPTY, 0);
+        player.getInventory().placeItemBackInInventory(resource.toStack(count));
         return true;
     }
 

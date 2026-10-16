@@ -119,6 +119,7 @@
   "voidworks.jade.displacer.nothing_fed": "Nothing fed",
   "voidworks.jade.displacer.stall.network_full": "Stalled: its network has no room",
   "voidworks.jade.displacer.stall.output_full": "Stalled: its output is full",
+  "voidworks.jade.displacer.stall.output_unemptied": "Spent: it turns to Voidstone once its output is emptied",
   "voidworks.jade.displacer.stall.pressure_too_high": "Stalled: the Void Pressure there is too high",
   "voidworks.jade.displacer.stall.tank_full": "Stalled: its tank is full",
   "voidworks.jade.dragon.bound": "Bound for %s",
