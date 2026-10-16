@@ -288,7 +288,7 @@ Dragonling or a Void Dragon.
 - **Hatching.** Either egg, placed by a player touching a Voidstone network, soaks up motes from it
   by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling its
   placer owns. A soaking egg neither falls nor teleports. Its price is fixed when it starts soaking
-  and doubles with every dragon its owner has hatched or is soaking, so carriers grow as fast as an
+  and grows, doubling by default, with every dragon its owner has hatched or is soaking, so carriers grow as fast as an
   owner can pay for them, and an egg given away starts its new owner cheap. An egg no player placed
   never soaks. Broken while soaking, it drops the egg it was and loses what it soaked.
 - **Growing.** A **Dragonling** is a young Void Dragon, an ordinary creature until it grows. It stays
@@ -505,7 +505,8 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
 - **Tool and armour Families** — wooden → stone → copper → iron → golden → diamond, and what an
   upgrade carries over: enchantments, damage, names, trims.
-- **Numbers** — the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
+- **Numbers** — prices are datapack data and the rest server config
+  ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent

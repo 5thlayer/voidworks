@@ -46,6 +46,11 @@ but a Void Siphon converts what it releases into FE in the FE items it charges.
 Bare "void" means this mechanic; removing items is "destroying" or "trashing" them.
 _Avoid_: voiding (for destroying items), void as "needs no power"
 
+**Sink**:
+What a factory pours its surplus into. Voidworks is one as well as a source: every spend uses motes
+up for good, and no spend has a last step, so a bigger factory always has more to spend them on.
+_Avoid_: drain, money sink
+
 **Void Pressure**:
 The ambient void level of a place, a small integer: a base per dimension, highest in the End, then
 the Overworld, lowest in the Nether, and one step higher where the End is open to the void below. It sets the grade of motes harvested
