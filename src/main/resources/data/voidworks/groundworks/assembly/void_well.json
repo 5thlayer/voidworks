@@ -1,0 +1,36 @@
+{
+  "key": "K",
+  "legend": {
+    "K": "voidworks:void_well",
+    "c": "voidworks:void_well_casing",
+    "r": "voidworks:void_well_rim",
+    ".": "empty"
+  },
+  "layers": [
+    ["     ",
+     " ccc ",
+     " ccc ",
+     " ccc ",
+     "     "],
+    ["ccccc",
+     "c...c",
+     "c...c",
+     "c...c",
+     "ccccc"],
+    ["ccccc",
+     "c...c",
+     "c...c",
+     "c...c",
+     "ccKcc"],
+    ["ccccc",
+     "c...c",
+     "c...c",
+     "c...c",
+     "ccccc"],
+    ["rrrrr",
+     "r...r",
+     "r...r",
+     "r...r",
+     "rrrrr"]
+  ]
+}
