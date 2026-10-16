@@ -307,10 +307,11 @@ Dragonling or a Void Dragon, and only old age kills a Void Dragon
   and 6), so a young dragon is a quick courier and an old one a slow freighter, carrying about as
   much an hour either way. Stages are not inherited: every dragon lives all four, and bred traits,
   if they come, multiply on top of them. An old dragon whose stage runs out **dies**, only at a stop
-  and after unloading: it sets any rider down on the rim, lays the eggs it owes, then its presence
-  rises over the Well in a short Ender Dragon death, beams and sound, and leaves nothing. Nothing
-  else tells its owner. Dragons from before life stages start young, their count toward an egg
-  dropped. Matching a dragon's stage to a trip, fast for far and big for large shortfalls, is left
+  at a loaded Well, once that stop is over: carrying nothing, it lays the eggs it owes, sets any rider
+  down on the rim, even one still mounted, then its presence rises over the Well in a short Ender
+  Dragon death, beams and sound, and leaves nothing. Its stage running out at a Well that is not
+  loaded, it lives on and dies at its next stop at a loaded one, so no egg is lost. Nothing else
+  tells its owner. Dragons from before life stages start young, their count toward an egg dropped. Matching a dragon's stage to a trip, fast for far and big for large shortfalls, is left
   to routing as it is, and to a later ticket if play needs it.
 - **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension. It flies only to a
   Well below its fill target, and takes from the owner's Well of highest network pressure that holds

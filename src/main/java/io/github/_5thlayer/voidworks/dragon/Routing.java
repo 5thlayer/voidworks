@@ -40,7 +40,7 @@ import java.util.function.Predicate;
  * dives from a Well it heals from that Well's motes, its network's, as far as they go.
  *
  * <p>It ages by the motes it unloads ({@link LifeStages}), which multiplies its speed and load, and
- * dies at a stop once it has outlived its old stage. Each time it has carried a set number of motes
+ * once it has outlived its old stage dies at the end of a stop at a loaded Well. Each time it has carried a set number of motes
  * as an adult since its last egg, counted as it unloads them, it
  * owes a Drained Dragon Egg, which it lays at the next Well it stops at, to load or unload, whose chunk
  * is loaded, with every other egg it owes; what it carried beyond them counts toward the next.
@@ -86,8 +86,10 @@ public final class Routing {
 
     /**
      * Moves every dragon on to game time {@code now}: each leg that has ended leads to its next, and each
-     * dragon with nothing to do looks for a trip. A dragon that has outlived its old stage, having just
-     * unloaded at a stop and laid what eggs it owes, dies there: its record is gone.
+     * dragon with nothing to do looks for a trip. A dragon that has outlived its old stage dies once a
+     * stop of its, at a Well whose chunk is loaded, is over, carrying nothing and having laid every egg it
+     * owes there, whether or not its owner still rides it: its record is gone. At a Well not loaded it
+     * lives on, to die at its next stop at a loaded one.
      *
      * @return the dragons that died, as they were when they did
      */
@@ -95,14 +97,19 @@ public final class Routing {
         var died = new ArrayList<VoidDragonRecord>();
         for (var dragon : List.copyOf(dragons.all())) {
             for (int legs = 0; legs < MOST_LEGS; legs++) {
+                if (endsItsLastStop(dragon, now)) {
+                    var laid = laying(dragon, dragon.rest());
+                    if (laid.sinceEgg() < eggMotes) {
+                        dragons.remove(laid.id());
+                        died.add(laid);
+                        break;
+                    }
+                    // It lives on until it has laid every egg it owes.
+                    dragons.update(laid);
+                    dragon = laid;
+                }
                 var next = next(dragons, dragon, now);
                 if (next.equals(dragon)) {
-                    break;
-                }
-                // Its cargo grows only as it unloads, so it outlives its old stage only at a stop.
-                if (stages.outlived(next.cargo())) {
-                    dragons.remove(next.id());
-                    died.add(next);
                     break;
                 }
                 // Each change is in the records at once, so the next dragon's plan counts its claim.
@@ -111,6 +118,16 @@ public final class Routing {
             }
         }
         return died;
+    }
+
+    /**
+     * @return whether {@code dragon} has outlived its old stage and its stop is over now, at a Well whose
+     *         chunk is loaded, carrying nothing: where it dies, once it has laid what it owes
+     */
+    private boolean endsItsLastStop(VoidDragonRecord dragon, long now) {
+        return stages.outlived(dragon.cargo()) && dragon.carried() == 0
+                && dragon.trip().filter(trip -> trip.divingTo().isEmpty() && trip.until() <= now).isPresent()
+                && wells.loaded(dragon.rest());
     }
 
     private VoidDragonRecord next(VoidDragons dragons, VoidDragonRecord dragon, long now) {

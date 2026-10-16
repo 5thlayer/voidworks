@@ -751,6 +751,77 @@ class RoutingTest {
         assertEquals(List.of(NETHER_WELL), wells.laid);
     }
 
+    @Test
+    void anOldDragonDiesOnlyOnceItsStopIsOver() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        // It has outlived its old stage as it began to unload, and lives on until its stop is over.
+        runFor(STOP - 1);
+        assertTrue(dragons.get(dragon.id()).isPresent(), "the old dragon died before its stop was over");
+        runFor(2);
+        assertEquals(Optional.empty(), dragons.get(dragon.id()));
+        assertEquals(1, died.size());
+    }
+
+    @Test
+    void anOldDragonOutlivingItsStageAtAnUnloadedWellLivesOnAndDiesAtItsNextLoadedStopLosingNoEgg() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.unseen.add(NETHER_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), EGG, 3_950));
+        // Its End Well loaded, it lays its owed egg there as it loads; it unloads at the unloaded Nether Well and lives on.
+        runFor(20_000);
+        assertEquals(List.of(), died);
+        assertEquals(List.of(END_WELL), wells.laid);
+        assertTrue(dragons.get(dragon.id()).orElseThrow().cargo() >= 4_000, "the old dragon did not outlive its stage");
+        wells.unseen.remove(NETHER_WELL);
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(1_000), 3, Map.of());
+        runFor(20_000);
+        assertEquals(1, died.size());
+        assertEquals(List.of(END_WELL), wells.laid);
+    }
+
+    @Test
+    void anOldDragonLaysTheEggItOwesAtTheEndOfItsStopBeforeItDies() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.unseen.add(END_WELL);
+        wells.unseen.add(NETHER_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), EGG, 3_950));
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        // The Nether Well's chunk loads while it unloads there: it lays the egg it could not as it arrived, then dies.
+        assertEquals(List.of(), wells.laid);
+        wells.unseen.remove(NETHER_WELL);
+        runFor(STOP + 1);
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(1, died.size());
+    }
+
+    @Test
+    void anOldDragonDiesAtTheEndOfItsStopThoughItsOwnerStillRidesIt() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        owners.riding.add(dragon.id());
+        runFor(STOP + 1);
+        assertEquals(1, died.size());
+    }
+
     /** @return {@code dragon} as one that has unloaded {@code cargo} over its life */
     private VoidDragonRecord aged(VoidDragonRecord dragon, long cargo) {
         var aged = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), dragon.sinceEgg(), cargo);
@@ -885,6 +956,11 @@ class RoutingTest {
             long put = Math.min(count, network.capacity() - total);
             network.motes().merge(grade, put, Long::sum);
             return put;
+        }
+
+        @Override
+        public boolean loaded(Place place) {
+            return wells.containsKey(place) && !unseen.contains(place);
         }
 
         @Override

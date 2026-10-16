@@ -102,7 +102,7 @@ class HatcheryTest {
         hatchery.hatch(egg(0));
         hatchery.startSoaking(egg(1), ALICE, PRICE);
         hatchery.hatch(egg(1));
-        hatchery.die(ALICE);
+        hatchery.gone(ALICE);
         assertEquals(1, hatchery.dragons(ALICE));
         assertEquals(2 * FIRST, hatchery.startSoaking(egg(2), ALICE, PRICE));
         assertTrue(hatchery.anyHatched(), "a dragon that died was still hatched");
@@ -111,8 +111,19 @@ class HatcheryTest {
     }
 
     @Test
+    void aDragonGoneCountsOnlyAgainstItsOwnOwner() {
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
+        hatchery.hatch(egg(0));
+        hatchery.startSoaking(egg(1), BOB, PRICE);
+        hatchery.hatch(egg(1));
+        hatchery.gone(BOB);
+        assertEquals(1, hatchery.dragons(ALICE));
+        assertEquals(0, hatchery.dragons(BOB));
+    }
+
+    @Test
     void aDeathNeverCountsBelowNone() {
-        hatchery.die(ALICE);
+        hatchery.gone(ALICE);
         assertEquals(0, hatchery.dragons(ALICE));
         assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE, PRICE));
     }

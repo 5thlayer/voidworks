@@ -109,6 +109,8 @@ final class RideTests {
                 TICKS, RideTests::diesOfOldAge);
         tests.testAlone("life_stage_a_void_dragon_dying_of_old_age_sets_its_rider_down_on_the_rim_of_the_well_it_dies_at", TICKS,
                 RideTests::setsItsRiderDownAsItDies);
+        tests.testAlone("life_stage_a_void_dragon_dying_of_old_age_sets_down_a_rider_who_mounted_it_as_it_unloaded_and_stayed_on", TICKS,
+                RideTests::setsDownARiderStillMountedAsItDies);
     }
 
     /**
@@ -187,6 +189,40 @@ final class RideTests {
                     helper.assertTrue(!owner.isPassenger(), "the dead dragon's rider still rides");
                     assertOnTheRim(helper, owner, HIGH_WELL);
                     helper.assertTrue(!DragonRiding.inTheDive(owner) && !owner.hasEffect(MobEffects.INVISIBILITY), "the rider set down is still in the dive");
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /**
+     * An old dragon loads at the test's Well for the high one and dives there alone; its owner mounts
+     * it as it unloads there and stays on through the end of its stop: it dies with them on its back,
+     * setting them down on the high Well's rim.
+     */
+    private static void setsDownARiderStillMountedAsItDies(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var dragonId = new AtomicReference<UUID>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, HELD);
+                    shortOfItsTarget(helper, owner, HIGH_WELL, SHORT);
+                    dragonId.set(old(helper, owner, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.UNLOADING)), "the old dragon is not unloading");
+                    var presence = atWork(helper, dragonId.get());
+                    helper.assertTrue(PresenceTests.record(helper, dragonId.get()).rest().equals(place(helper, HIGH_WELL)), "the old dragon is not unloading at the high Well");
+                    presence.interact(owner, InteractionHand.MAIN_HAND, presence.position());
+                    helper.assertTrue(owner.getVehicle() == presence, "its owner did not mount the unloading dragon");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(SavedVoidDragons.of(server).get(dragonId.get()).isEmpty(), "the ridden old dragon has not died"))
+                .thenExecute(() -> {
+                    helper.assertTrue(!owner.isPassenger(), "the dead dragon's rider still rides");
+                    assertOnTheRim(helper, owner, HIGH_WELL);
                 })
                 .thenExecute(() -> clearAway(helper, owner, Set.of()))
                 .thenSucceed();

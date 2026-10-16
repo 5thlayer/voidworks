@@ -70,7 +70,7 @@ public final class DragonRouting {
         var dragons = SavedVoidDragons.of(server);
         var owners = new ServerOwners(server);
         for (var died : routing(server, owners).step(dragons, server.overworld().getGameTime())) {
-            SavedHatchery.of(server).die(died.owner());
+            SavedHatchery.of(server).gone(died.owner());
             DragonPresences.die(server, died);
         }
         for (var dragon : dragons.all()) {
@@ -201,6 +201,13 @@ public final class DragonRouting {
         public long put(Place place, int grade, long count) {
             return networks(place).map(networks -> move(count, (amount, transaction) ->
                     networks.deposit(place.pos(), MoteResource.of(grade), amount, transaction))).orElse(0L);
+        }
+
+        /** Loaded while its core's chunk is loaded and ticking entities. */
+        @Override
+        public boolean loaded(Place place) {
+            var level = place.level(server);
+            return level != null && level.isPositionEntityTicking(place.pos());
         }
 
         /** Pops the egg out of the middle of the Well's shaft, while its chunk is loaded and ticking. */

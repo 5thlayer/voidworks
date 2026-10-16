@@ -120,13 +120,19 @@ public final class DragonPresences {
             if (!level.isPositionEntityTicking(showing == Showing.EMERGING ? spot.emerges() : spot.over())) {
                 continue;
             }
-            var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
-            if (presence != null) {
-                presence.showPresenceOf(dragon, showing, spot, stage);
-                level.addFreshEntity(presence);
-                saved.presences.put(dragon.id(), presence);
-            }
+            spawn(level, dragon, showing, spot, stage).ifPresent(presence -> saved.presences.put(dragon.id(), presence));
         }
+    }
+
+    /** @return a new presence of {@code dragon} at {@code stage}, showing {@code showing} at {@code spot}, added to {@code level}; empty if none could be made */
+    private static Optional<VoidDragon> spawn(ServerLevel level, VoidDragonRecord dragon, Showing showing, Spot spot, LifeStage stage) {
+        var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
+        if (presence == null) {
+            return Optional.empty();
+        }
+        presence.showPresenceOf(dragon, showing, spot, stage);
+        level.addFreshEntity(presence);
+        return Optional.of(presence);
     }
 
     /**
@@ -203,12 +209,7 @@ public final class DragonPresences {
         if (!level.isPositionEntityTicking(spot.over())) {
             return;
         }
-        var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
-        if (presence != null) {
-            presence.showPresenceOf(dragon, Showing.WORKING, spot, LifeStage.OLD);
-            level.addFreshEntity(presence);
-            presence.dieOfOldAge();
-        }
+        spawn(level, dragon, Showing.WORKING, spot, LifeStage.OLD).ifPresent(VoidDragon::dieOfOldAge);
     }
 
     /** @return whether the dragon with {@code id} shows a presence its owner rides at its stop, before any dive */

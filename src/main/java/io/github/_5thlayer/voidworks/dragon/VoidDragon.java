@@ -576,17 +576,11 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** A tick of its death: it rises, bursts at the end, and is gone. */
+    /** A tick of its death: it rises, and at the end is gone. */
     private void dieOn() {
         deathTicks++;
         setDeltaMovement(Vec3.ZERO);
         setPos(getX(), getY() + DEATH_RISE, getZ());
-        if (deathTicks >= DEATH_TICKS - 20) {
-            double x = (random.nextFloat() - 0.5F) * getBbWidth();
-            double y = random.nextFloat() * getBbHeight();
-            double z = (random.nextFloat() - 0.5F) * getBbWidth();
-            level().addParticle(ParticleTypes.EXPLOSION, getX() + x, getY() + y, getZ() + z, 0.0, 0.0, 0.0);
-        }
         if (deathTicks >= DEATH_TICKS && level() instanceof ServerLevel) {
             discard();
         }

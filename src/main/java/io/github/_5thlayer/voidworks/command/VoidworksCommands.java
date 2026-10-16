@@ -13,6 +13,7 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
@@ -172,10 +173,12 @@ public final class VoidworksCommands {
         var box = BoundingBox.fromCorners(BlockPosArgument.getBlockPos(context, "from"), BlockPosArgument.getBlockPos(context, "to"));
         var dimension = level.dimension().identifier();
         var server = level.getServer();
-        int removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos())).size();
+        var removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos()));
+        // A dragon taken out no longer counts toward its owner's next egg, as one that died does not.
+        removed.forEach(dragon -> SavedHatchery.of(server).gone(dragon.owner()));
         DragonPresences.show(server);
-        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed), false);
-        return removed;
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed.size()), false);
+        return removed.size();
     }
 
     /** Builds the conduction showcase two blocks ahead of the player, at their feet. @return how many motes went in */
