@@ -5,8 +5,26 @@
       "rolls": 1,
       "entries": [
         {
-          "type": "minecraft:item",
-          "name": "voidworks:well_hatch"
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "voidworks:well_hatch_requester",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "voidworks:well_hatch",
+                  "properties": {
+                    "mode": "requester"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "voidworks:well_hatch"
+            }
+          ]
         }
       ],
       "conditions": [

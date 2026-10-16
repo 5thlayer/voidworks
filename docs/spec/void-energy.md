@@ -489,8 +489,10 @@ Factorio's chests.
   and empty it, a hopper beneath it with nothing but vanilla. Its Well no longer whole, it is idle
   and keeps what it holds; its core broken, it is a plain container until a new core makes the Well
   whole again.
-- **Requester or provider.** It is placed a provider, and its owner switches it by sneak-using it
-  with an empty hand. A **provider** offers whatever it holds to its owner's requesters elsewhere,
+- **Requester or provider.** It is placed as its item is, a Well Hatch Provider, which its recipe
+  makes, or a Well Hatch Requester; either turns into the other sneak-used in the air, and a hatch
+  broken drops the item of what it is. Its owner switches a placed one by sneak-using it with an
+  empty hand, its front showing which it is. A **provider** offers whatever it holds to its owner's requesters elsewhere,
   and never asks; it fills only through its item faces, never by hand, as befits mass transport, so a
   player filling one by hand sets a hopper on it, and its owner's empty hand takes a stack out.
   A **requester** asks for one item, so many stacks of it, and never gives; it empties only through

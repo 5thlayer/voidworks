@@ -16,6 +16,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.players.NameAndId;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +32,12 @@ import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
  */
 public final class WellHatches {
 
+    /**
+     * What is heard as a hatch, placed or in hand, switches either way: a shulker box opening. Its
+     * closing starts with a long silence, timed to the lid's animation.
+     */
+    public static final SoundEvent SWITCH_SOUND = SoundEvents.SHULKER_BOX_OPEN;
+
     public static final Codec<WellHatches> CODEC = Entry.CODEC.listOf().xmap(WellHatches::read,
             hatches -> hatches.hatches.values().stream().map(Entry::of).toList());
 
@@ -43,15 +51,16 @@ public final class WellHatches {
     }
 
     /**
-     * Puts a hatch at {@code place}, holding nothing, in place of any that was there.
+     * Puts a hatch at {@code place}, holding nothing and asking for nothing, in place of any that was there.
      *
      * @param well  the core of the Well it joined; empty for one that joined none
      * @param owner whose it is, its Well's owner; empty for anyone's
+     * @param mode  whether it is a provider or a requester, as the item that placed it was
      * @param slots how many slots it holds
      * @return the hatch put there
      */
-    public Hatch put(Place place, Optional<Place> well, Optional<NameAndId> owner, int slots) {
-        var hatch = new Hatch(place, well, owner, Mode.PROVIDER, Optional.empty(), NonNullList.withSize(slots, ItemStack.EMPTY), this);
+    public Hatch put(Place place, Optional<Place> well, Optional<NameAndId> owner, Mode mode, int slots) {
+        var hatch = new Hatch(place, well, owner, mode, Optional.empty(), NonNullList.withSize(slots, ItemStack.EMPTY), this);
         hatches.put(place, hatch);
         onChange.run();
         return hatch;
@@ -80,6 +89,11 @@ public final class WellHatches {
         PROVIDER, REQUESTER;
 
         static final Codec<Mode> CODEC = StringRepresentable.fromEnum(Mode::values);
+
+        /** @return the other mode, the one switching to it gives */
+        public Mode other() {
+            return this == PROVIDER ? REQUESTER : PROVIDER;
+        }
 
         @Override
         public String getSerializedName() {
@@ -152,7 +166,7 @@ public final class WellHatches {
             return contents;
         }
 
-        /** @return whether it is a provider or a requester; it is placed a provider */
+        /** @return whether it is a provider or a requester; it is placed as the item that placed it was */
         public Mode mode() {
             return mode;
         }
@@ -170,7 +184,7 @@ public final class WellHatches {
          * @return what it is now
          */
         public Mode switchMode() {
-            mode = mode == Mode.PROVIDER ? Mode.REQUESTER : Mode.PROVIDER;
+            mode = mode.other();
             request = Optional.empty();
             hatches.onChange.run();
             return mode;

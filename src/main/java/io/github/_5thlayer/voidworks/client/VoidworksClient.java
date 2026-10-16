@@ -36,7 +36,7 @@ import net.neoforged.neoforge.common.NeoForge;
 /**
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
- * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the Void Dragon
+ * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the item on a Well hatch's front ({@link WellHatchRenderer}), the Void Dragon
  * ({@link VoidDragonRenderer}), the void taking a block ({@link VoidTakings}) and a Matter Dragon Egg's amber
  * ({@link EggTint}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
@@ -85,6 +85,7 @@ public final class VoidworksClient {
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(VoidworksBlocks.VOID_CRUCIBLE_ENTITY.get(), context -> new VoidCrucibleRenderer());
         event.registerBlockEntityRenderer(VoidworksBlocks.VOID_WELL_ENTITY.get(), context -> new VoidWellRenderer());
+        event.registerBlockEntityRenderer(VoidworksBlocks.WELL_HATCH_ENTITY.get(), context -> new WellHatchRenderer());
         event.registerEntityRenderer(VoidworksEntities.VOID_DRAGON.get(), VoidDragonRenderer::new);
     }
 

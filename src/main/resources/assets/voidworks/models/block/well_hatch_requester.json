@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "voidworks:block/well_hatch_requester_front",
+    "side": "voidworks:block/void_well_casing",
+    "top": "voidworks:block/void_well_casing"
+  }
+}

@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,mode=provider": {
       "model": "voidworks:block/well_hatch"
     },
-    "facing=east": {
+    "facing=east,mode=provider": {
       "model": "voidworks:block/well_hatch",
       "y": 90
     },
-    "facing=south": {
+    "facing=south,mode=provider": {
       "model": "voidworks:block/well_hatch",
       "y": 180
     },
-    "facing=west": {
+    "facing=west,mode=provider": {
       "model": "voidworks:block/well_hatch",
+      "y": 270
+    },
+    "facing=north,mode=requester": {
+      "model": "voidworks:block/well_hatch_requester"
+    },
+    "facing=east,mode=requester": {
+      "model": "voidworks:block/well_hatch_requester",
+      "y": 90
+    },
+    "facing=south,mode=requester": {
+      "model": "voidworks:block/well_hatch_requester",
+      "y": 180
+    },
+    "facing=west,mode=requester": {
+      "model": "voidworks:block/well_hatch_requester",
       "y": 270
     }
   }

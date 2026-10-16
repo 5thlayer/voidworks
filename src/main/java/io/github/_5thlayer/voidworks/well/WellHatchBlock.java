@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,11 +22,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -41,13 +45,14 @@ import org.jspecify.annotations.Nullable;
  * places one, and only they use it by hand; anywhere else, and against another's Well, it is refused.
  *
  * <p>What it holds is in the server's {@link WellHatches} ({@link WellHatchBlockEntity}), filled and
- * emptied through every face, never filled by hand, as befits mass transport. It is placed a provider,
- * and its owner switches it between provider and requester by sneak-using it with an empty hand. A
- * provider gives its owner's empty hand its first stack; a requester gives no hand anything, but
- * takes its request from its owner's: an item sets it to that item's kind and adds a stack, and an empty
- * hand clears it, each told above the hotbar. Its Well no longer whole, it is idle and keeps what it
- * holds; its core broken, it is a plain container until a new core there makes the Well whole again.
- * Broken, it drops what it holds.
+ * emptied through every face, never filled by hand, as befits mass transport. It is placed a provider
+ * or a requester, as the {@link WellHatchItem} placing it is, and drops as what it is. Its owner
+ * switches it between provider and requester by sneak-using it with an empty hand, heard as a shulker
+ * box opening. A provider gives its owner's empty hand its first stack; a requester gives no hand
+ * anything, but takes its request from its owner's: an item sets it to that item's kind and adds a
+ * stack, and an empty hand clears it, each told above the hotbar. Its Well no longer whole, it is idle
+ * and keeps what it holds; its core broken, it is a plain container until a new core there makes the
+ * Well whole again. Broken, it drops what it holds.
  */
 public final class WellHatchBlock extends BaseEntityBlock {
 
@@ -56,12 +61,15 @@ public final class WellHatchBlock extends BaseEntityBlock {
     /** The way it faces, away from the wall casing it was placed against. */
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
+    /** Whether it is a provider or a requester, which its front shows; its entry in the server's {@link WellHatches} decides. */
+    public static final EnumProperty<WellHatches.Mode> MODE = EnumProperty.create("mode", WellHatches.Mode.class);
+
     /** How far from the casing a hatch is placed against the core of its Well may stand: two across the shaft, two to the shaft. */
     private static final int REACH = 4;
 
     public WellHatchBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(MODE, WellHatches.Mode.PROVIDER));
     }
 
     @Override
@@ -71,10 +79,10 @@ public final class WellHatchBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, MODE);
     }
 
-    /** Refused, telling its placer why, anywhere but against a wall casing's outer face, and against another player's Well. */
+    /** Placed as the item placing it is, a provider or a requester; refused, telling its placer why, anywhere but against a wall casing's outer face, and against another player's Well. */
     @Override
     public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
         var face = context.getClickedFace();
@@ -90,7 +98,8 @@ public final class WellHatchBlock extends BaseEntityBlock {
             tell(level, player, well.get().ownedBy());
             return null;
         }
-        return defaultBlockState().setValue(FACING, face);
+        var mode = context.getItemInHand().getItem() instanceof WellHatchItem item ? item.mode() : WellHatches.Mode.PROVIDER;
+        return defaultBlockState().setValue(FACING, face).setValue(MODE, mode);
     }
 
     private static void tell(Level level, @Nullable Player player, Component message) {
@@ -124,9 +133,23 @@ public final class WellHatchBlock extends BaseEntityBlock {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
+    /** Picked as the item it drops, its mode's. */
+    @Override
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+        return new ItemStack(WellHatchItem.of(state.getValue(MODE)));
+    }
+
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new WellHatchBlockEntity(pos, state);
+    }
+
+    @Override
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        if (!(level instanceof ServerLevel) || type != VoidworksBlocks.WELL_HATCH_ENTITY.get()) {
+            return null;
+        }
+        return (world, pos, blockState, entity) -> ((WellHatchBlockEntity) entity).serverTick((ServerLevel) world);
     }
 
     /**
@@ -146,7 +169,7 @@ public final class WellHatchBlock extends BaseEntityBlock {
             var hatches = SavedWellHatches.of(server.getServer());
             hatches.remove(Place.of(server, pos)).ifPresent(stale -> ItemFace.drop(server, pos, stale.contents()));
             hatches.put(Place.of(server, pos), well.map(core -> Place.of(server, core.getBlockPos())),
-                    well.flatMap(VoidWellBlockEntity::owner), VoidworksConfig.wellHatchSlots());
+                    well.flatMap(VoidWellBlockEntity::owner), state.getValue(MODE), VoidworksConfig.wellHatchSlots());
         }
     }
 
@@ -185,7 +208,10 @@ public final class WellHatchBlock extends BaseEntityBlock {
         }
         entity.hatch().filter(hatch -> usableBy(hatch, player)).ifPresent(hatch -> {
             if (player.isSecondaryUseActive()) {
-                player.sendOverlayMessage(Component.translatable(hatch.switchMode() == WellHatches.Mode.REQUESTER
+                var mode = hatch.switchMode();
+                level.setBlock(pos, state.setValue(MODE, mode), Block.UPDATE_ALL);
+                level.playSound(null, pos, WellHatches.SWITCH_SOUND, SoundSource.BLOCKS, 0.5F, 1.0F);
+                player.sendOverlayMessage(Component.translatable(mode == WellHatches.Mode.REQUESTER
                         ? "voidworks.hatch.now_requester" : "voidworks.hatch.now_provider"));
             } else if (hatch.mode() == WellHatches.Mode.REQUESTER) {
                 hatch.clearRequest();

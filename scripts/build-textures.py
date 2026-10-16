@@ -46,9 +46,10 @@ panels: its casing the large brooding brick in obsidian's shades, its rim the sm
 purpur's, both tiling without a seam across the well's faces. Its core's front is a window in the
 casing, framed in the rim's tiles, with the roiling plasma churning behind it in the void's purples,
 every frame of it and its animation copied beside the sprite; Dormant, the window shows still dark.
-A Well hatch's front is the same window framing a shulker shell, the small stone tiles in a shulker's
-purples, with its lid's seam across the middle in the casing's darkest and its latch in the rim's
-lightest, so it reads as a shulker box let into the Well; its other faces are the bare casing.
+A Well hatch's front is the same window framing a shulker shell, the small stone tiles in an orange
+shulker's shades, with its lid's seam across the middle in the casing's darkest and its latch in the rim's
+lightest, so it reads as a shulker box let into the Well; its other faces are the bare casing. That
+is a provider's; a requester's shell is a blue shulker's, so the two read apart at a glance.
 
 The Drained Dragon Egg's shell is the bonetree's bark recoloured into a washed-out end stone white,
 pale bone drained of void, shaded darker toward its foot. It is drawn as the vanilla egg's sprite is,
@@ -105,9 +106,11 @@ WELL_RIM = [(0x90, 0x65, 0x90), (0xAC, 0x7B, 0xAC), (0xC7, 0xA8, 0xC7)]
 # The void behind the core's window, darkest to lightest, and the box of the window with its frame.
 WELL_VOID = [(0x0A, 0x02, 0x14), (0x3C, 0x0C, 0x6E), (0x9A, 0x4C, 0xE6), (0xE6, 0xC0, 0xFF)]
 WINDOW = (2, 2, 14, 14)
-# A Well hatch's shulker shell, darkest to lightest, read off vanilla's purple shulker box; the rows
-# of its lid's seam, and the columns of its latch, which hangs one row below the seam.
-HATCH_SHELL = [(0x3E, 0x22, 0x4C), (0x79, 0x4C, 0x86), (0xA6, 0x7A, 0xB0)]
+# A provider Well hatch's shulker shell, darkest to lightest, read off vanilla's orange shulker box;
+# the rows of its lid's seam, and the columns of its latch, which hangs one row below the seam.
+HATCH_SHELL = [(0x6A, 0x2C, 0x04), (0xD0, 0x5E, 0x08), (0xFA, 0xA0, 0x48)]
+# A requester's shell, the same read off vanilla's blue shulker box.
+HATCH_REQUESTER_SHELL = [(0x1A, 0x1B, 0x50), (0x34, 0x38, 0x9C), (0x6E, 0x74, 0xD2)]
 HATCH_SEAM = (7, 8)
 HATCH_LATCH = (7, 9)
 
@@ -287,10 +290,10 @@ def void_well():
     save(well_window(casing, rim, still), TEXTURES / "block" / "void_well_front_dormant.png")
 
 
-def well_hatch():
+def well_hatch(name="well_hatch_front", shell_shades=HATCH_SHELL):
     casing = recolour(sprite("brooding_brick_large"), WELL_CASING)
     rim = recolour(sprite("stone_tiles_small"), WELL_RIM)
-    shell = recolour(sprite("stone_tiles_small"), HATCH_SHELL)
+    shell = recolour(sprite("stone_tiles_small"), shell_shades)
     pixels = shell.load()
     for x in range(16):
         for y in range(*HATCH_SEAM):
@@ -298,7 +301,7 @@ def well_hatch():
     for x in range(*HATCH_LATCH):
         for y in range(HATCH_SEAM[0], HATCH_SEAM[1] + 1):
             pixels[x, y] = (*WELL_RIM[-1], 255)
-    save(well_window(casing, rim, shell), TEXTURES / "block" / "well_hatch_front.png")
+    save(well_window(casing, rim, shell), TEXTURES / "block" / f"{name}.png")
 
 
 def crack_pixels(stage):
@@ -377,6 +380,7 @@ def main():
     void_crucible(abyssium)
     void_well()
     well_hatch()
+    well_hatch("well_hatch_requester_front", HATCH_REQUESTER_SHELL)
     drained_dragon_egg()
     taking_masks()
 

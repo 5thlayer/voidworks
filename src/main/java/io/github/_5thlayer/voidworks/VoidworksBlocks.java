@@ -24,11 +24,14 @@ import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import io.github._5thlayer.voidworks.well.WellHatchBlock;
 import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
+import io.github._5thlayer.voidworks.well.WellHatchItem;
+import io.github._5thlayer.voidworks.well.WellHatches;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DragonEggBlock;
@@ -160,12 +163,21 @@ public final class VoidworksBlocks {
 
     public static final DeferredItem<BlockItem> WELL_RIM_ITEM = ITEMS.registerSimpleBlockItem(WELL_RIM);
 
-    /** A Well hatch, placed against a Void Well's wall casing: as hard as the casing, and it cannot be pushed, so what it holds stays where it is. */
+    /** A Well hatch, placed against a Void Well's wall casing: as hard as a machine, as blast-proof as the casing, and it cannot be pushed, so what it holds stays where it is. */
     public static final DeferredBlock<WellHatchBlock> WELL_HATCH = BLOCKS.registerBlock("well_hatch", WellHatchBlock::new,
-            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops().pushReaction(PushReaction.BLOCK)
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F, 600.0F).requiresCorrectToolForDrops().pushReaction(PushReaction.BLOCK)
                     .sound(SoundType.STONE));
 
-    public static final DeferredItem<BlockItem> WELL_HATCH_ITEM = ITEMS.registerSimpleBlockItem(WELL_HATCH);
+    /**
+     * A provider Well hatch in hand, the block's own item, which its recipe makes. Each mode's item has
+     * its own name and the block none, so Jade names a hatch by the item it is picked as.
+     */
+    public static final DeferredItem<WellHatchItem> WELL_HATCH_ITEM = ITEMS.registerItem("well_hatch",
+            properties -> new WellHatchItem(WELL_HATCH.get(), WellHatches.Mode.PROVIDER, properties), Item.Properties::useItemDescriptionPrefix);
+
+    /** A requester Well hatch in hand, which a provider's turns into, sneak-used in the air, and back. */
+    public static final DeferredItem<WellHatchItem> WELL_HATCH_REQUESTER_ITEM = ITEMS.registerItem("well_hatch_requester",
+            properties -> new WellHatchItem(WELL_HATCH.get(), WellHatches.Mode.REQUESTER, properties), Item.Properties::useItemDescriptionPrefix);
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WellHatchBlockEntity>> WELL_HATCH_ENTITY =
             BLOCK_ENTITIES.register("well_hatch", () -> new BlockEntityType<>(WellHatchBlockEntity::new, WELL_HATCH.get()));

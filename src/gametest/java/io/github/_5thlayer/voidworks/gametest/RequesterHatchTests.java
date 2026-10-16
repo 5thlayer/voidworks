@@ -14,9 +14,12 @@ import static io.github._5thlayer.voidworks.gametest.WellHatchTests.placeHatch;
 import java.util.List;
 import java.util.Optional;
 
+import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.well.HatchReport;
 import io.github._5thlayer.voidworks.well.SavedWellHatches;
+import io.github._5thlayer.voidworks.well.WellHatchBlock;
+import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
 import io.github._5thlayer.voidworks.well.WellHatches;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -24,6 +27,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -36,8 +40,10 @@ import net.minecraft.world.phys.Vec3;
  * A Well hatch made a requester by its owner, by hand, with no dragon: sneak-using it with an empty
  * hand switches it between provider and requester; on a requester an item sets the request to its
  * kind, components ignored, and adds a stack per use up to its slots, another item starting again at
- * one, an empty hand clearing it, each told above the hotbar. A requester gives nothing to a hand and
- * empties through its faces; switched back, it loses its request and offers what it holds. No one but
+ * one, an empty hand clearing it, each told above the hotbar, its front showing which it is and the
+ * item it asks for, or a provider's first stack. A requester gives nothing to a hand and
+ * empties through its faces; a requester's own item places one and is what one drops, and sneak-used
+ * in the air turns into a provider's and back; switched back, it loses its request and offers what it holds. No one but
  * its owner switches it or sets its request. Its mode and request survive a reload, and Jade shows them.
  */
 final class RequesterHatchTests {
@@ -56,30 +62,35 @@ final class RequesterHatchTests {
                 RequesterHatchTests::emptiesThroughFaces);
         tests.test("a_requester_hatch_is_switched_and_set_by_no_one_but_its_owner", TICKS, RequesterHatchTests::ownerOnly);
         tests.test("a_requester_hatch_keeps_its_mode_and_request_across_a_save_and_reload", TICKS, RequesterHatchTests::saved);
+        tests.test("a_requester_hatch_is_placed_from_its_own_item_and_drops_as_what_it_is", TICKS, RequesterHatchTests::itsOwnItem);
+        tests.test("a_requester_hatch_item_turns_into_a_provider_s_and_back_sneak_used_in_the_air", TICKS, RequesterHatchTests::itemSwitched);
+        tests.test("a_requester_hatch_shows_its_request_on_its_front_and_a_provider_its_first_stack", TICKS, RequesterHatchTests::shown);
     }
 
     private static void switched(GameTestHelper helper) {
         var owner = ownedHatch(helper);
         var hatch = hatch(helper, HATCH);
         helper.assertTrue(hatch.mode() == WellHatches.Mode.PROVIDER, "a hatch is placed a " + hatch.mode());
-        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.provider"))),
-                "Jade shows a provider as " + lines(hatch));
+        helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.PROVIDER);
+        helper.assertTrue(lines(hatch).isEmpty(), "Jade shows a provider, which its name already says it is, as " + lines(hatch));
         insert(hatch.contents(), Items.ENDER_PEARL, 16);
 
         sneakUse(helper, owner, ItemStack.EMPTY);
         helper.assertTrue(hatch.mode() == WellHatches.Mode.REQUESTER, "sneak-using a provider made it a " + hatch.mode());
+        helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.REQUESTER);
         helper.assertTrue(owner.overlays.getLast().equals(Component.translatable("voidworks.hatch.now_requester")),
                 "switching to a requester told " + owner.overlays.getLast());
         helper.assertTrue(owner.getMainHandItem().isEmpty() && held(hatch.contents(), Items.ENDER_PEARL) == 16,
                 "a provider switched to a requester did not keep what it holds");
         helper.assertTrue(hatch.request().isEmpty(), "a provider switched to a requester asks for " + hatch.request());
-        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requester_nothing"))),
+        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting_nothing"))),
                 "Jade shows a requester asking for nothing as " + lines(hatch));
 
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         helper.assertTrue(hatch.request().isPresent(), "using an item on a requester set no request");
         sneakUse(helper, owner, ItemStack.EMPTY);
         helper.assertTrue(hatch.mode() == WellHatches.Mode.PROVIDER, "sneak-using a requester made it a " + hatch.mode());
+        helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.PROVIDER);
         helper.assertTrue(owner.overlays.getLast().equals(Component.translatable("voidworks.hatch.now_provider")),
                 "switching to a provider told " + owner.overlays.getLast());
         helper.assertTrue(hatch.request().isEmpty(), "a requester switched to a provider kept its request " + hatch.request());
@@ -110,8 +121,8 @@ final class RequesterHatchTests {
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         assertRequest(helper, owner, hatch, Items.IRON_INGOT, 3);
-        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requester", 3, new ItemStack(Items.IRON_INGOT).getItemName()))),
-                "Jade shows a requester's request as " + lines(hatch));
+        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting")))
+                && HatchReport.of(hatch).request().equals(hatch.request()), "Jade shows a requester's request as " + lines(hatch));
 
         for (int use = 0; use < 30; use++) {
             use(helper, owner, new ItemStack(Items.IRON_INGOT));
@@ -154,6 +165,7 @@ final class RequesterHatchTests {
 
         sneakUse(helper, other, ItemStack.EMPTY);
         helper.assertTrue(hatch.mode() == WellHatches.Mode.PROVIDER, "another player switched the hatch to a " + hatch.mode());
+        helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.PROVIDER);
         sneakUse(helper, owner, ItemStack.EMPTY);
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         use(helper, other, new ItemStack(Items.COBBLESTONE));
@@ -185,6 +197,76 @@ final class RequesterHatchTests {
         helper.assertTrue(provider.mode() == WellHatches.Mode.PROVIDER && provider.request().isEmpty(),
                 "the saved provider reread is a " + provider.mode() + " asking for " + provider.request());
         helper.succeed();
+    }
+
+    private static void itsOwnItem(GameTestHelper helper) {
+        WellTests.buildWell(helper);
+        var owner = new WellTests.Listener(helper, "well-owner");
+        WellTests.placeCore(helper, owner);
+        var requesterItem = VoidworksBlocks.WELL_HATCH_REQUESTER_ITEM.get();
+        helper.assertTrue(placeHatch(helper, owner, HATCH_AGAINST, Direction.EAST, requesterItem), "no hatch was placed from a requester's item");
+        helper.assertTrue(hatch(helper, HATCH).mode() == WellHatches.Mode.REQUESTER, "a requester's item placed a " + hatch(helper, HATCH).mode());
+        helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.REQUESTER);
+        var picked = helper.getBlockState(HATCH).getCloneItemStack(helper.getLevel(), helper.absolutePos(HATCH), false);
+        helper.assertTrue(picked.is(requesterItem), "a requester is picked as " + picked);
+        helper.getLevel().destroyBlock(helper.absolutePos(HATCH), true);
+        helper.assertItemEntityCountIs(requesterItem, HATCH, 2, 1);
+        helper.assertItemEntityCountIs(VoidworksBlocks.WELL_HATCH_ITEM.get(), HATCH, 2, 0);
+        helper.killAllEntitiesOfClass(ItemEntity.class);
+
+        helper.assertTrue(placeHatch(helper, owner, HATCH_AGAINST, Direction.EAST, VoidworksBlocks.WELL_HATCH_ITEM.get()), "no hatch was placed from a provider's item");
+        helper.assertTrue(hatch(helper, HATCH).mode() == WellHatches.Mode.PROVIDER, "a provider's item placed a " + hatch(helper, HATCH).mode());
+        sneakUse(helper, owner, ItemStack.EMPTY);
+        helper.getLevel().destroyBlock(helper.absolutePos(HATCH), true);
+        helper.assertItemEntityCountIs(requesterItem, HATCH, 2, 1);
+        helper.assertItemEntityCountIs(VoidworksBlocks.WELL_HATCH_ITEM.get(), HATCH, 2, 0);
+        helper.succeed();
+    }
+
+    private static void itemSwitched(GameTestHelper helper) {
+        var player = new WellTests.Listener(helper, "holder");
+        var provider = VoidworksBlocks.WELL_HATCH_ITEM.get();
+        var requester = VoidworksBlocks.WELL_HATCH_REQUESTER_ITEM.get();
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(provider, 5));
+        player.gameMode.useItem(player, helper.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND);
+        helper.assertTrue(player.getMainHandItem().is(provider) && player.getMainHandItem().getCount() == 5,
+                "using a provider's item in the air, not sneaking, left " + player.getMainHandItem());
+        player.setShiftKeyDown(true);
+        player.gameMode.useItem(player, helper.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND);
+        helper.assertTrue(player.getMainHandItem().is(requester) && player.getMainHandItem().getCount() == 5,
+                "sneak-using 5 providers' items in the air left " + player.getMainHandItem() + ", not 5 requesters'");
+        player.gameMode.useItem(player, helper.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND);
+        helper.assertTrue(player.getMainHandItem().is(provider) && player.getMainHandItem().getCount() == 5,
+                "sneak-using 5 requesters' items in the air left " + player.getMainHandItem() + ", not 5 providers'");
+        helper.succeed();
+    }
+
+    private static void shown(GameTestHelper helper) {
+        var owner = ownedHatch(helper);
+        var hatch = hatch(helper, HATCH);
+        var entity = helper.getBlockEntity(HATCH, WellHatchBlockEntity.class);
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    helper.assertTrue(entity.shown().isEmpty(), "an empty provider shows " + entity.shown());
+                    insert(hatch.contents(), Items.ENDER_PEARL, 16);
+                    insert(hatch.contents(), Items.COBBLESTONE, 40);
+                })
+                .thenWaitUntil(() -> assertShown(helper, entity, Items.ENDER_PEARL, "a provider holding pearls first"))
+                .thenExecute(() -> sneakUse(helper, owner, ItemStack.EMPTY))
+                .thenWaitUntil(() -> helper.assertTrue(entity.shown().isEmpty(), "a requester asking for nothing shows " + entity.shown()))
+                .thenExecute(() -> use(helper, owner, new ItemStack(Items.IRON_INGOT, 7)))
+                .thenWaitUntil(() -> assertShown(helper, entity, Items.IRON_INGOT, "a requester asking for iron"))
+                .thenExecute(() -> {
+                    var update = entity.getUpdateTag(helper.getLevel().registryAccess());
+                    helper.assertTrue(update.toString().contains("iron_ingot") && !update.toString().contains("ender_pearl"),
+                            "a watcher is sent " + update + ", not the requested iron alone");
+                })
+                .thenSucceed();
+    }
+
+    private static void assertShown(GameTestHelper helper, WellHatchBlockEntity entity, Item item, String what) {
+        helper.assertTrue(entity.shown().is(item) && entity.shown().getCount() == 1, what + " shows " + entity.shown() + ", not one " + item);
     }
 
     /** @return the hatch at {@code place} as the server's saved hatches, written and read back, hold it */

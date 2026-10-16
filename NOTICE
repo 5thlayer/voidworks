@@ -175,6 +175,7 @@ Files:   data/art/brooding_brick_large.png
          src/main/resources/assets/voidworks/textures/block/void_well_front.png and its .mcmeta
          src/main/resources/assets/voidworks/textures/block/void_well_front_dormant.png
          src/main/resources/assets/voidworks/textures/block/well_hatch_front.png
+         src/main/resources/assets/voidworks/textures/block/well_hatch_requester_front.png
 Author:  Malcolm Riley
 Source:  https://github.com/malcolmriley/unused-textures
          blocks/brooding_brick_large.png, blocks/stone_tiles_small.png and
@@ -185,8 +186,8 @@ Source:  https://github.com/malcolmriley/unused-textures
          into purpur's for its rim, and for its core's front lets a window framed in the rim's tiles
          into the casing, the roiling plasma behind it frame by frame in the void's purples while it
          works and still dark while it is Dormant, copying the plasma's animation beside its sprite.
-         A Well hatch's front is the same window framing the small stone tiles in a shulker's
-         purples, crossed by a lid's seam and latch.
+         A Well hatch's front is the same window framing the small stone tiles in an orange
+         shulker's shades, crossed by a lid's seam and latch; a requester's, in a blue shulker's.
 Licence: Creative Commons Attribution 4.0 International
          https://creativecommons.org/licenses/by/4.0/
 

@@ -286,10 +286,15 @@ final class WellHatchTests {
     private record Against(BlockPos pos, Direction face, String what) {
     }
 
-    /** {@code player} places a hatch against {@code face} of the block at {@code against}; @return whether it stands there now */
+    /** {@code player} places a provider hatch against {@code face} of the block at {@code against}; @return whether it stands there now */
     static boolean placeHatch(GameTestHelper helper, ServerPlayer player, BlockPos against, Direction face) {
+        return placeHatch(helper, player, against, face, VoidworksBlocks.WELL_HATCH_ITEM.get());
+    }
+
+    /** {@code player} places a hatch from {@code item} against {@code face} of the block at {@code against}; @return whether it stands there now */
+    static boolean placeHatch(GameTestHelper helper, ServerPlayer player, BlockPos against, Direction face, Item item) {
         var absolute = helper.absolutePos(against);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksBlocks.WELL_HATCH_ITEM.get()));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item));
         player.getMainHandItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(absolute).add(Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(0.5)), face, absolute, false)));
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);

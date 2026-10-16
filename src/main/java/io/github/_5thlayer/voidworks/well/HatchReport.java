@@ -15,8 +15,10 @@ import net.minecraft.network.codec.StreamCodec;
 
 /**
  * What a Well hatch shows a player looking at it, beside what it holds, which Jade shows from its item
- * face: whether it is a provider or a requester, and what a requester asks for. Read on the server,
- * where the hatch is, and sent to the client, which words it with {@link #lines}.
+ * face: what a requester asks for. Whether it is a provider or a requester its name says, the item it is
+ * picked as, so a provider shows nothing more. Read on the server, where the hatch is, and sent to the
+ * client, which words it with {@link #lines} and draws a request after them as its item with the stacks
+ * asked for on it.
  *
  * @param mode    whether it is a provider or a requester
  * @param request what a requester asks for; empty for a provider, and a requester asking for nothing
@@ -41,12 +43,11 @@ public record HatchReport(WellHatches.Mode mode, Optional<WellHatches.Request> r
         return new HatchReport(hatch.mode(), hatch.request());
     }
 
-    /** @return that it is a provider; or that it is a requester, with the stacks and item it asks for, or that it asks for nothing */
+    /** @return nothing for a provider; for a requester, that it is requesting, which its request follows, or that it requests nothing */
     public List<Component> lines() {
         if (mode == WellHatches.Mode.PROVIDER) {
-            return List.of(Component.translatable("voidworks.jade.hatch.provider"));
+            return List.of();
         }
-        return List.of(request.map(asked -> Component.translatable("voidworks.jade.hatch.requester", asked.stacks(), asked.itemName()))
-                .orElseGet(() -> Component.translatable("voidworks.jade.hatch.requester_nothing")));
+        return List.of(Component.translatable(request.isPresent() ? "voidworks.jade.hatch.requesting" : "voidworks.jade.hatch.requesting_nothing"));
     }
 }

@@ -38,6 +38,7 @@ import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
@@ -45,6 +46,7 @@ import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
 import snownee.jade.api.IWailaPlugin;
 import snownee.jade.api.WailaPlugin;
+import snownee.jade.api.ui.JadeUI;
 
 /**
  * What a void block holds, in Jade, read on the server where networks and Dormancy live: a
@@ -53,7 +55,7 @@ import snownee.jade.api.WailaPlugin;
  * Displacer's {@link DisplacerReport}; a Mutation Chamber's {@link ChamberReport}; an Unmaking
  * Chamber's {@link UnmakingReport}; a Void Crucible's {@link CrucibleReport}; and a Void Well's
  * {@link WellReport}, its name, target and owner, beside its network and payment; and a Well hatch's
- * {@link HatchReport}, its mode and request, beside what Jade shows it holds from its item face. All but the
+ * {@link HatchReport}, its mode and request, the request drawn as its item with the stacks asked for on it, beside what Jade shows it holds from its item face. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
  * A Void Dragon's presence shows its record's {@link DragonReport}, and a Dragonling its
  * {@link DragonlingReport}, each a {@link CreatureReport} in place of Jade's hearts;
@@ -170,8 +172,10 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 VoidCrucibleBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidWellBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                WellHatchBlock.class);
+        registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> {
+            report.lines().forEach(line -> tooltip.add(JadeUI.text(line).alignSelfCenter()));
+            report.request().ifPresent(asked -> tooltip.append(JadeUI.item(new ItemStack(asked.item()), 1, Integer.toString(asked.stacks()))));
+        }), WellHatchBlock.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines,
                 report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
