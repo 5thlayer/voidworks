@@ -19,6 +19,7 @@ import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
@@ -58,6 +59,10 @@ final class ZoneUpgradeTests {
         tests.test("a_zone_upgrade_costs_its_growth_more_each_level_and_its_levels_survive_a_reload", 2 * TICKS, ZoneUpgradeTests::secondLevel);
         tests.test("a_zone_upgrade_paid_in_part_keeps_its_payment_across_a_reload_and_cancelled_loses_it", 2 * TICKS, ZoneUpgradeTests::paidInPart);
         tests.test("a_zone_upgrade_is_not_offered_by_a_dormant_end_displacer", 1, ZoneUpgradeTests::notWhileDormant);
+        tests.test("a_zone_upgrade_confirmed_once_its_network_can_no_longer_afford_it_takes_nothing", 1, ZoneUpgradeTests::unaffordableAtTheConfirm);
+        tests.test("a_zone_upgrade_is_refused_to_a_displacer_that_can_reach_nothing", 1, ZoneUpgradeTests::refusedWithNothingInReach);
+        tests.test("a_zone_upgrade_soaking_lets_it_harvest_and_is_spent_when_nothing_is_left_in_reach", 2 * TICKS, ZoneUpgradeTests::lostWhenNothingInReach);
+        tests.test("a_zone_upgrade_is_bought_by_an_awake_end_displacer", 1, ZoneUpgradeTests::boughtInTheEnd);
     }
 
     private static void quotedThenBought(GameTestHelper helper) {
@@ -198,8 +203,12 @@ final class ZoneUpgradeTests {
                     helper.assertTrue(reloaded.upgradeLevels() == 1, "reloaded, it has bought " + reloaded.upgradeLevels() + " levels, not 1");
                     helper.assertTrue(reloaded.upgradePayment().equals(Optional.of(new DisplacerBlockEntity.Payment(0, second))),
                             "reloaded, it soaks " + reloaded.upgradePayment() + ", not the second level's " + second);
-                    var report = DisplacerReport.of(reloaded, helper.getLevel());
-                    helper.assertTrue(report.levels() == 1 && report.upgrade().isPresent(), "its report shows " + report);
+                    var lines = DisplacerReport.of(reloaded, helper.getLevel()).lines();
+                    var upgrades = Component.translatable("voidworks.jade.displacer.upgrades", 1, second);
+                    var upgrading = Component.translatable("voidworks.jade.displacer.upgrading", 0L, second);
+                    helper.assertTrue(lines.stream().anyMatch(line -> line.getContents().equals(upgrades.getContents()))
+                                    && lines.stream().anyMatch(line -> line.getContents().equals(upgrading.getContents())),
+                            "Jade shows " + lines + ", not its level, the next price and the soak");
                 })
                 .thenWaitUntil(() -> helper.assertTrue(displacer(helper).upgradeLevels() == 2, "it has not bought its second level"))
                 .thenExecute(() -> {
@@ -251,6 +260,95 @@ final class ZoneUpgradeTests {
                             })
                             .thenSucceed();
                 });
+    }
+
+    /** Quoted with 20 motes beside it, confirmed once only 10 are left: it tells the player so and commits to nothing. */
+    private static void unaffordableAtTheConfirm(GameTestHelper helper) {
+        var displacer = place(helper);
+        store(helper, 20);
+        var player = sneaking(helper);
+        var level = helper.getLevel();
+        long price = upgrade(displacer).price(0);
+        int to = upgrade(displacer).raise(ZONE);
+        var quote = Component.translatable("voidworks.displacer.upgrade.quote", ZONE, to, price);
+        helper.assertTrue(displacer.sneakUse(level, player).equals(quote), "the first sneak-use was not quoted " + quote);
+        store(helper, 10);
+        var refused = Component.translatable("voidworks.displacer.upgrade.unaffordable", ZONE, to, price, 10 * VoidEnergy.BASE);
+        var told = displacer.sneakUse(level, player);
+        helper.assertTrue(told.equals(refused), "the confirm told the player " + told + ", not " + refused);
+        helper.assertTrue(displacer.upgradePayment().isEmpty(), "it committed to an upgrade its network can no longer afford");
+        helper.succeed();
+    }
+
+    /** In the air with nothing to harvest, sneak-used before its first tick pops it off: it is told nothing is in reach. */
+    private static void refusedWithNothingInReach(GameTestHelper helper) {
+        var high = DISPLACER.above(3);
+        helper.setBlock(high, VoidworksBlocks.OVERWORLD_DISPLACER.get());
+        var displacer = helper.getBlockEntity(high, OverworldDisplacerBlockEntity.class);
+        var told = displacer.sneakUse(helper.getLevel(), sneaking(helper));
+        var refused = Component.translatable("voidworks.displacer.upgrade.unreachable");
+        helper.assertTrue(told.equals(refused), "it told the player " + told + ", not " + refused);
+        helper.succeed();
+    }
+
+    /**
+     * Up in the air over one stone block, its network's motes two and three Voidstone off so they
+     * soak in slowly: it harvests the stone while the upgrade soaks, then, with nothing left in
+     * reach and its output emptied, becomes Voidstone all the same.
+     */
+    private static void lostWhenNothingInReach(GameTestHelper helper) {
+        var high = DISPLACER.above(2);
+        var stone = high.below();
+        helper.setBlock(stone, Blocks.STONE);
+        helper.setBlock(high, VoidworksBlocks.OVERWORLD_DISPLACER.get());
+        var displacer = helper.getBlockEntity(high, OverworldDisplacerBlockEntity.class);
+        displacer.setZone(ZONE);
+        displacer.inventory().set(DisplacerBlockEntity.INPUT, ItemResource.of(Items.COPPER_BLOCK), 1);
+        for (int i = 1; i <= 3; i++) {
+            helper.setBlock(high.east(i), VoidworksBlocks.VOIDSTONE.get());
+        }
+        int grade = DisplacerTests.pressure(helper, high) + 1;
+        int capacity = VoidworksConfig.voidstoneCapacity();
+        VoidstoneTests.insert(helper, high.east(3), grade, capacity);
+        VoidstoneTests.insert(helper, high.east(2), grade, capacity);
+        var player = sneaking(helper);
+        helper.useBlock(high, player);
+        helper.useBlock(high, player);
+        helper.assertTrue(displacer.upgradePayment().isPresent(), "the second sneak-use did not commit to the upgrade");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(displacer.grown().size() == 1, "it has not harvested the stone below it"))
+                .thenExecute(() -> {
+                    var payment = displacer.upgradePayment();
+                    helper.assertTrue(payment.isPresent() && payment.get().paid() < payment.get().price(),
+                            "it harvested only once the upgrade was paid: " + payment);
+                    for (int slot = 1; slot <= DisplacerBlockEntity.OUTPUT_SLOTS; slot++) {
+                        displacer.inventory().set(slot, ItemResource.EMPTY, 0);
+                    }
+                })
+                .thenWaitUntil(() -> helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), high))
+                .thenSucceed();
+    }
+
+    /** Woken and with Voidstone holding the price beside it, an End Displacer buys its first level as the Overworld's does. */
+    private static void boughtInTheEnd(GameTestHelper helper) {
+        var at = new BlockPos(8, 64, 8);
+        DimensionSite.run(helper, Level.END, new BlockPos(16 * 9, 0, 512), at, 4, site -> {
+            var displacer = site.place(VoidworksBlocks.END_DISPLACER.get().defaultBlockState().setValue(EndDisplacerBlock.FACING, Direction.DOWN),
+                    ZONE, EndDisplacerBlockEntity.class);
+            site.payInFull(displacer);
+            site.tick(displacer, 1);
+            site.assertTrue(displacer.dormancy().awake(), "the paid End Displacer did not wake");
+            site.set(at.north(), VoidworksBlocks.VOIDSTONE.get().defaultBlockState());
+            site.insert(at.north(), site.pressure(at) + 1, VoidworksConfig.voidstoneCapacity());
+            var player = sneaking(helper);
+            displacer.sneakUse(site.level(), player);
+            displacer.sneakUse(site.level(), player);
+            site.assertTrue(displacer.upgradePayment().isPresent(), "the End Displacer did not commit to the upgrade");
+            site.tick(displacer, 2 * VoidworksConfig.soakInterval());
+            int step = upgrade(displacer).step();
+            site.assertTrue(displacer.upgradeLevels() == 1 && displacer.harvestsLeft() == ZONE + step,
+                    "it bought " + displacer.upgradeLevels() + " levels and has " + displacer.harvestsLeft() + " harvests left, not 1 and " + (ZONE + step));
+        });
     }
 
     /** Dormant, a sneak-use quotes nothing however much touches it, so a second commits to nothing. */

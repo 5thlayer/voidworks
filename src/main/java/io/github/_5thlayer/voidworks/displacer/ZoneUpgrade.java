@@ -55,6 +55,11 @@ public record ZoneUpgrade(int step, long firstPrice, int growth) {
 
     /** @return {@code zone} raised by one level, and {@link Integer#MAX_VALUE} once that would pass it */
     public int raise(int zone) {
+        return raise(zone, step);
+    }
+
+    /** @return {@code zone} raised by {@code step}, and {@link Integer#MAX_VALUE} once that would pass it */
+    public static int raise(int zone, int step) {
         return IntMath.saturatedAdd(zone, step);
     }
 }

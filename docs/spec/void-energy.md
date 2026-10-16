@@ -138,7 +138,8 @@ same player sneak-using it again within 5 seconds commits to it; anything else l
 A network whose motes are worth less than the price at the Displacer's block is told the price and
 what it is worth there, and arms nothing. Committed, the Displacer soaks the price as a Dormant
 machine does, from the stores touching it by the spend rule at its block, while it goes on
-harvesting, and its Zone rises once it is paid; a payment in part is kept across a save. Sneak-using
+harvesting, and its Zone rises once it is paid, the players near it told and hearing it; a payment
+in part is kept across a save. Sneak-using
 it while it soaks shows what is paid and offers to cancel, confirmed the same way; a cancelled
 upgrade loses what it paid, as any spend does. A Displacer can be upgraded while it is awake and
 not yet Voidstone: stalled, starved of fed blocks, or with its Zone spent and its output still

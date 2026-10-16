@@ -10,12 +10,10 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 
-import com.google.common.math.IntMath;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
-import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.inventory.ItemFace;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -208,7 +206,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         }
         // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it,
         // and one whose Zone upgrade is soaking waits for it, to harvest on.
-        if ((target.isEmpty() || grown.size() >= zone && upgrades.soaking().isEmpty()) && outputEmpty()) {
+        if ((target.isEmpty() || (zoneSpent() && upgrades.payment().isEmpty())) && outputEmpty()) {
             becomeVoidstone(level);
         }
     }
@@ -278,7 +276,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      *         {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
-        if (zoneSpent() && upgrades.soaking().isPresent() && frontierLoaded(level) && next(level).isPresent()) {
+        if (zoneSpent() && upgrades.payment().isPresent() && frontierLoaded(level) && next(level).isPresent()) {
             return Optional.of(Stall.UPGRADE_UNPAID);
         }
         if (spent(level)) {
@@ -423,7 +421,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /** @return the void energy soaked toward the Zone upgrade it is soaking and its price, or empty while none is */
     public Optional<Payment> upgradePayment() {
-        return upgrades.soaking();
+        return upgrades.payment();
     }
 
     /** What a soaking Zone upgrade has paid of its price, in void energy, the paid at most the price. */
@@ -434,55 +432,23 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      * What a player sneak-using it with an empty hand does, the awake Displacer's one gesture: a
      * first quotes its next Zone upgrade, and the same player's second within
      * {@link Confirmation#TICKS} ticks commits to it, the Displacer then soaking its price from the
-     * stores touching it. While one soaks, a first offers to cancel it and a second cancels it.
+     * stores touching it. While one soaks, a first offers to cancel it and a second cancels it
+     * ({@link ZoneUpgrades#sneakUse}).
      *
      * @return what the player is told, above the hotbar
      */
     public Component sneakUse(ServerLevel level, Player player) {
-        var confirmation = upgrades.confirmation;
-        long now = level.getGameTime();
-        var soaking = upgrades.soaking();
-        if (soaking.isPresent()) {
-            if (confirmation.confirms(player.getUUID(), Confirmation.Offer.CANCEL, now)) {
-                upgrades.cancel();
-                return Component.translatable("voidworks.displacer.upgrade.cancelled");
-            }
-            confirmation.arm(player.getUUID(), Confirmation.Offer.CANCEL, now);
-            return Component.translatable("voidworks.displacer.upgrade.cancel", soaking.get().paid(), soaking.get().price());
-        }
-        var upgrade = ZoneUpgrade.of(getBlockState());
-        if (upgrade.isEmpty()) {
-            confirmation.lapse();
-            return Component.translatable("voidworks.displacer.upgrade.none");
-        }
-        if (!frontierLoaded(level) || next(level).isEmpty()) {
-            confirmation.lapse();
-            return Component.translatable("voidworks.displacer.upgrade.unreachable");
-        }
-        int from = zoneOrConfig();
-        int to = upgrade.get().raise(from);
-        long price = upgrade.get().price(upgrades.levels());
-        boolean confirmed = confirmation.confirms(player.getUUID(), Confirmation.Offer.BUY, now);
-        long worth = TouchingMotes.networkWorth(level, worldPosition);
-        if (worth < price) {
-            return Component.translatable("voidworks.displacer.upgrade.unaffordable", from, to, price, worth);
-        }
-        if (confirmed) {
-            upgrades.commit(upgrade.get());
-            return Component.translatable("voidworks.displacer.upgrade.committed", from, to, price);
-        }
-        confirmation.arm(player.getUUID(), Confirmation.Offer.BUY, now);
-        return Component.translatable("voidworks.displacer.upgrade.quote", from, to, price);
+        return upgrades.sneakUse(level, player, zoneOrConfig(), frontierLoaded(level) && next(level).isPresent());
     }
 
     /** Drops any quote waiting on a confirmation, as any use but a sneak-use does. */
     public void lapseQuote() {
-        upgrades.confirmation.lapse();
+        upgrades.lapse();
     }
 
     /** Its Zone upgrade paid, its Zone grows by {@code step}, and the players near it hear and are told so. */
     private void upgraded(ServerLevel level, int step) {
-        setZone(IntMath.saturatedAdd(zoneOrConfig(), step));
+        setZone(ZoneUpgrade.raise(zoneOrConfig(), step));
         var message = Component.translatable("voidworks.displacer.upgrade.done", step, zone);
         for (var player : level.players()) {
             if (player.blockPosition().closerThan(worldPosition, UPGRADE_TOLD_WITHIN)) {

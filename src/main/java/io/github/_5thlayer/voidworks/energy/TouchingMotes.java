@@ -20,6 +20,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 
 /**
@@ -128,12 +129,22 @@ public final class TouchingMotes {
             if (soaked >= most) {
                 break;
             }
-            var spend = VoidSpender.spendUpTo(store.motes(), level, pos, most - soaked);
-            soaked += spend.released();
-            var from = store.pos().getCenter();
-            spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+            soaked += payInto(level, store.motes(), store.pos().getCenter(), pos, most - soaked);
         }
         return soaked;
+    }
+
+    /**
+     * Spends what it can of {@code motes}, up to {@code most} void energy, by the spend rule at
+     * {@code pos} ({@link VoidSpender#spendUpTo}), the motes flying from {@code from} to it as
+     * butterflies: one store's share of a soak, or a Void Siphon emptied into a machine.
+     *
+     * @return the void energy released, which may pass {@code most} by part of a mote
+     */
+    public static long payInto(ServerLevel level, ResourceHandler<MoteResource> motes, Vec3 from, BlockPos pos, long most) {
+        var spend = VoidSpender.spendUpTo(motes, level, pos, most);
+        spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+        return spend.released();
     }
 
     /**

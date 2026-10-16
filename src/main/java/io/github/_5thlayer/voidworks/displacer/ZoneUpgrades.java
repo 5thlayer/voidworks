@@ -4,21 +4,26 @@
 package io.github._5thlayer.voidworks.displacer;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.jspecify.annotations.Nullable;
 
 /**
- * A Void Displacer's Zone upgrades: how many levels it has bought, and the one it is soaking, if
- * any. A committed upgrade soaks its price as a Dormant machine soaks its cost, from the stores
- * touching the Displacer, once every {@link VoidworksConfig#soakInterval()} ticks, and a payment in
- * part is kept across a save. Its price and step are fixed when it is committed, so a datapack
- * reloaded meanwhile changes only the levels after it.
+ * A Void Displacer's Zone upgrades: how many levels it has bought, the one it is soaking, if any,
+ * and the quote a player is waiting to confirm. A committed upgrade soaks its price as a Dormant
+ * machine soaks its cost, from the stores touching the Displacer, once every
+ * {@link VoidworksConfig#soakInterval()} ticks, and a payment in part is kept across a save. Its
+ * price and step are fixed when it is committed, so a datapack reloaded meanwhile changes only the
+ * levels after it.
  */
 final class ZoneUpgrades {
 
@@ -28,19 +33,24 @@ final class ZoneUpgrades {
     private static final String PRICE_KEY = "price";
     private static final String PAID_KEY = "paid";
 
-    /** The quote a player is waiting to confirm, held only while the game runs. */
-    final Confirmation confirmation = new Confirmation();
-
     private final BlockEntity displacer;
+    /** Held only while the game runs. */
+    private final Confirmation confirmation = new Confirmation();
     private int levels;
-    /** The soaking level's step, 0 while none soaks. */
-    private int step;
-    private long price;
-    private long paid;
+    private @Nullable Soaking soaking;
     private int sinceSoak;
 
     ZoneUpgrades(BlockEntity displacer) {
         this.displacer = displacer;
+    }
+
+    /**
+     * The level it has committed to and is soaking.
+     *
+     * @param step the positions it adds to the Zone once paid
+     * @param paid the void energy soaked so far, which may pass the price by part of a mote
+     */
+    private record Soaking(int step, long price, long paid) {
     }
 
     /** @return how many levels it has bought */
@@ -49,67 +59,112 @@ final class ZoneUpgrades {
     }
 
     /** @return what the level it is soaking has paid of its price, or empty while none is */
-    Optional<DisplacerBlockEntity.Payment> soaking() {
-        return step == 0 ? Optional.empty() : Optional.of(new DisplacerBlockEntity.Payment(Math.min(paid, price), price));
+    Optional<DisplacerBlockEntity.Payment> payment() {
+        return soaking == null
+                ? Optional.empty()
+                : Optional.of(new DisplacerBlockEntity.Payment(Math.min(soaking.paid(), soaking.price()), soaking.price()));
     }
 
-    /** Commits to the next level, by {@code upgrade}'s terms: its step and the price of the level after those bought. */
-    void commit(ZoneUpgrade upgrade) {
-        step = upgrade.step();
-        price = upgrade.price(levels);
-        paid = 0;
-        sinceSoak = 0;
-        displacer.setChanged();
+    /**
+     * A player's sneak-use: while a level soaks, a first offers to cancel it and the same player's
+     * second within {@link Confirmation#TICKS} ticks cancels it, what it paid spent; otherwise a
+     * first quotes the next level and such a second commits to it, so long as the Displacer's block
+     * buys any, it can still reach something to harvest, and the networks touching it are worth the
+     * price at its block.
+     *
+     * @param zone      its Zone now
+     * @param reachable whether it can still reach something to harvest
+     * @return what the player is told, above the hotbar
+     */
+    Component sneakUse(ServerLevel level, Player player, int zone, boolean reachable) {
+        long now = level.getGameTime();
+        if (soaking != null) {
+            if (confirmation.confirms(player.getUUID(), Confirmation.Offer.CANCEL, now)) {
+                cancel();
+                return Component.translatable("voidworks.displacer.upgrade.cancelled");
+            }
+            confirmation.arm(player.getUUID(), Confirmation.Offer.CANCEL, now);
+            var payment = payment().orElseThrow();
+            return Component.translatable("voidworks.displacer.upgrade.cancel", payment.paid(), payment.price());
+        }
+        var upgrade = ZoneUpgrade.of(displacer.getBlockState());
+        if (upgrade.isEmpty()) {
+            confirmation.lapse();
+            return Component.translatable("voidworks.displacer.upgrade.none");
+        }
+        if (!reachable) {
+            confirmation.lapse();
+            return Component.translatable("voidworks.displacer.upgrade.unreachable");
+        }
+        int to = upgrade.get().raise(zone);
+        long price = upgrade.get().price(levels);
+        boolean confirmed = confirmation.confirms(player.getUUID(), Confirmation.Offer.BUY, now);
+        long worth = TouchingMotes.networkWorth(level, displacer.getBlockPos());
+        if (worth < price) {
+            return Component.translatable("voidworks.displacer.upgrade.unaffordable", zone, to, price, worth);
+        }
+        if (confirmed) {
+            soaking = new Soaking(upgrade.get().step(), price, 0);
+            sinceSoak = 0;
+            displacer.setChanged();
+            return Component.translatable("voidworks.displacer.upgrade.committed", zone, to, price);
+        }
+        confirmation.arm(player.getUUID(), Confirmation.Offer.BUY, now);
+        return Component.translatable("voidworks.displacer.upgrade.quote", zone, to, price);
     }
 
-    /** Drops the level it is soaking; what it paid is spent. */
-    void cancel() {
-        step = 0;
-        price = 0;
-        paid = 0;
+    /** Drops any quote waiting on a confirmation, as any use but a sneak-use does. */
+    void lapse() {
+        confirmation.lapse();
+    }
+
+    private void cancel() {
+        soaking = null;
         displacer.setChanged();
     }
 
     /**
-     * Soaks what it can of the soaking level's price from the stores touching the Displacer, once every
-     * soak interval. Called each server tick while the Displacer is awake.
+     * Soaks what it can of the soaking level's price from the stores touching the Displacer, once
+     * every soak interval. Called each server tick while the Displacer is awake.
      *
      * @return the step the Zone grows by, once the level is paid and bought; empty until then, or while none soaks
      */
-    Optional<Integer> soak(ServerLevel level) {
-        if (step == 0 || ++sinceSoak < VoidworksConfig.soakInterval() && paid < price) {
-            return Optional.empty();
+    OptionalInt soak(ServerLevel level) {
+        if (soaking == null || ++sinceSoak < VoidworksConfig.soakInterval() && soaking.paid() < soaking.price()) {
+            return OptionalInt.empty();
         }
         sinceSoak = 0;
-        if (paid < price) {
-            long soaked = TouchingMotes.soak(level, displacer.getBlockPos(), Set.of(), price - paid);
+        long owed = soaking.price() - soaking.paid();
+        if (owed > 0) {
+            long soaked = TouchingMotes.soak(level, displacer.getBlockPos(), Set.of(), owed);
             if (soaked > 0) {
-                paid += soaked;
+                soaking = new Soaking(soaking.step(), soaking.price(), soaking.paid() + soaked);
                 displacer.setChanged();
             }
         }
-        if (paid < price) {
-            return Optional.empty();
+        if (soaking.paid() < soaking.price()) {
+            return OptionalInt.empty();
         }
-        int bought = step;
+        int bought = soaking.step();
         levels++;
         cancel();
-        return Optional.of(bought);
+        return OptionalInt.of(bought);
     }
 
     void save(ValueOutput output) {
         var child = output.child(KEY);
         child.putInt(LEVELS_KEY, levels);
-        child.putInt(STEP_KEY, step);
-        child.putLong(PRICE_KEY, price);
-        child.putLong(PAID_KEY, paid);
+        if (soaking != null) {
+            child.putInt(STEP_KEY, soaking.step());
+            child.putLong(PRICE_KEY, soaking.price());
+            child.putLong(PAID_KEY, soaking.paid());
+        }
     }
 
     void load(ValueInput input) {
         var child = input.childOrEmpty(KEY);
         levels = child.getIntOr(LEVELS_KEY, 0);
-        step = child.getIntOr(STEP_KEY, 0);
-        price = child.getLongOr(PRICE_KEY, 0);
-        paid = child.getLongOr(PAID_KEY, 0);
+        int step = child.getIntOr(STEP_KEY, 0);
+        soaking = step == 0 ? null : new Soaking(step, child.getLongOr(PRICE_KEY, 0), child.getLongOr(PAID_KEY, 0));
     }
 }
