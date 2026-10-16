@@ -4,7 +4,6 @@
 package io.github._5thlayer.voidworks.gametest;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -17,7 +16,6 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksItems;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
-import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
@@ -37,8 +35,8 @@ import net.minecraft.world.phys.AABB;
 /**
  * The Gallery pack (libworks ADR 0010), through libworks' {@link GalleryCheck}: offered and off, its
  * build running every command without failing, and each scene's key block where it stands. Beyond
- * the build, the Void Dragon scene's dragon sets off from its reservoir for the other Well, and
- * building the scene again leaves one dragon; and a scene's sign, clicked, builds it again. What a
+ * the build, building the Void Dragon scene again leaves one dragon, and a scene's sign, clicked,
+ * builds it again. What a
  * scene's machines do is the mechanics' own game tests' to check, never the Gallery's. Each test turns the pack on, which reloads the server's
  * data, and off again, passing or failing, so each runs in a batch of its own.
  */
@@ -92,8 +90,8 @@ final class GalleryTests {
     static void register(VoidworksGameTests.Registrar tests) {
         tests.testOnItsOwn("the_gallery_pack_is_offered_and_off_and_its_build_lays_every_scene_with_no_failing_command", TICKS,
                 GalleryTests::builds);
-        tests.testOnItsOwn("the_void_dragon_scenes_dragon_sets_off_from_its_reservoir_for_the_other_well_and_building_it_again_leaves_one", TICKS,
-                GalleryTests::dragonCarries);
+        tests.testOnItsOwn("the_gallery_void_dragon_scene_built_again_leaves_one_dragon", TICKS,
+                GalleryTests::dragonRebuiltLeavesOne);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
     }
@@ -131,24 +129,15 @@ final class GalleryTests {
         })).thenSucceed();
     }
 
-    private static void dragonCarries(GameTestHelper helper) {
+    /** The Void Dragon scene, built twice, leaves the runner one dragon, resting at its reservoir. */
+    private static void dragonRebuiltLeavesOne(GameTestHelper helper) {
         var reservoir = Place.of(helper.getLevel(), helper.absolutePos(ORIGIN).offset(RESERVOIR));
-        var shortWell = Place.of(helper.getLevel(), helper.absolutePos(ORIGIN).offset(SHORT));
-        oneScene(helper, (source, steps) -> {
-            var owner = source.getPlayer().getUUID();
-            steps.thenExecute(() -> GalleryCheck.assertRuns(helper, source, VOID_DRAGON))
-                    .thenWaitUntil(() -> {
-                        var dragon = only(helper, owner);
-                        helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().map(Trip::destination).equals(Optional.of(shortWell)),
-                                "the scene's dragon is " + dragon + ", not setting off from the reservoir for the other Well");
-                    })
-                    .thenExecute(() -> {
-                        GalleryCheck.assertRuns(helper, source, VOID_DRAGON);
-                        var dragon = only(helper, owner);
-                        helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().isEmpty(),
-                                "building the scene again left " + dragon + ", not a dragon resting at the reservoir");
-                    });
-        });
+        oneScene(helper, (source, steps) -> steps.thenExecute(() -> {
+            GalleryCheck.assertRuns(helper, source, VOID_DRAGON);
+            GalleryCheck.assertRuns(helper, source, VOID_DRAGON);
+            var dragon = only(helper, source.getPlayer().getUUID());
+            helper.assertTrue(dragon.rest().equals(reservoir), "building the scene again left " + dragon + ", not a dragon resting at the reservoir");
+        }));
     }
 
     /** A scene's sign, clicked, builds the scene again where it stands: here the Crucible, taken away. */

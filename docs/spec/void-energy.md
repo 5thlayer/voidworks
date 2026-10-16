@@ -701,8 +701,8 @@ builds on its own.
   runs `gallery/clear` on each plot afterwards: the pack is offered and off; every gallery function
   loads; `build`, run by an operator player, runs every command without failing, a failure naming the
   command; and each scene's key block, the dragon scene's two Well cores, stands where the scene
-  puts it. A test of its own checks that the dragon scene's dragon sets off from the reservoir for
-  the other Well, and that building it again leaves one dragon.
+  puts it. A test of its own checks that building the dragon scene again leaves one dragon. What a
+  scene's features do is their own game tests' to check, never the Gallery's.
 
 ## Loops
 
