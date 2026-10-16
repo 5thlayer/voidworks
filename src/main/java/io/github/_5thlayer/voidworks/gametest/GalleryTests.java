@@ -14,16 +14,16 @@ import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksItems;
-import io.github._5thlayer.voidworks.siphon.SiphonMode;
-import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
-import io.github._5thlayer.voidworks.network.MoteNetwork;
-import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.gallery.GalleryPack;
+import io.github._5thlayer.voidworks.network.MoteNetwork;
+import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
+import io.github._5thlayer.voidworks.siphon.SiphonMode;
+import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -132,7 +132,7 @@ final class GalleryTests {
                     var emptying = helper.getLevel().getBlockEntity(helper.absolutePos(ORIGIN.offset(scene(7, 14, 0, -2))));
                     var siphon = emptying instanceof ChestBlockEntity chest ? chest.getItem(13) : ItemStack.EMPTY;
                     helper.assertTrue(siphon.is(VoidworksItems.VOID_SIPHON.get()) && VoidSiphonItem.mode(siphon) == SiphonMode.EMPTY
-                                    && siphon.has(VoidworksItems.SIPHON_MOTES.get()),
+                                    && VoidSiphonItem.heldMotes(siphon).total() > 0,
                             "the Emptying scene's chest holds " + siphon + ", not a charged Siphon set to empty");
                     for (int index : new int[] {2, 3}) {
                         var over = helper.absolutePos(ORIGIN.offset(scene(index, 14, 1, -2)));

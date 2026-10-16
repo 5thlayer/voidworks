@@ -9,7 +9,8 @@
 voidworks dragon remove ~2 ~-1 ~-12 ~25 ~15 ~
 function voidworks:gallery/clear
 
-# The reservoir, its core in its south wall facing the sign, a Voidstone pillar against its west wall.
+# The reservoir, its core in its south wall facing the sign, a Voidstone pillar against its west
+# wall.
 fill ~6 ~ ~-8 ~10 ~3 ~-4 voidworks:void_well_casing
 fill ~7 ~1 ~-7 ~9 ~3 ~-5 minecraft:air
 fill ~6 ~4 ~-8 ~10 ~4 ~-4 voidworks:void_well_rim
