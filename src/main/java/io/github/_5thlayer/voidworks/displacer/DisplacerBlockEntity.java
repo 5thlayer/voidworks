@@ -56,8 +56,8 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * or tank, or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
  * with an empty hand, as nothing else can extract them. When its Zone is spent, or it can reach
  * nothing more, it waits for its output to empty, then becomes Voidstone itself and its network
- * keeps the motes; one that could reach nothing before its first harvest pops off instead, as outside its dimension, even before it is
- * {@linkplain #ready ready}.
+ * keeps the motes; one that could reach nothing before its first harvest pops off instead, as
+ * outside its dimension, even before it is {@linkplain #ready ready}.
  */
 public abstract class DisplacerBlockEntity extends BlockEntity {
 
