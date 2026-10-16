@@ -50,9 +50,9 @@ class RoutingTest {
     /** The motes a dragon carries for each egg it lays. */
     private static final long EGG = 250;
     /** Stages too long for any test to outlive, which change neither speed nor load: a young dragon stays young. */
-    private static final LifeStages AGELESS = new LifeStages(1_000_000_000L, List.of(1.0, 1.0, 1.0, 1.0), List.of(1.0, 1.0, 1.0, 1.0));
+    private static final LifeStages AGELESS = LifeStages.of(1_000_000_000L, List.of(1.0, 1.0, 1.0, 1.0), List.of(1.0, 1.0, 1.0, 1.0));
     /** Stages of 1,000 motes, at the provisional factors. */
-    private static final LifeStages AGEING = new LifeStages(1_000, LifeStages.DEFAULT_SPEEDS, LifeStages.DEFAULT_LOADS);
+    private static final LifeStages AGEING = new LifeStages(1_000, LifeStages.DEFAULTS);
     /** A second a dive per 64 blocks, the Nether's counting eight, and 200 ticks more between dimensions. */
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     /** No harm anywhere, so a trip's motes go only where it carries them. */
@@ -451,12 +451,12 @@ class RoutingTest {
         runFor(20_000);
         // 200 carried, short of the 250 an egg takes.
         assertEquals(List.of(), wells.laid);
-        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().towardEgg());
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
         runFor(20_000);
         // A load of 100 makes 300: it lays at the Overworld Well, as it unloads there, and the 50 over count on.
         assertEquals(List.of(OVERWORLD_WELL), wells.laid);
-        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -467,7 +467,7 @@ class RoutingTest {
         runFor(20_000);
         // Five loads of 100: an egg as it unloads the third, at 300, and the next at the fifth, at 50 and 200 more.
         assertEquals(List.of(NETHER_WELL, NETHER_WELL), wells.laid);
-        assertEquals(0, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(0, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -477,7 +477,7 @@ class RoutingTest {
         runFor(20_000);
         assertEquals(Map.of(4, 300L), wells.motes(END_WELL));
         assertEquals(List.of(END_WELL), wells.laid);
-        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -488,13 +488,13 @@ class RoutingTest {
         var dragon = aged(dragons.add(ALICE, END_WELL), AGELESS.length());
         runFor(20_000);
         assertEquals(List.of(), wells.laid);
-        assertEquals(600, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(600, dragons.get(dragon.id()).orElseThrow().towardEgg());
         wells.unseen.remove(END_WELL);
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
         runFor(20_000);
         // It stops next at the End's Well, to load for the Overworld, and lays both eggs it owes there.
         assertEquals(List.of(END_WELL, END_WELL), wells.laid);
-        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -713,7 +713,7 @@ class RoutingTest {
         runFor(40_000);
         assertEquals(900, dragons.get(dragon.id()).orElseThrow().cargo());
         assertEquals(List.of(), wells.laid);
-        assertEquals(0, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(0, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -728,7 +728,7 @@ class RoutingTest {
         // Its first load of 200 is 50 more as an adult, an egg owed it cannot lay at the Nether Well, so lays
         // as it next loads at the End's; senior, nothing it carries counts toward another.
         assertEquals(List.of(END_WELL), wells.laid);
-        assertEquals(40, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(40, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -824,7 +824,7 @@ class RoutingTest {
 
     /** @return {@code dragon} as one that has unloaded {@code cargo} over its life */
     private VoidDragonRecord aged(VoidDragonRecord dragon, long cargo) {
-        var aged = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), dragon.sinceEgg(), cargo);
+        var aged = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), dragon.towardEgg(), cargo);
         dragons.update(aged);
         return aged;
     }

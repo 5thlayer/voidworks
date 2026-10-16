@@ -57,7 +57,7 @@ class HarmTest {
     }
 
     /** A young dragon's speed is its health's share alone. */
-    private static final LifeStages YOUNG = new LifeStages(1_000, LifeStages.DEFAULT_SPEEDS, LifeStages.DEFAULT_LOADS);
+    private static final LifeStages YOUNG = new LifeStages(1_000, LifeStages.DEFAULTS);
 
     private static VoidDragonRecord ofHealth(int health) {
         return VoidDragonRecord.grown(UUID.randomUUID(), new Place(OVERWORLD, BlockPos.ZERO)).weakened(VoidDragonRecord.FULL_HEALTH - health);

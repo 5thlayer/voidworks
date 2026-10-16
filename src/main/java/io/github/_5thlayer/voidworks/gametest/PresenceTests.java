@@ -281,7 +281,7 @@ final class PresenceTests {
                     helper.assertTrue(egg.is(VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get()) && egg.getCount() == 1, "the dragon laid " + egg);
                     var after = record(helper, dragonId.get());
                     helper.assertTrue(after.rest().pos().equals(helper.absolutePos(WELL)), "the dragon laid at " + after.rest() + ", not the Well");
-                    helper.assertTrue(after.sinceEgg() == SHORT - 1, "the dragon's count is " + after.sinceEgg() + " after its egg, not what it carried over");
+                    helper.assertTrue(after.towardEgg() == SHORT - 1, "the dragon's count is " + after.towardEgg() + " after its egg, not what it carried over");
                     laid.get().discard();
                     helper.setBlock(EGG_NETWORK, VoidworksBlocks.VOIDSTONE.get());
                     var other = EggTests.player(helper);

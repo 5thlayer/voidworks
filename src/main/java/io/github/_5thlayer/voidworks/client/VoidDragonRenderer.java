@@ -21,8 +21,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -50,6 +50,19 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     private static final int MOST_BEAMS = 40;
     /** The same beams each frame, so they turn rather than flicker. */
     private static final long BEAM_SEED = 54L;
+    /** How long a beam is at the least, and how much longer at most by the end of its death, in model units. */
+    private static final float BEAM_LENGTH = 6.0F;
+    private static final float BEAM_GROWTH = 18.0F;
+    /** How wide a beam's fan is at the least, and how much wider at most. */
+    private static final float BEAM_WIDTH = 0.6F;
+    private static final float BEAM_WIDENING = 1.5F;
+    /** How much of its white a beam's heart has faded by the end of its death. */
+    private static final float BEAM_FADE = 0.5F;
+    /** The void's purple, clear, at a beam's tip. */
+    private static final int BEAM_TIP = ARGB.color(0, 190, 130, 255);
+    /** Where beams come out of the body, from the model's origin. */
+    private static final float BEAM_ORIGIN_Y = -1.0F;
+    private static final float BEAM_ORIGIN_Z = -2.0F;
 
     /** How many of its flight history's latest samples its model's neck and head read. */
     private static final int NECK = 6;
@@ -78,7 +91,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     @Override
     public void extractRenderState(VoidDragon dragon, State state, float partialTicks) {
         super.extractRenderState(dragon, state, partialTicks);
-        state.scale = dragon.grown() ? DRAGONLING_SCALE * VoidDragon.GROWN_SCALE * dragon.stage().size() : DRAGONLING_SCALE;
+        state.scale = dragon.grown() ? DRAGONLING_SCALE * VoidDragon.GROWN_SCALE * VoidDragon.size(dragon.stage()) : DRAGONLING_SCALE;
         state.deathTime = dragon.deathTime(partialTicks);
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
@@ -131,8 +144,8 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
      */
     private static void submitBeams(PoseStack poseStack, float dying, SubmitNodeCollector submitNodeCollector, RenderType renderType) {
         submitNodeCollector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
-            int heart = ARGB.colorFromFloat(1.0F - dying * 0.5F, 1.0F, 1.0F, 1.0F);
-            int tip = ARGB.color(0, 190, 130, 255);
+            int heart = ARGB.colorFromFloat(1.0F - dying * BEAM_FADE, 1.0F, 1.0F, 1.0F);
+            int tip = BEAM_TIP;
             var random = RandomSource.create(BEAM_SEED);
             int beams = Mth.ceil(dying * MOST_BEAMS);
             var origin = new Vector3f();
@@ -140,8 +153,8 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
             for (int i = 0; i < beams; i++) {
                 turn.rotationXYZ(random.nextFloat() * Mth.TWO_PI, random.nextFloat() * Mth.TWO_PI, random.nextFloat() * Mth.TWO_PI + dying * Mth.HALF_PI);
                 pose.rotate(turn);
-                float length = 6.0F + random.nextFloat() * 18.0F * dying;
-                float width = 0.6F + random.nextFloat() * 1.5F;
+                float length = BEAM_LENGTH + random.nextFloat() * BEAM_GROWTH * dying;
+                float width = BEAM_WIDTH + random.nextFloat() * BEAM_WIDENING;
                 var left = new Vector3f(-width, length, 0.0F);
                 var right = new Vector3f(width, length, 0.0F);
                 var back = new Vector3f(0.0F, length, width);
@@ -181,7 +194,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         submitNodeCollector.submitModel(model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
         if (state.deathTime > 0.0F) {
             poseStack.pushPose();
-            poseStack.translate(0.0F, -1.0F, -2.0F);
+            poseStack.translate(0.0F, BEAM_ORIGIN_Y, BEAM_ORIGIN_Z);
             float dying = state.deathTime / VoidDragon.DEATH_TICKS;
             submitBeams(poseStack, dying, submitNodeCollector, RenderTypes.dragonRays());
             submitBeams(poseStack, dying, submitNodeCollector, RenderTypes.dragonRaysDepth());

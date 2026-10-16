@@ -22,6 +22,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
@@ -52,6 +53,8 @@ public final class Voidworks {
         Families.register(modBus);
         UnmakingRecipes.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);
+        modBus.addListener(ModConfigEvent.Loading.class, VoidworksConfig::onLoad);
+        modBus.addListener(ModConfigEvent.Reloading.class, VoidworksConfig::onLoad);
         NeoForge.EVENT_BUS.addListener(Conduction::onLevelTick);
         Hatching.register();
         DragonPresences.register();

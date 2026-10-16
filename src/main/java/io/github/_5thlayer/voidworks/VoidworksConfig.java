@@ -8,6 +8,7 @@ import java.util.List;
 import io.github._5thlayer.voidworks.dragon.LifeStages;
 import io.github._5thlayer.voidworks.mutation.UnmakingYield;
 import io.github._5thlayer.voidworks.siphon.SiphonTier;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -51,6 +52,9 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.LongValue LIFE_STAGE_MOTES;
     private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_SPEEDS;
     private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_LOADS;
+
+    /** How dragons age, read from the config once a load of it; null until read. */
+    private static volatile LifeStages lifeStages;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -316,8 +320,20 @@ public final class VoidworksConfig {
         return LIFE_STAGE_MOTES.getAsLong();
     }
 
-    /** @return how Void Dragons age, at the configured stage length and factors */
+    /** @return how Void Dragons age, at the configured stage length and factors, read once a load of the config */
     public static LifeStages lifeStages() {
-        return new LifeStages(lifeStageMotes(), List.copyOf(LIFE_STAGE_SPEEDS.get()), List.copyOf(LIFE_STAGE_LOADS.get()));
+        var stages = lifeStages;
+        if (stages == null) {
+            stages = LifeStages.of(lifeStageMotes(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get());
+            lifeStages = stages;
+        }
+        return stages;
+    }
+
+    /** Forgets what was read of the config as it loads or reloads, so it is read afresh. */
+    public static void onLoad(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == SPEC) {
+            lifeStages = null;
+        }
     }
 }

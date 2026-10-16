@@ -116,9 +116,6 @@ public final class VoidDragon extends PathfinderMob {
     /** How far it rises each tick as it dies, as the Ender Dragon does. */
     private static final double DEATH_RISE = 0.1;
 
-    /** Ticks it has been dying, on either side, counted from when it began. */
-    private int deathTicks;
-
     /**
      * Where a presence's rider sits, in blocks from where it stands: on top of its body, where its wings
      * meet. The Ender Dragon's model, which its flapping lifts 2 blocks, has its body's top about 3.2
@@ -159,14 +156,17 @@ public final class VoidDragon extends PathfinderMob {
     /** The heading, as a mob's, a presence keeps as it lands, sits and takes off: synced, since its model follows it rather than its body. */
     private static final EntityDataAccessor<Float> DATA_PERCH_YAW = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.FLOAT);
     /** Where a presence lands and sits, while it does: synced, for how far its model's neck has to settle. */
+    private static final EntityDataAccessor<Optional<BlockPos>> DATA_SEAT = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
     /** Its dragon's life stage, by which a grown presence is sized. */
     private static final EntityDataAccessor<Byte> DATA_STAGE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
     /** Whether it plays its dragon's death of old age. */
     private static final EntityDataAccessor<Boolean> DATA_DYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Optional<BlockPos>> DATA_SEAT = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
 
     private static final String OWNER_KEY = "owner";
     private static final String TICKS_TO_GROW_KEY = "ticks_to_grow";
+
+    /** Ticks it has been dying, on either side, counted from when it began. */
+    private int deathTicks;
 
     /** Where its body has been, for its model's neck and tail. */
     public final DragonFlightHistory flightHistory = new DragonFlightHistory();
@@ -536,6 +536,16 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
+    /** @return how much a grown presence of a dragon at {@code stage} is scaled from {@link #GROWN_SCALE} */
+    public static float size(LifeStage stage) {
+        return switch (stage) {
+            case YOUNG -> 0.8F;
+            case ADULT -> 1.0F;
+            case SENIOR -> 1.1F;
+            case OLD -> 1.2F;
+        };
+    }
+
     /** @return its dragon's life stage, by which it is sized */
     public LifeStage stage() {
         return LifeStage.values()[entityData.get(DATA_STAGE)];
@@ -879,7 +889,7 @@ public final class VoidDragon extends PathfinderMob {
     @Override
     protected EntityDimensions getDefaultDimensions(Pose pose) {
         var dimensions = super.getDefaultDimensions(pose);
-        return grown() ? dimensions.scale(GROWN_SCALE * stage().size()) : dimensions;
+        return grown() ? dimensions.scale(GROWN_SCALE * size(stage())) : dimensions;
     }
 
     @Override

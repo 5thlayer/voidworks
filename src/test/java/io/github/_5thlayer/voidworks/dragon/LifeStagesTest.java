@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -21,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class LifeStagesTest {
 
     private static final long STAGE = 1_000;
-    private static final LifeStages STAGES = new LifeStages(STAGE, LifeStages.DEFAULT_SPEEDS, LifeStages.DEFAULT_LOADS);
+    private static final LifeStages STAGES = new LifeStages(STAGE, LifeStages.DEFAULTS);
     private static final Place HERE = new Place(Identifier.withDefaultNamespace("overworld"), BlockPos.ZERO);
 
     @Test
@@ -66,6 +67,14 @@ class LifeStagesTest {
         // Crossing out of it, only what lies before its end.
         assertEquals(200, STAGES.towardEggs(1_800, 700));
         assertEquals(0, STAGES.towardEggs(2_000, 500));
+    }
+
+    @Test
+    void configuredFactorsAreTakenAsTheDefaultsUnlessEachIsFourPositiveOnes() {
+        var configured = LifeStages.of(STAGE, List.of(2.0, 1.0, 0.5, 0.25), List.of(1.0, 1.5, 2.0, 3.0));
+        assertEquals(new LifeStages.Factors(0.5, 2.0), configured.factors().get(LifeStage.SENIOR));
+        assertEquals(STAGES, LifeStages.of(STAGE, List.of(1.0, 1.0), LifeStages.DEFAULT_LOADS));
+        assertEquals(STAGES, LifeStages.of(STAGE, LifeStages.DEFAULT_SPEEDS, List.of(1.0, 0.0, 1.0, 1.0)));
     }
 
     private static VoidDragonRecord dragon(int health, long cargo) {

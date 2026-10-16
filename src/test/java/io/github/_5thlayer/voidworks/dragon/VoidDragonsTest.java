@@ -127,7 +127,7 @@ class VoidDragonsTest {
         dragons.update(carried);
         var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
-        assertEquals(3_000, read.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(3_000, read.get(dragon.id()).orElseThrow().towardEgg());
         assertEquals(5_000, read.get(dragon.id()).orElseThrow().cargo());
     }
 
@@ -140,7 +140,7 @@ class VoidDragonsTest {
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
         assertTrue(read.load().isEmpty());
         assertTrue(read.trip().isEmpty());
-        assertEquals(0, read.sinceEgg());
+        assertEquals(0, read.towardEgg());
         assertEquals(HERE, read.rest());
     }
 
@@ -151,7 +151,7 @@ class VoidDragonsTest {
                   "rest": {"dimension": "minecraft:overworld", "pos": [1, 64, 2]}, "since_egg": 40000}]
                 """);
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
-        assertEquals(0, read.sinceEgg());
+        assertEquals(0, read.towardEgg());
         assertEquals(0, read.cargo());
     }
 

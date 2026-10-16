@@ -32,7 +32,7 @@ class DragonReportTest {
     private static final Place HERE = new Place(OVERWORLD, new BlockPos(0, 64, 0));
     private static final Place THERE = new Place(OVERWORLD, new BlockPos(640, 64, 0));
     private static final Place CALLED = new Place(OVERWORLD, new BlockPos(0, 64, 640));
-    private static final LifeStages STAGES = new LifeStages(1_000, LifeStages.DEFAULT_SPEEDS, LifeStages.DEFAULT_LOADS);
+    private static final LifeStages STAGES = new LifeStages(1_000, LifeStages.DEFAULTS);
     private static final Component THERE_NAME = Component.literal("Smeltery");
 
     @Test

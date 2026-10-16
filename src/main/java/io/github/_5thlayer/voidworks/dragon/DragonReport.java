@@ -78,6 +78,16 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
                 .map(dragon -> of(dragon, place -> DragonRiding.label(server, place), nameOf(server, dragon.owner()), VoidworksConfig.lifeStages()));
     }
 
+    /** @return the translation key of {@code stage}'s name, as Jade shows it */
+    private static String stageKey(LifeStage stage) {
+        return switch (stage) {
+            case YOUNG -> "voidworks.jade.dragon.young";
+            case ADULT -> "voidworks.jade.dragon.adult";
+            case SENIOR -> "voidworks.jade.dragon.senior";
+            case OLD -> "voidworks.jade.dragon.old";
+        };
+    }
+
     /** @return the name of the player {@code id}, online or once seen on {@code server}, if it has one */
     static Optional<String> nameOf(MinecraftServer server, UUID id) {
         var online = server.getPlayerList().getPlayer(id);
@@ -103,7 +113,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
                 ? Component.translatable("voidworks.jade.dragon.carrying_nothing")
                 : Component.translatable("voidworks.jade.dragon.carrying", carried()));
         lines.add(Component.translatable("voidworks.jade.dragon.health", health, VoidDragonRecord.FULL_HEALTH));
-        lines.add(Component.translatable(stage.key()));
+        lines.add(Component.translatable(stageKey(stage)));
         lines.add(ownerLine(owner));
         return lines;
     }
