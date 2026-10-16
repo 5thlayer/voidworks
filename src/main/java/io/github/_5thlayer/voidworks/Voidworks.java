@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks;
 
+import io.github._5thlayer.libworks.gallery.GalleryPack;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.DensityTooltip;
@@ -52,6 +53,7 @@ public final class Voidworks {
         VoidworksItems.register(modBus);
         VoidworksEntities.register(modBus);
         modBus.addListener(WorksTabContents::add);
+        GalleryPack.register(modBus, MOD_ID);
         Displacement.register(modBus);
         VoidTaking.register(modBus);
         DensityTooltip.register();

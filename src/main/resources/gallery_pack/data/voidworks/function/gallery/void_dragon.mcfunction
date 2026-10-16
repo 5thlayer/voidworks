@@ -4,9 +4,7 @@
 # diving into one shaft and emerging from the other.
 #
 # The plot runs from ~2 to ~25 east and from ~-12 to the sign at ~0 south, 16 high, cleared as
-# every scene's is.
-# The dragons resting there or on a trip to or from it go first, so building it again leaves one.
-voidworks dragon remove ~2 ~-1 ~-12 ~25 ~15 ~
+# every scene's is, its dragons with it, so building it again leaves one.
 function voidworks:gallery/clear
 
 # The reservoir, its core in its south wall facing the sign, a Voidstone pillar against its west

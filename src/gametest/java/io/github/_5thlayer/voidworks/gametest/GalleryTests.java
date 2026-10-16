@@ -3,13 +3,15 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
-import com.mojang.authlib.GameProfile;
+import io.github._5thlayer.libworks.gallery.GalleryPack;
+import io.github._5thlayer.libworks.testkit.GalleryCheck;
+import io.github._5thlayer.libworks.testkit.GalleryCheck.Layout;
+import io.github._5thlayer.libworks.testkit.GalleryCheck.Scene;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
@@ -19,7 +21,6 @@ import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
-import io.github._5thlayer.voidworks.gallery.GalleryPack;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
@@ -27,49 +28,37 @@ import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.gametest.framework.GameTestInfo;
-import net.minecraft.gametest.framework.GameTestListener;
-import net.minecraft.gametest.framework.GameTestRunner;
+import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.PermissionSet;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
-import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
- * The Gallery pack (ADR 0008), through {@link GalleryCheck}, as FactoryWorks #691's shared check will
- * run it: offered and off, its build running every command without failing, and each scene's key
- * block where it stands. Beyond the build, the Void Dragon scene's dragon sets off from its
- * reservoir for the other Well, and building the scene again leaves one dragon. Each test turns the
- * pack on, which reloads the server's data, and off again, passing or failing, so each runs in a
- * batch of its own.
+ * The Gallery pack (libworks ADR 0010), through libworks' {@link GalleryCheck}: offered and off, its
+ * build running every command without failing, and each scene's key block where it stands. Beyond
+ * the build, the Void
+ * Dragon scene's dragon sets off from its reservoir for the other Well, and building the scene again
+ * leaves one dragon; the Density, Dormant machines and Overworld Displacer scenes do their work; and
+ * a scene's sign, clicked, builds it again. Each test turns the pack on, which reloads the server's
+ * data, and off again, passing or failing, so each runs in a batch of its own.
  */
 final class GalleryTests {
 
-    private static final Identifier BUILD = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/build");
-    private static final Identifier VOID_DRAGON = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_dragon");
-    private static final Identifier DENSITY = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/density");
-    private static final Identifier DORMANT_MACHINES = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/dormant_machines");
-    private static final Identifier OVERWORLD_DISPLACER = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/overworld_displacer");
-    private static final Identifier VOID_CRUCIBLE = Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "gallery/void_crucible");
+    private static final Identifier VOID_DRAGON = GalleryPack.scene(Voidworks.MOD_ID, "void_dragon");
+    private static final Identifier DENSITY = GalleryPack.scene(Voidworks.MOD_ID, "density");
+    private static final Identifier DORMANT_MACHINES = GalleryPack.scene(Voidworks.MOD_ID, "dormant_machines");
+    private static final Identifier OVERWORLD_DISPLACER = GalleryPack.scene(Voidworks.MOD_ID, "overworld_displacer");
+    private static final Identifier VOID_CRUCIBLE = GalleryPack.scene(Voidworks.MOD_ID, "void_crucible");
 
-    /** How far east each scene's plot is of the one before it in its row, and how far north each row is of the last. */
-    private static final int PLOT_WIDTH = 24;
-    private static final int ROW_DEPTH = 16;
-    /** How many scenes a row holds. */
-    private static final int ROW = 3;
-    /** How many scenes {@code build} lays, the Void Dragon's first. */
-    private static final int SCENES = 12;
+    /** Three scenes a row, each row 16 blocks north of the last, as {@code gallery/build} lays them. */
+    private static final Layout ROWS = new Layout(3, 16);
 
     /** Where the gallery is run from: the platform's south-west corner, its plots spilling north and east of the platform. */
     private static final BlockPos ORIGIN = new BlockPos(0, 1, 8);
@@ -80,9 +69,9 @@ final class GalleryTests {
     private static final BlockPos SIGN = new BlockPos(14, 0, 0);
     /** The Density scene's four Displacers, from where it is run, coal's to diamond's, each on its pad of Voidstone. */
     private static final int[] DENSITY_XS = {5, 10, 15, 20};
-    /** A scene's plot, from where it is run, its floor included. */
-    private static final BlockPos PLOT_FROM = new BlockPos(2, -1, -12);
-    private static final BlockPos PLOT_TO = new BlockPos(25, 15, 0);
+
+    /** A test of one scene, run on its own from where the gallery is run, loads only the first plot. */
+    private static final int ONE_SCENE = 1;
 
     /** Two reloads, the build, and the dragon's first stop, with room to spare. */
     private static final int TICKS = 1_200;
@@ -91,6 +80,25 @@ final class GalleryTests {
     private static final int DISPLACER_TICKS = 2_400;
 
     private GalleryTests() {
+    }
+
+    /** The scenes in the order {@code build} lays them, each with a key block and where, from where the scene is run, its function places it. */
+    private static List<Scene> scenes() {
+        return List.of(
+                new Scene("void_dragon", RESERVOIR, VoidworksBlocks.VOID_WELL.get()),
+                new Scene("overworld_displacer", new BlockPos(14, 2, -4), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
+                // The game tests run in the Overworld, so the End and Nether scenes show their
+                // Displacers as item displays, over a pedestal behind their signs.
+                new Scene("end_displacer", SIGN, Blocks.OAK_SIGN),
+                new Scene("nether_displacer", SIGN, Blocks.OAK_SIGN),
+                new Scene("density", new BlockPos(20, 1, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
+                new Scene("voidstone_networks", new BlockPos(5, 0, -6), VoidworksBlocks.VOIDSTONE.get()),
+                new Scene("void_siphon_charging", new BlockPos(14, 0, -2), Blocks.CHEST),
+                new Scene("void_siphon_emptying", new BlockPos(14, 0, -2), Blocks.CHEST),
+                new Scene("dormant_machines", new BlockPos(14, 0, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
+                new Scene("mutation_chamber", new BlockPos(14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
+                new Scene("unmaking_chamber", new BlockPos(14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
+                new Scene("void_crucible", new BlockPos(14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get()));
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
@@ -108,76 +116,57 @@ final class GalleryTests {
                 GalleryTests::signReplays);
     }
 
+    /**
+     * libworks' build check, over every plot, written out to add what one key block a scene can't show: the Void
+     * Dragon scene's second Well, the Emptying scene's charged Siphon, and the End and Nether scenes'
+     * Displacers shown over their pedestals.
+     */
     private static void builds(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
-        GalleryCheck.assertOfferedAndOff(helper, GalleryPack.ID);
-        forceLoad(helper, true);
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
-                .thenExecute(() -> {
-                    GalleryCheck.assertRuns(helper, source, BUILD);
-                    GalleryCheck.assertKeyBlocks(helper, helper.absolutePos(ORIGIN), Map.ofEntries(
-                            Map.entry(RESERVOIR, VoidworksBlocks.VOID_WELL.get()),
-                            Map.entry(SHORT, VoidworksBlocks.VOID_WELL.get()),
-                            Map.entry(scene(1, 14, 2, -4), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
-                            // The game tests run in the Overworld, so the End and Nether scenes show
-                            // their Displacers as item displays, over a pedestal behind their signs.
-                            Map.entry(scene(2, SIGN), Blocks.OAK_SIGN),
-                            Map.entry(scene(3, SIGN), Blocks.OAK_SIGN),
-                            Map.entry(scene(4, 20, 1, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
-                            Map.entry(scene(5, 5, 0, -6), VoidworksBlocks.VOIDSTONE.get()),
-                            Map.entry(scene(6, 14, 0, -2), Blocks.CHEST),
-                            Map.entry(scene(7, 14, 0, -2), Blocks.CHEST),
-                            Map.entry(scene(8, 14, 0, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
-                            Map.entry(scene(9, 14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
-                            Map.entry(scene(10, 14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
-                            Map.entry(scene(11, 14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get())));
-                    var emptying = helper.getLevel().getBlockEntity(helper.absolutePos(ORIGIN.offset(scene(7, 14, 0, -2))));
-                    var siphon = emptying instanceof ChestBlockEntity chest ? chest.getItem(13) : ItemStack.EMPTY;
-                    helper.assertTrue(siphon.is(VoidworksItems.VOID_SIPHON.get()) && VoidSiphonItem.mode(siphon) == SiphonMode.EMPTY
-                                    && VoidSiphonItem.heldMotes(siphon).total() > 0,
-                            "the Emptying scene's chest holds " + siphon + ", not a charged Siphon set to empty");
-                    for (int index : new int[] {2, 3}) {
-                        var over = helper.absolutePos(ORIGIN.offset(scene(index, 14, 1, -2)));
-                        var shown = helper.getLevel().getEntitiesOfClass(Display.ItemDisplay.class, new AABB(over));
-                        helper.assertTrue(shown.size() == 1, "scene " + index + " shows " + shown.size() + " Displacers over its pedestal, not one");
-                    }
-                    off.set(clearAway(helper, source));
-                })
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+        var scenes = scenes();
+        var at = helper.absolutePos(ORIGIN);
+        var functions = helper.getLevel().getServer().getFunctions();
+        GalleryCheck.withPack(helper, Voidworks.MOD_ID, ORIGIN, ROWS, scenes.size(), (source, steps) -> steps.thenExecute(() -> {
+            GalleryCheck.assertLoads(helper, source, Voidworks.MOD_ID);
+            for (var scene : scenes) {
+                helper.assertTrue(functions.get(GalleryPack.scene(Voidworks.MOD_ID, scene.name())).isPresent(),
+                        "there is no scene function " + scene.name());
+            }
+            GalleryCheck.assertRuns(helper, source, GalleryPack.build(Voidworks.MOD_ID));
+            GalleryCheck.assertKeyBlocks(helper, at, ROWS, scenes);
+            var shortWell = sceneOrigin(at, scenes, "void_dragon").offset(SHORT);
+            helper.assertTrue(helper.getLevel().getBlockState(shortWell).is(VoidworksBlocks.VOID_WELL.get()),
+                    "the Void Dragon scene's second Well is not at " + shortWell.toShortString());
+            var emptying = helper.getLevel().getBlockEntity(sceneOrigin(at, scenes, "void_siphon_emptying").offset(14, 0, -2));
+            var siphon = emptying instanceof ChestBlockEntity chest ? chest.getItem(13) : ItemStack.EMPTY;
+            helper.assertTrue(siphon.is(VoidworksItems.VOID_SIPHON.get()) && VoidSiphonItem.mode(siphon) == SiphonMode.EMPTY
+                            && VoidSiphonItem.heldMotes(siphon).total() > 0,
+                    "the Emptying scene's chest holds " + siphon + ", not a charged Siphon set to empty");
+            for (var name : List.of("end_displacer", "nether_displacer")) {
+                var over = sceneOrigin(at, scenes, name).offset(14, 1, -2);
+                var shown = helper.getLevel().getEntitiesOfClass(Display.ItemDisplay.class, new AABB(over));
+                helper.assertTrue(shown.size() == 1, "scene " + name + " shows " + shown.size() + " Displacers over its pedestal, not one");
+            }
+        })).thenSucceed();
     }
 
     private static void dragonCarries(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
-        var owner = source.getPlayer().getUUID();
         var reservoir = Place.of(helper.getLevel(), helper.absolutePos(ORIGIN).offset(RESERVOIR));
         var shortWell = Place.of(helper.getLevel(), helper.absolutePos(ORIGIN).offset(SHORT));
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
-                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, VOID_DRAGON))
-                .thenWaitUntil(() -> {
-                    var dragon = only(helper, owner);
-                    helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().map(Trip::destination).equals(Optional.of(shortWell)),
-                            "the scene's dragon is " + dragon + ", not setting off from the reservoir for the other Well");
-                })
-                .thenExecute(() -> {
-                    GalleryCheck.assertRuns(helper, source, VOID_DRAGON);
-                    var dragon = only(helper, owner);
-                    helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().isEmpty(),
-                            "building the scene again left " + dragon + ", not a dragon resting at the reservoir");
-                    off.set(clearAway(helper, source));
-                })
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+        oneScene(helper, (source, steps) -> {
+            var owner = source.getPlayer().getUUID();
+            steps.thenExecute(() -> GalleryCheck.assertRuns(helper, source, VOID_DRAGON))
+                    .thenWaitUntil(() -> {
+                        var dragon = only(helper, owner);
+                        helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().map(Trip::destination).equals(Optional.of(shortWell)),
+                                "the scene's dragon is " + dragon + ", not setting off from the reservoir for the other Well");
+                    })
+                    .thenExecute(() -> {
+                        GalleryCheck.assertRuns(helper, source, VOID_DRAGON);
+                        var dragon = only(helper, owner);
+                        helper.assertTrue(dragon.rest().equals(reservoir) && dragon.trip().isEmpty(),
+                                "building the scene again left " + dragon + ", not a dragon resting at the reservoir");
+                    });
+        });
     }
 
     /**
@@ -185,13 +174,7 @@ final class GalleryTests {
      * holds the motes one harvest of that Density yields.
      */
     private static void densityYields(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
+        oneScene(helper, (source, steps) -> steps
                 .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DENSITY))
                 .thenWaitUntil(() -> {
                     for (int density = 1; density <= DENSITY_XS.length; density++) {
@@ -204,42 +187,24 @@ final class GalleryTests {
                         long yield = VoidworksConfig.motes(density);
                         helper.assertTrue(motes == yield, "Density " + density + "'s network holds " + motes + " motes, not " + yield);
                     }
-                })
-                .thenExecute(() -> off.set(clearAway(helper, source)))
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+                }));
     }
 
     /** The Dormant machines scene: its Chamber soaks its cost from the motes along the line, and wakes. */
     private static void dormantWakes(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
         var chamber = helper.absolutePos(ORIGIN).offset(14, 0, -6);
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
+        oneScene(helper, (source, steps) -> steps
                 .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DORMANT_MACHINES))
                 .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockEntity(chamber) instanceof Dormancy.Holder machine
-                        && machine.dormancy().awake(), "the scene's Chamber is not awake yet"))
-                .thenExecute(() -> off.set(clearAway(helper, source)))
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+                        && machine.dormancy().awake(), "the scene's Chamber is not awake yet")));
     }
 
     /** The Overworld Displacer scene: its chest gets the stone of every harvest, the last one too, and nothing lies loose. */
     private static void overworldDisplacerDelivers(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
         var displacer = helper.absolutePos(ORIGIN).offset(14, 2, -4);
         var chest = helper.absolutePos(ORIGIN).offset(14, 0, -4);
         var plot = new AABB(helper.absolutePos(ORIGIN).offset(10, -1, -10).getCenter(), helper.absolutePos(ORIGIN).offset(18, 6, -2).getCenter());
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
+        oneScene(helper, (source, steps) -> steps
                 .thenExecute(() -> GalleryCheck.assertRuns(helper, source, OVERWORLD_DISPLACER))
                 .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockState(displacer).is(VoidworksBlocks.VOIDSTONE.get()),
                         "the scene's Displacer is not Voidstone yet"))
@@ -249,66 +214,39 @@ final class GalleryTests {
                     var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, plot).stream().map(ItemEntity::getItem).toList();
                     helper.assertTrue(stone == VoidworksConfig.zone() && loose.isEmpty(),
                             "the chest holds " + stone + " stone, not " + VoidworksConfig.zone() + ", and the plot holds loose " + loose);
-                    off.set(clearAway(helper, source));
-                })
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+                }));
     }
 
     /** A scene's sign, clicked, builds the scene again where it stands: here the Crucible, taken away. */
     private static void signReplays(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        var source = operator(helper);
         var crucible = helper.absolutePos(ORIGIN).offset(14, 1, -6);
         var sign = helper.absolutePos(ORIGIN).offset(SIGN);
-        clearAwayIfItFails(helper, source);
-        var on = GalleryCheck.select(server, GalleryPack.ID, true);
-        var off = new AtomicReference<CompletableFuture<Void>>();
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(on.isDone(), "the Gallery pack is not on yet"))
-                .thenExecute(() -> {
-                    GalleryCheck.assertRuns(helper, source, VOID_CRUCIBLE);
-                    helper.getLevel().removeBlock(crucible, false);
-                    helper.assertTrue(helper.getLevel().getBlockEntity(sign) instanceof SignBlockEntity entity
-                                    && entity.executeClickCommandsIfPresent(helper.getLevel(), source.getPlayer(), sign, true),
-                            "the scene's sign runs no command when clicked");
-                    helper.assertTrue(helper.getLevel().getBlockState(crucible).is(VoidworksBlocks.VOID_CRUCIBLE.get()),
-                            "clicking the sign did not build the Crucible again where it stood");
-                    var plot = AABB.encapsulatingFullBlocks(helper.absolutePos(ORIGIN.offset(PLOT_FROM)), helper.absolutePos(ORIGIN.offset(PLOT_TO)));
-                    var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, plot);
-                    helper.assertTrue(loose.isEmpty(), "building the scene again left items loose: " + loose.stream().map(ItemEntity::getItem).toList());
-                    off.set(clearAway(helper, source));
-                })
-                .thenWaitUntil(() -> assertOff(helper, off))
-                .thenSucceed();
+        oneScene(helper, (source, steps) -> steps.thenExecute(() -> {
+            GalleryCheck.assertRuns(helper, source, VOID_CRUCIBLE);
+            helper.getLevel().removeBlock(crucible, false);
+            helper.assertTrue(helper.getLevel().getBlockEntity(sign) instanceof SignBlockEntity entity
+                            && entity.executeClickCommandsIfPresent(helper.getLevel(), source.getPlayer(), sign, true),
+                    "the scene's sign runs no command when clicked");
+            helper.assertTrue(helper.getLevel().getBlockState(crucible).is(VoidworksBlocks.VOID_CRUCIBLE.get()),
+                    "clicking the sign did not build the Crucible again where it stood");
+            var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, AABB.of(GalleryCheck.plot(helper.absolutePos(ORIGIN))));
+            helper.assertTrue(loose.isEmpty(), "building the scene again left items loose: " + loose.stream().map(ItemEntity::getItem).toList());
+        }));
     }
 
-    /** @return the position, from where the gallery is run, of {@code pos} in scene {@code index}, the Void Dragon's 0 */
-    private static BlockPos scene(int index, BlockPos pos) {
-        return pos.east(PLOT_WIDTH * (index % ROW)).north(ROW_DEPTH * (index / ROW));
-    }
-
-    /**
-     * Keeps the chunks the whole gallery stands in loaded, or not, as a player standing where it is
-     * run would: the game test server loads only those near the test.
-     */
-    private static void forceLoad(GameTestHelper helper, boolean load) {
-        var from = ChunkPos.containing(helper.absolutePos(ORIGIN.offset(PLOT_FROM).north(ROW_DEPTH * ((SCENES - 1) / ROW))));
-        var to = ChunkPos.containing(helper.absolutePos(ORIGIN.offset(scene(ROW - 1, PLOT_TO))));
-        for (int x = Math.min(from.x(), to.x()); x <= Math.max(from.x(), to.x()); x++) {
-            for (int z = Math.min(from.z(), to.z()); z <= Math.max(from.z(), to.z()); z++) {
-                helper.getLevel().setChunkForced(x, z, load);
+    /** Where the scene named {@code name} is run from, as {@code build} lays {@code scenes} from {@code at}, absolute. */
+    private static BlockPos sceneOrigin(BlockPos at, List<Scene> scenes, String name) {
+        for (int index = 0; index < scenes.size(); index++) {
+            if (scenes.get(index).name().equals(name)) {
+                return ROWS.sceneOrigin(at, index);
             }
         }
+        throw new IllegalArgumentException("there is no scene " + name);
     }
 
-    private static BlockPos scene(int index, int x, int y, int z) {
-        return scene(index, new BlockPos(x, y, z));
-    }
-
-    /** Waits for the reload that turns the pack off, which a step failing before it never starts. */
-    private static void assertOff(GameTestHelper helper, AtomicReference<CompletableFuture<Void>> off) {
-        helper.assertTrue(off.get() != null && off.get().isDone(), "the Gallery pack is not off yet");
+    /** A test of a scene run on its own from where the gallery is run, on the first plot, in libworks' frame: passing once the pack is off again. */
+    private static void oneScene(GameTestHelper helper, BiConsumer<CommandSourceStack, GameTestSequence> steps) {
+        GalleryCheck.withPack(helper, Voidworks.MOD_ID, ORIGIN, ROWS, ONE_SCENE, steps).thenSucceed();
     }
 
     /** @return {@code owner}'s one dragon; fails the test unless they have exactly one */
@@ -316,62 +254,5 @@ final class GalleryTests {
         var dragons = SavedVoidDragons.of(helper.getLevel().getServer()).all().stream().filter(dragon -> dragon.owner().equals(owner)).toList();
         helper.assertTrue(dragons.size() == 1, "the runner has " + dragons.size() + " dragons, not one: " + dragons);
         return dragons.getFirst();
-    }
-
-    /**
-     * Takes away what the scene built, its dragons and its blocks, the Wells' records going with their
-     * cores, and turns the Gallery pack off.
-     *
-     * @return the reload, done once the pack is off
-     */
-    private static CompletableFuture<Void> clearAway(GameTestHelper helper, CommandSourceStack source) {
-        var commands = helper.getLevel().getServer().getCommands();
-        for (int index = 0; index < SCENES; index++) {
-            // One fill a plot, each within the fill limit.
-            var box = CommandTests.coordinates(helper, ORIGIN.offset(scene(index, PLOT_FROM)))
-                    + " " + CommandTests.coordinates(helper, ORIGIN.offset(scene(index, PLOT_TO)));
-            commands.performPrefixedCommand(source, "voidworks dragon remove " + box);
-            commands.performPrefixedCommand(source, "fill " + box + " minecraft:air");
-        }
-        commands.performPrefixedCommand(source, "kill @e[type=minecraft:item_display,distance=..200]");
-        commands.performPrefixedCommand(source, "kill @e[type=minecraft:item_frame,distance=..200]");
-        forceLoad(helper, false);
-        return GalleryCheck.select(helper.getLevel().getServer(), GalleryPack.ID, false);
-    }
-
-    /**
-     * Clears away if the test fails, which skips its own last steps, so a dragon it built carries on
-     * and the pack stays on under the batches after it.
-     */
-    private static void clearAwayIfItFails(GameTestHelper helper, CommandSourceStack source) {
-        helper.testInfo.addListener(new GameTestListener() {
-            @Override
-            public void testStructureLoaded(GameTestInfo testInfo) {
-            }
-
-            @Override
-            public void testPassed(GameTestInfo testInfo, GameTestRunner runner) {
-            }
-
-            @Override
-            public void testFailed(GameTestInfo testInfo, GameTestRunner runner) {
-                clearAway(helper, source);
-            }
-
-            @Override
-            public void testAddedForRerun(GameTestInfo original, GameTestInfo copy, GameTestRunner runner) {
-            }
-        });
-    }
-
-    /**
-     * An operator player of its own, standing where the gallery is run from, whose source runs it there.
-     * It is NeoForge's fake player, as {@link CommandTests}' is.
-     */
-    private static CommandSourceStack operator(GameTestHelper helper) {
-        ServerPlayer player = new FakePlayer(helper.getLevel(), new GameProfile(UUID.randomUUID(), "gallery-visitor"));
-        Vec3 feet = Vec3.atBottomCenterOf(helper.absolutePos(ORIGIN));
-        player.setPos(feet.x, feet.y, feet.z);
-        return player.createCommandSourceStack().withPermission(PermissionSet.ALL_PERMISSIONS).withPosition(feet);
     }
 }

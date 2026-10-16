@@ -26,6 +26,13 @@ scene writes those records as well as its blocks, and removes the dragons it bui
 again. A dragon a command makes is not hatched: it doubles no egg price, and it does not stop a
 dragon kill bringing back the founder egg.
 
+**Amended.** libworks-runtime 0.1.10 carries the helper and the check
+([libworks#31](https://github.com/5thlayer/libworks/issues/31)), and Voidworks took them: libworks'
+`GalleryPack` offers the pack, at the same id and under the same name, and its `GalleryCheck` lays
+the gallery in rows and runs the game tests in its pack frame, which runs `gallery/clear` on each
+plot before clearing it away. Voidworks' own registration and check are gone, and `gallery/clear`
+removes a plot's dragons, so the frame leaves none behind.
+
 ## Considered options
 
 - **Wait for libworks**: the dragon goes unchecked by eye until a libworks release and the
@@ -43,7 +50,7 @@ dragon kill bringing back the founder egg.
   of the whole gallery, and the same way again.
 - Building the dragon scene changes server-wide records as well as blocks, unlike #691's other
   galleries, which change blocks alone. Its own Wells' records go with their cores, and its dragons
-  with its `dragon remove`, so building it again leaves one dragon.
+  with `gallery/clear`'s `dragon remove`, so building it again leaves one dragon.
 - A scene is replayed from its own sign: a click event runs its function again, rebuilding it from
   the start, so a scene that runs out (a Displacer's harvests, a Dormant machine waking) can be
   watched after `build` has laid out the whole gallery. A sign needs no setting, where a command block

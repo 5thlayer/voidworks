@@ -664,16 +664,19 @@ Farming up a ladder is allowed, the farm's yield halving or worse at each step.
 ## The Gallery pack
 
 Voidworks ships a **Gallery pack**, as FactoryWorks [#691](https://github.com/5thlayer/factoryworks/issues/691)
-plans for every Module in the FactoryWorks Showcase, ahead of libworks
-([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)): an
-optional datapack in its jar, "Voidworks Gallery", offered in the Data Packs screen and off by
-default, holding functions only. An operator player turns it on and runs `voidworks:gallery/build`,
-which lays the Module's features out as working scenes in a row, one function per scene,
-`voidworks:gallery/<scene>`, that also builds on its own.
+plans for every Module in the FactoryWorks Showcase
+([ADR 0008](../adr/0008-voidworks-ships-an-optional-gallery-pack-ahead-of-libworks.md)), offered
+by libworks' `GalleryPack` (libworks ADR 0010): an optional datapack in its jar, "Voidworks
+Gallery", offered in the Data Packs screen and off by default, holding functions only. An operator
+player turns it on and runs `voidworks:gallery/build`, which lays the Module's features out as
+working scenes in rows of three, one function per scene, `voidworks:gallery/<scene>`, that also
+builds on its own.
 
 - **Layout.** On the world's axes, whichever way the player faces: a scene's plot starts 2 blocks
-  east of where it is run, at the player's feet, and `build` runs each further scene 24 blocks east
-  of the last (`execute positioned ~24 ~ ~`, then `~48`), so its plot follows.
+  east of where it is run, at the player's feet, and `build` runs each further scene of a row 24
+  blocks east of the last (`execute positioned ~24 ~ ~`, then `~48`), and each row 16 blocks north
+  of the one before (`~ ~ ~-16`), so the whole gallery stays near enough to the player for its
+  machines to keep working. `voidworks:gallery/clear` clears one scene's plot, its dragons with it.
   A scene clears its plot, 16 blocks high, floors it with stone and builds on it, so it builds the
   same way wherever it is run and every time. A sign at its south front names the feature, in the
   player's language.
@@ -694,14 +697,12 @@ which lays the Module's features out as working scenes in a row, one function pe
     Well core at `pos`. It is not hatched: it doubles no egg price.
   - `/voidworks dragon remove <from> <to>` removes every dragon, whoever's, resting in the box, in
     the runner's dimension, or on a trip to or from a place in it, and its presence with it.
-- **Tested** by the Module's game tests as #691's shared check will test it: the pack is offered and
-  off; `build`, run by an operator player, runs every command without failing, a failure naming the
+- **Tested** by the Module's game tests through libworks' `GalleryCheck`, in its pack frame, which
+  runs `gallery/clear` on each plot afterwards: the pack is offered and off; every gallery function
+  loads; `build`, run by an operator player, runs every command without failing, a failure naming the
   command; and each scene's key block, the dragon scene's two Well cores, stands where the scene
   puts it. A test of its own checks that the dragon scene's dragon sets off from the reservoir for
   the other Well, and that building it again leaves one dragon.
-- **Later.** A scene for each of the README's other features, and libworks' helper and check in
-  place of Voidworks' own once a runtime release carries them
-  ([libworks#30](https://github.com/5thlayer/libworks/issues/30)).
 
 ## Loops
 
