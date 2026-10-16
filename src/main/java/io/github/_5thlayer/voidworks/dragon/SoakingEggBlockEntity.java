@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * A soaking egg's block entity. It soaks its price through {@link Dormancy}, by the spend rule at
  * its own block, from the mote stores touching it, and once paid hatches a Dragonling its owner
- * owns. Its price is fixed when it starts soaking ({@link Hatchery}); an egg with no owner, which no
+ * owns, of the Line its egg fixes. Its price is fixed when it starts soaking ({@link Hatchery}); an egg with no owner, which no
  * player placed, never soaks.
  */
 public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy.Holder {
@@ -97,7 +97,7 @@ public final class SoakingEggBlockEntity extends BlockEntity implements Dormancy
         var dragonling = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.BREEDING);
         if (dragonling != null) {
             dragonling.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
-            dragonling.hatchFor(owner);
+            dragonling.hatchFor(owner, getBlockState().getValue(SoakingEggBlock.EGG).line());
             level.addFreshEntity(dragonling);
         }
         level.playSound(null, pos, SoundEvents.SNIFFER_EGG_HATCH, SoundSource.BLOCKS, 1.0F, 0.6F);

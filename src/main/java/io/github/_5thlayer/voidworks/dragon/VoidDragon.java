@@ -173,6 +173,7 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_DYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
 
     private static final String OWNER_KEY = "owner";
+    private static final String LINE_KEY = "line";
     private static final String TICKS_TO_GROW_KEY = "ticks_to_grow";
 
     /** Ticks it has been dying, on either side, counted from when it began. */
@@ -188,6 +189,8 @@ public final class VoidDragon extends PathfinderMob {
     private double flightY;
 
     private @Nullable UUID owner;
+    /** A Dragonling's Line, which its egg fixed and its grown dragon keeps. */
+    private Line line = Line.MOTE;
     /** A Dragonling's ticks left to grow, counted while its chunk is loaded. */
     private long ticksToGrow;
     /** A presence's dragon; null for a Dragonling. */
@@ -280,9 +283,15 @@ public final class VoidDragon extends PathfinderMob {
         goalSelector.addGoal(5, new RandomLookAroundGoal(this));
     }
 
-    /** Hatches it for {@code owner}, where it stands: that is its home, and it starts growing. */
+    /** Hatches it for {@code owner}, of the Mote line, where it stands: that is its home, and it starts growing. */
     public void hatchFor(UUID owner) {
+        hatchFor(owner, Line.MOTE);
+    }
+
+    /** Hatches it for {@code owner}, of {@code line}, where it stands: that is its home, and it starts growing. */
+    public void hatchFor(UUID owner, Line line) {
         this.owner = owner;
+        this.line = line;
         setHomeTo(blockPosition(), HOME_RADIUS);
         ticksToGrow = VoidworksConfig.dragonlingGrowTicks();
     }
@@ -297,6 +306,7 @@ public final class VoidDragon extends PathfinderMob {
         showStage(stage);
         dragon = record.id();
         owner = record.owner();
+        line = record.line();
         shownAt = record.rest();
         this.spot = spot;
         entityData.set(DATA_GROWN, true);
@@ -718,6 +728,11 @@ public final class VoidDragon extends PathfinderMob {
         return Optional.ofNullable(owner);
     }
 
+    /** @return a Dragonling's Line, which its egg fixed; a presence's is its dragon record's */
+    public Line line() {
+        return line;
+    }
+
     /** @return whether it is grown: a Void Dragon's presence rather than a Dragonling */
     public boolean grown() {
         return entityData.get(DATA_GROWN);
@@ -860,7 +875,7 @@ public final class VoidDragon extends PathfinderMob {
 
     /** Grown, it becomes a Void Dragon's record, resting where it grew up, and the Dragonling gives way to its presence. */
     private void growUp(ServerLevel level) {
-        var record = SavedVoidDragons.of(level.getServer()).add(owner, Place.of(level, blockPosition()));
+        var record = SavedVoidDragons.of(level.getServer()).add(owner, line, Place.of(level, blockPosition()));
         discard();
         level.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.NEUTRAL, 1.0F, 1.4F);
         level.sendParticles(ParticleTypes.REVERSE_PORTAL, getX(), getY() + 1.0, getZ(), 128, 2.0, 1.0, 2.0, 0.1);
@@ -984,6 +999,7 @@ public final class VoidDragon extends PathfinderMob {
         if (owner != null) {
             output.store(OWNER_KEY, UUIDUtil.CODEC, owner);
         }
+        output.store(LINE_KEY, Line.CODEC, line);
         output.putLong(TICKS_TO_GROW_KEY, ticksToGrow);
     }
 
@@ -991,6 +1007,8 @@ public final class VoidDragon extends PathfinderMob {
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
         owner = input.read(OWNER_KEY, UUIDUtil.CODEC).orElse(null);
+        // One hatched before Lines is of the Mote line.
+        line = input.read(LINE_KEY, Line.CODEC).orElse(Line.MOTE);
         // One hatched before Dragonlings grew starts growing now.
         ticksToGrow = input.getLong(TICKS_TO_GROW_KEY).orElseGet(() -> (long) VoidworksConfig.dragonlingGrowTicks());
     }

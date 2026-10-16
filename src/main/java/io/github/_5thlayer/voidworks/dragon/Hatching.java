@@ -23,7 +23,7 @@ import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
 /**
- * Where a dragon's life starts. Either egg, the vanilla egg or a Drained Dragon Egg, that a player
+ * Where a dragon's life starts. Any of the three eggs, the vanilla egg, a Drained or a Matter Dragon Egg, that a player
  * places touching a Voidstone network becomes a {@link SoakingEggBlock} the player owns; an egg that came
  * any other way, left on the exit portal, fallen or teleported, stays as it is and never soaks. And
  * while no player has hatched a dragon in the world, a dragon kill places the vanilla egg on the

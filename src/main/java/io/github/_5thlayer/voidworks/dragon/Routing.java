@@ -5,8 +5,10 @@ package io.github._5thlayer.voidworks.dragon;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -64,7 +66,8 @@ public final class Routing {
     private final int stopTicks;
     private final long eggMotes;
     private final LifeStages stages;
-    private final Cargo cargo;
+    /** What each Line's dragons carry. */
+    private final Map<Line, Cargo> cargoes = new EnumMap<>(Line.class);
 
     /**
      * @param load the most motes a dragon carries
@@ -81,7 +84,8 @@ public final class Routing {
         this.stopTicks = stopTicks;
         this.eggMotes = eggMotes;
         this.stages = stages;
-        this.cargo = new MoteCargo(wells);
+        cargoes.put(Line.MOTE, new MoteCargo(wells));
+        cargoes.put(Line.MATTER, new MatterCargo());
     }
 
     /**
@@ -220,10 +224,10 @@ public final class Routing {
         long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), trip.added().orElseThrow()) * VoidDragonRecord.WHOLE_SPEED, speed);
         long ridden = dive.ridden(unridden);
         long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
-        if (excess > at.map(stop -> cargo.room(stop, (long) healing * harm.motesPerPoint())).orElse(0L)) {
+        if (excess > at.map(stop -> cargo(dragon).room(stop, (long) healing * harm.motesPerPoint())).orElse(0L)) {
             return Optional.empty();
         }
-        var lightened = excess > 0 ? dragon.carrying(cargo.putBack(dragon.load(), dragon.rest(), excess)) : dragon;
+        var lightened = excess > 0 ? dragon.carrying(cargo(dragon).putBack(dragon.load(), dragon.rest(), excess)) : dragon;
         var healed = healed(lightened);
         return Optional.of(healed.on(Optional.of(trip.claiming(Math.min(trip.claimed(), healed.carried())).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
     }
@@ -307,7 +311,7 @@ public final class Routing {
     private VoidDragonRecord drop(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
         var place = trip.added().orElseThrow();
         var stopped = dragon.resting(place);
-        var after = stop(dragon.owner(), place).map(stop -> stopped.carrying(cargo.put(stopped.load(), place, stop, need(dragons, stop, dragon.id()), false))).orElse(stopped);
+        var after = stop(dragon.owner(), place).map(stop -> stopped.carrying(cargo(dragon).put(stopped.load(), place, stop, need(dragons, stop, dragon), false))).orElse(stopped);
         long dropped = stopped.carried() - after.carried();
         var laid = dropped > 0 ? laying(unloaded(after, dropped), place) : after;
         return laid.on(Optional.of(trip.claiming(Math.min(trip.claimed(), laid.carried())).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
@@ -317,15 +321,15 @@ public final class Routing {
     private VoidDragonRecord plan(VoidDragons dragons, VoidDragonRecord dragon, long now) {
         var owned = stops(dragon.owner());
         var needing = owned.stream()
-                .filter(stop -> need(dragons, stop, dragon.id()) > 0)
-                .sorted(Comparator.comparingLong((Stop stop) -> need(dragons, stop, dragon.id())).reversed())
+                .filter(stop -> need(dragons, stop, dragon) > 0)
+                .sorted(Comparator.comparingLong((Stop stop) -> need(dragons, stop, dragon)).reversed())
                 .toList();
         for (var destination : needing) {
             var source = owned.stream()
-                    .filter(stop -> deliverable(dragons, stop, destination, dragon.id()) > 0)
-                    .max(cargo.sources(destination));
+                    .filter(stop -> deliverable(dragons, stop, destination, dragon) > 0)
+                    .max(cargo(dragon).sources(destination));
             if (source.isPresent()) {
-                long claimed = Math.min(loadOf(dragon), Math.min(need(dragons, destination, dragon.id()), deliverable(dragons, source.get(), destination, dragon.id())));
+                long claimed = Math.min(loadOf(dragon), Math.min(need(dragons, destination, dragon), deliverable(dragons, source.get(), destination, dragon)));
                 var from = source.get().nearest(dragon.rest(), dive);
                 return setOff(dragon, Trip.planned(Optional.of(from), destination.nearest(from, dive), claimed, false,
                         Trip.Leg.TO_SOURCE), now);
@@ -343,8 +347,8 @@ public final class Routing {
         if (from.isEmpty() || to.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        long most = Math.min(loadOf(dragon), Math.min(need(dragons, to.get(), dragon.id()), deliverable(dragons, from.get(), to.get(), dragon.id())));
-        var loaded = cargo.take(from.get(), source, to.get(), most);
+        long most = Math.min(loadOf(dragon), Math.min(need(dragons, to.get(), dragon), deliverable(dragons, from.get(), to.get(), dragon)));
+        var loaded = cargo(dragon).take(from.get(), source, to.get(), most);
         if (loaded.isEmpty()) {
             return stopped.on(Optional.empty());
         }
@@ -359,7 +363,7 @@ public final class Routing {
     private VoidDragonRecord unload(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
         var stopped = dragon.resting(trip.destination());
         var after = stop(dragon.owner(), trip.destination())
-                .map(stop -> stopped.carrying(cargo.put(stopped.load(), trip.destination(), stop, trip.stow() ? cargo.room(stop) : need(dragons, stop, dragon.id()), trip.stow())))
+                .map(stop -> stopped.carrying(cargo(dragon).put(stopped.load(), trip.destination(), stop, trip.stow() ? cargo(dragon).room(stop) : need(dragons, stop, dragon), trip.stow())))
                 .orElse(stopped);
         long put = stopped.carried() - after.carried();
         if (put == 0) {
@@ -397,19 +401,19 @@ public final class Routing {
     private VoidDragonRecord send(VoidDragons dragons, VoidDragonRecord dragon, long now) {
         var owned = stops(dragon.owner());
         var needing = owned.stream()
-                .filter(stop -> cargo.wants(stop, dragon.load()))
-                .max(Comparator.comparingLong(stop -> need(dragons, stop, dragon.id())))
-                .filter(stop -> need(dragons, stop, dragon.id()) > 0);
+                .filter(stop -> cargo(dragon).wants(stop, dragon.load()))
+                .max(Comparator.comparingLong(stop -> need(dragons, stop, dragon)))
+                .filter(stop -> need(dragons, stop, dragon) > 0);
         if (needing.isPresent()) {
-            long claimed = Math.min(dragon.carried(), need(dragons, needing.get(), dragon.id()));
+            long claimed = Math.min(dragon.carried(), need(dragons, needing.get(), dragon));
             return setOff(dragon, Trip.planned(Optional.empty(), needing.get().nearest(dragon.rest(), dive), claimed, false,
                     Trip.Leg.TO_DESTINATION), now);
         }
         var roomiest = owned.stream()
-                .max(Comparator.comparingLong(stop -> room(dragons, stop, dragon.id())))
-                .filter(stop -> room(dragons, stop, dragon.id()) > 0);
+                .max(Comparator.comparingLong(stop -> room(dragons, stop, dragon)))
+                .filter(stop -> room(dragons, stop, dragon) > 0);
         if (roomiest.isPresent()) {
-            long claimed = Math.min(dragon.carried(), room(dragons, roomiest.get(), dragon.id()));
+            long claimed = Math.min(dragon.carried(), room(dragons, roomiest.get(), dragon));
             return setOff(dragon, Trip.planned(Optional.empty(), roomiest.get().nearest(dragon.rest(), dive), claimed, true,
                     Trip.Leg.TO_DESTINATION), now);
         }
@@ -479,36 +483,45 @@ public final class Routing {
         return stops(owner).stream().filter(stop -> stop.has(place)).findFirst();
     }
 
+    /** @return what {@code dragon}'s Line carries */
+    private Cargo cargo(VoidDragonRecord dragon) {
+        return cargoes.get(dragon.line());
+    }
+
     /**
-     * @return how much {@code from} offers {@code to} ({@link Cargo#offer}), less what dragons other than
-     *         {@code except}, whoever's, are on their way to load on its network, which is spoken for
+     * @return how much {@code from} offers {@code to} ({@link Cargo#offer}) of what {@code dragon} carries,
+     *         less what other dragons of its Line, whoever's, are on their way to load on its network, which
+     *         is spoken for
      */
-    private long deliverable(VoidDragons dragons, Stop from, Stop to, UUID except) {
-        long spokenFor = claimed(dragons, except,
+    private long deliverable(VoidDragons dragons, Stop from, Stop to, VoidDragonRecord dragon) {
+        long spokenFor = claimed(dragons, dragon,
                 trip -> trip.leg() == Trip.Leg.TO_SOURCE && trip.source().filter(from.network()::contains).isPresent());
-        return Math.max(0, cargo.offer(from, to) - spokenFor);
+        return Math.max(0, cargo(dragon).offer(from, to) - spokenFor);
     }
 
-    /** @return how much {@code stop} is short of ({@link Cargo#shortfall}), less what dragons other than {@code except} have claimed for its network */
-    private long need(VoidDragons dragons, Stop stop, UUID except) {
-        return Math.max(0, cargo.shortfall(stop) - claimedFor(dragons, stop, except));
+    /** @return how much {@code stop} is short of ({@link Cargo#shortfall}) of what {@code dragon} carries, less what other dragons of its Line have claimed for its network */
+    private long need(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
+        return Math.max(0, cargo(dragon).shortfall(stop) - claimedFor(dragons, stop, dragon));
     }
 
-    /** @return how much more {@code stop} takes ({@link Cargo#room}), less what dragons other than {@code except} have claimed for its network */
-    private long room(VoidDragons dragons, Stop stop, UUID except) {
-        return Math.max(0, cargo.room(stop) - claimedFor(dragons, stop, except));
+    /** @return how much more of what {@code dragon} carries {@code stop} takes ({@link Cargo#room}), less what other dragons of its Line have claimed for its network */
+    private long room(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
+        return Math.max(0, cargo(dragon).room(stop) - claimedFor(dragons, stop, dragon));
     }
 
-    /** @return the motes on their way to any Well on {@code stop}'s network on the trips of every dragon but {@code except}, whoever's */
-    private static long claimedFor(VoidDragons dragons, Stop stop, UUID except) {
-        return claimed(dragons, except, trip -> stop.network().contains(trip.destination()));
+    /** @return what is on its way to any Well on {@code stop}'s network on the trips of every dragon of {@code dragon}'s Line but it, whoever's */
+    private static long claimedFor(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
+        return claimed(dragons, dragon, trip -> stop.network().contains(trip.destination()));
     }
 
-    /** @return the motes claimed on the trips that are {@code such} of every dragon but {@code except}, whoever's */
-    private static long claimed(VoidDragons dragons, UUID except, Predicate<Trip> such) {
+    /**
+     * @return what is claimed on the trips that are {@code such} of every dragon of {@code dragon}'s Line but
+     *         it, whoever's: claims count in their Line's unit, so another Line's never bind it
+     */
+    private static long claimed(VoidDragons dragons, VoidDragonRecord dragon, Predicate<Trip> such) {
         return dragons.all().stream()
-                .filter(dragon -> !dragon.id().equals(except))
-                .flatMap(dragon -> dragon.trip().stream())
+                .filter(other -> !other.id().equals(dragon.id()) && other.line() == dragon.line())
+                .flatMap(other -> other.trip().stream())
                 .filter(such)
                 .mapToLong(Trip::claimed)
                 .sum();

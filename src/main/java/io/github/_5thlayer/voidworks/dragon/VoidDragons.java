@@ -33,12 +33,21 @@ public final class VoidDragons {
     }
 
     /**
-     * A Dragonling of {@code owner}'s has grown up at {@code rest}.
+     * A Dragonling of {@code owner}'s, of the Mote line, has grown up at {@code rest}.
      *
      * @return the new Void Dragon, at full health and resting there
      */
     public VoidDragonRecord add(UUID owner, Place rest) {
-        var dragon = VoidDragonRecord.grown(owner, rest);
+        return add(owner, Line.MOTE, rest);
+    }
+
+    /**
+     * A Dragonling of {@code owner}'s, of {@code line}, has grown up at {@code rest}.
+     *
+     * @return the new Void Dragon, at full health and resting there
+     */
+    public VoidDragonRecord add(UUID owner, Line line, Place rest) {
+        var dragon = VoidDragonRecord.grown(owner, line, rest);
         dragons.put(dragon.id(), dragon);
         onChange.run();
         return dragon;

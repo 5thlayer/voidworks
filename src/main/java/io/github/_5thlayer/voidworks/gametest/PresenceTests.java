@@ -267,7 +267,7 @@ final class PresenceTests {
                     reservoir(helper, owner, under);
                     var dragons = SavedVoidDragons.of(server);
                     var grown = dragons.add(owner.getUUID(), under);
-                    dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(),
+                    dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(),
                             VoidworksConfig.dragonEggMotes() - 1, VoidworksConfig.lifeStageMotes()));
                     dragonId.set(grown.id());
                 })

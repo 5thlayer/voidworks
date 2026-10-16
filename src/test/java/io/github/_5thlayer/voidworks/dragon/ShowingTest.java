@@ -53,7 +53,7 @@ class ShowingTest {
     }
 
     private static VoidDragonRecord dragon(Optional<Trip> trip) {
-        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), VoidDragonRecord.FULL_HEALTH, HERE, MoteLoad.NONE, trip, 0, 0);
+        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), Line.MOTE, VoidDragonRecord.FULL_HEALTH, HERE, MoteLoad.NONE, trip, 0, 0);
     }
 
     private static Optional<Trip> trip(Trip.Leg leg, long until) {

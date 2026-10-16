@@ -60,6 +60,6 @@ class HarmTest {
     private static final LifeStages YOUNG = new LifeStages(1_000, LifeStages.DEFAULTS);
 
     private static VoidDragonRecord ofHealth(int health) {
-        return VoidDragonRecord.grown(UUID.randomUUID(), new Place(OVERWORLD, BlockPos.ZERO)).weakened(VoidDragonRecord.FULL_HEALTH - health);
+        return VoidDragonRecord.grown(UUID.randomUUID(), Line.MOTE, new Place(OVERWORLD, BlockPos.ZERO)).weakened(VoidDragonRecord.FULL_HEALTH - health);
     }
 }

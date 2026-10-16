@@ -256,7 +256,7 @@ final class RideTests {
     private static VoidDragonRecord old(GameTestHelper helper, Rider owner, Place rest) {
         var dragons = SavedVoidDragons.of(helper.getLevel().getServer());
         var grown = dragons.add(owner.getUUID(), rest);
-        var old = new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0,
+        var old = new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0,
                 LifeStage.values().length * VoidworksConfig.lifeStageMotes() - 1);
         dragons.update(old);
         return old;

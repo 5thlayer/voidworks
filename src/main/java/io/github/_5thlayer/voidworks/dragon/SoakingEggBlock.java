@@ -6,6 +6,8 @@ package io.github._5thlayer.voidworks.dragon;
 import com.mojang.serialization.MapCodec;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -31,7 +33,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A dragon egg soaking up motes, {@code voidworks:soaking_dragon_egg}: what either egg becomes once a
+ * A dragon egg soaking up motes, {@code voidworks:soaking_dragon_egg}: what any egg becomes once a
  * player places it touching a mote store ({@link Hatching}). It is the vanilla egg's shape and
  * neither falls nor teleports. It shows how full it is in four {@link #STAGE stages}, glowing and
  * drawing in the void's sparks the more, and hatches a Dragonling once paid
@@ -50,6 +52,8 @@ public final class SoakingEggBlock extends BaseEntityBlock {
     public static final IntegerProperty STAGE = IntegerProperty.create("stage", 0, LAST_STAGE);
 
     private static final VoxelShape SHAPE = Block.column(14.0, 0.0, 16.0);
+
+    private static Fleck fleck = Level::addParticle;
 
     public SoakingEggBlock(Properties properties) {
         super(properties);
@@ -103,12 +107,36 @@ public final class SoakingEggBlock extends BaseEntityBlock {
         return new ItemStack(state.getValue(EGG).block());
     }
 
-    /** The void's sparks drawn into it, more at each stage. */
+    /**
+     * Has a watcher show a soaking Matter Dragon Egg's flecks with {@code show}, as the client does to tint
+     * them amber; vanilla's item particles take the item's sprite untinted.
+     */
+    public static void onFleck(Fleck show) {
+        fleck = show;
+    }
+
+    /** Shows one fleck of a Matter Dragon Egg at a point, moving so. */
+    @FunctionalInterface
+    public interface Fleck {
+        void show(Level level, ParticleOptions fleck, double x, double y, double z, double dx, double dy, double dz);
+    }
+
+    /**
+     * Drawn in, more at each stage: a Mote-line egg's the void's sparks, a Matter Dragon Egg flecks of
+     * itself.
+     */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        boolean matter = state.getValue(EGG) == EggKind.MATTER;
         for (int i = 0; i <= state.getValue(STAGE); i++) {
-            level.addParticle(ParticleTypes.REVERSE_PORTAL, pos.getX() + random.nextDouble(), pos.getY() + random.nextDouble(),
-                    pos.getZ() + random.nextDouble(), 0.0, 0.0, 0.0);
+            if (matter) {
+                fleck.show(level, new ItemParticleOption(ParticleTypes.ITEM, VoidworksBlocks.MATTER_DRAGON_EGG_ITEM.get()),
+                        pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.8, pos.getY() + 0.2 + random.nextDouble() * 0.7,
+                        pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.8, (random.nextDouble() - 0.5) * 0.1, 0.1, (random.nextDouble() - 0.5) * 0.1);
+            } else {
+                level.addParticle(ParticleTypes.REVERSE_PORTAL, pos.getX() + random.nextDouble(), pos.getY() + random.nextDouble(),
+                        pos.getZ() + random.nextDouble(), 0.0, 0.0, 0.0);
+            }
         }
     }
 

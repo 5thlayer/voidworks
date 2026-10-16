@@ -72,7 +72,7 @@ class DragonReportTest {
     @Test
     void itShowsItsLifeStage() {
         var dragon = dragon(Optional.empty(), new TreeMap<>(), VoidDragonRecord.FULL_HEALTH);
-        var old = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 0, 3_500);
+        var old = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.line(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 0, 3_500);
         var report = report(old, Optional.empty());
 
         assertEquals(LifeStage.OLD, report.stage());
@@ -125,7 +125,7 @@ class DragonReportTest {
     }
 
     private static VoidDragonRecord dragon(Optional<Trip> trip, SortedMap<Integer, Long> load, int health) {
-        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), health, HERE, new MoteLoad(load), trip, 0, 0);
+        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), Line.MOTE, health, HERE, new MoteLoad(load), trip, 0, 0);
     }
 
     private static Optional<Trip> trip(Trip.Leg leg) {

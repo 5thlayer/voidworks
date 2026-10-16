@@ -1,0 +1,7 @@
+{
+  "parent": "voidworks:block/tinted_dragon_egg",
+  "textures": {
+    "particle": "voidworks:block/drained_dragon_egg",
+    "all": "voidworks:block/drained_dragon_egg"
+  }
+}

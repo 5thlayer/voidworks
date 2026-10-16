@@ -1,0 +1,12 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "voidworks:block/matter_dragon_egg",
+    "tints": [
+      {
+        "type": "minecraft:constant",
+        "value": 16756782
+      }
+    ]
+  }
+}

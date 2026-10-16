@@ -1,0 +1,13 @@
+{
+  "rungs": [
+    {
+      "items": "#voidworks:rung/dragon_eggs/drained"
+    },
+    {
+      "items": "#voidworks:rung/dragon_eggs/matter",
+      "result": "voidworks:matter_dragon_egg",
+      "cost": 800,
+      "chance": 0.5
+    }
+  ]
+}

@@ -180,7 +180,7 @@ final class CommandTests {
 
     /** @return {@code dragon} on {@code trip}, which it is in no hurry to finish */
     private static VoidDragonRecord on(VoidDragonRecord dragon, Trip trip) {
-        return new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), Optional.of(trip), dragon.towardEgg(), dragon.cargo());
+        return new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.line(), dragon.health(), dragon.rest(), dragon.load(), Optional.of(trip), dragon.towardEgg(), dragon.cargo());
     }
 
     /** Asserts the command refused, saying {@code key}: a failure comes styled, the translation as its one sibling. */

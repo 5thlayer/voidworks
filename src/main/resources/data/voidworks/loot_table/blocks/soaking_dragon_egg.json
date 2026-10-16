@@ -29,6 +29,19 @@
               }
             }
           ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "voidworks:matter_dragon_egg",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "voidworks:soaking_dragon_egg",
+              "properties": {
+                "egg": "matter"
+              }
+            }
+          ]
         }
       ]
     }

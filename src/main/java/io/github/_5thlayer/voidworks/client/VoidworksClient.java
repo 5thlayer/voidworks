@@ -37,7 +37,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
  * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the Void Dragon
- * ({@link VoidDragonRenderer}) and the void taking a block ({@link VoidTakings}), and keeps the Void Pressure
+ * ({@link VoidDragonRenderer}), the void taking a block ({@link VoidTakings}) and a Matter Dragon Egg's amber
+ * ({@link EggTint}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
@@ -51,6 +52,7 @@ public final class VoidworksClient {
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         modBus.addListener(VoidworksClient::registerRenderers);
         VoidTakings.register(modBus);
+        EggTint.register(modBus);
         // Over the world but under the hotbar: a dragon's rider sees only the void through its dive.
         modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS,
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dive"), DiveOverlay::render));

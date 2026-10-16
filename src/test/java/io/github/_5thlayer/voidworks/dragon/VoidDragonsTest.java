@@ -167,6 +167,28 @@ class VoidDragonsTest {
     }
 
     @Test
+    void aDragonIsOfTheLineItHatchedOfAndASaveAndReloadKeepsIt() {
+        var matter = dragons.add(ALICE, Line.MATTER, HERE);
+        var mote = dragons.add(ALICE, HERE);
+        assertEquals(Line.MATTER, matter.line());
+        assertEquals(Line.MOTE, mote.line());
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(matter, read.get(matter.id()).orElseThrow());
+        assertEquals(mote, read.get(mote.id()).orElseThrow());
+    }
+
+    @Test
+    void aDragonSavedBeforeLinesReadsAsTheMoteLine() {
+        var saved = JsonParser.parseString("""
+                [{"id": [0, 0, 0, 1], "owner": [0, 0, 0, 2], "health": 100,
+                  "rest": {"dimension": "minecraft:overworld", "pos": [1, 64, 2]}, "load": {"5": 40}}]
+                """);
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
+        assertEquals(Line.MOTE, read.line());
+    }
+
+    @Test
     void aDiveSavedBeforeDragonsWeakenedArrivesWhenItWasTo() {
         var saved = JsonParser.parseString("""
                 {"destination": {"dimension": "minecraft:the_end", "pos": [-5, 70, 9]}, "claimed": 70,

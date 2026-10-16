@@ -78,8 +78,8 @@ class LifeStagesTest {
     }
 
     private static VoidDragonRecord dragon(int health, long cargo) {
-        var grown = VoidDragonRecord.grown(UUID.randomUUID(), HERE);
-        var aged = new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0, cargo);
+        var grown = VoidDragonRecord.grown(UUID.randomUUID(), Line.MOTE, HERE);
+        var aged = new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0, cargo);
         return health == VoidDragonRecord.FULL_HEALTH ? aged : aged.weakened(VoidDragonRecord.FULL_HEALTH - health);
     }
 }
