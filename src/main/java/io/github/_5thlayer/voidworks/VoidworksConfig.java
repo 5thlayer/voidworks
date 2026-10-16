@@ -46,6 +46,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGON_STOP_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_BLOCKS_PER_SECOND;
+    private static final ModConfigSpec.IntValue DRAGON_RIDDEN_DIVE_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_WEAKEN_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_HEAL_MOTES;
     private static final ModConfigSpec.LongValue DRAGON_EGG_MOTES;
@@ -146,6 +147,10 @@ public final class VoidworksConfig {
                 .comment("How many blocks apart two Void Wells are, in Overworld blocks, for each second a dive between them",
                         "takes: a Nether block counts eight, an End block one.")
                 .defineInRange("dragonDiveBlocksPerSecond", 64, 1, 1 << 20);
+        DRAGON_RIDDEN_DIVE_TICKS = builder
+                .comment("The most ticks a Void Dragon's dive takes with its owner riding it, however far; its load is cut by the",
+                        "share of time saved, so riding carries no more motes a second. A dive takes at least 2 seconds all the same.")
+                .defineInRange("dragonRiddenDiveTicks", 60, 0, 24000);
         DRAGON_WEAKEN_TICKS = builder
                 .comment("Ticks in which a Void Dragon diving between Void Wells loses a point of its health for each step the",
                         "Void Pressure at the worse of the dive's two ends is below the End's: twice as fast to or from the Nether",
@@ -298,6 +303,10 @@ public final class VoidworksConfig {
     /** @return Overworld blocks apart for each second a dive takes */
     public static int dragonDiveBlocksPerSecond() {
         return DRAGON_DIVE_BLOCKS_PER_SECOND.getAsInt();
+    }
+
+    public static int dragonRiddenDiveTicks() {
+        return DRAGON_RIDDEN_DIVE_TICKS.getAsInt();
     }
 
     /** @return ticks in which a diving Void Dragon loses a point of health for each step of pressure below the End's */

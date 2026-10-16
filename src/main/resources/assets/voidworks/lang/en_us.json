@@ -97,6 +97,7 @@
   "voidworks.dragon.coming": "A Void Dragon is coming",
   "voidworks.dragon.ride.cannot": "The dragon cannot dive to %s now",
   "voidworks.dragon.ride.mounted": "Strafe to pick a Well, jump to dive, sneak to get off",
+  "voidworks.dragon.ride.no_room": "The Well here has no room for what the dragon cannot carry with you to %s",
   "voidworks.dragon.ride.nowhere": "You have no other Void Well to dive to",
   "voidworks.dragon.ride.picked": "Jump to dive to %s",
   "voidworks.dragonling.feed.charging": "Set the Void Siphon to empty (sneak-use) to feed a Dragonling",
