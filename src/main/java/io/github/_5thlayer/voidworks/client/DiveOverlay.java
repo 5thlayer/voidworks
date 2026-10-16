@@ -44,10 +44,10 @@ final class DiveOverlay {
     private DiveOverlay() {
     }
 
-    /** Draws the void over the whole screen while the player rides a dragon through its dive. */
+    /** Draws the void over the whole screen while the player rides a dragon through its dive, once it has taken them into the shaft. */
     static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         var player = Minecraft.getInstance().player;
-        if (player == null || !(player.getVehicle() instanceof VoidDragon presence) || !presence.carrying()) {
+        if (player == null || !(player.getVehicle() instanceof VoidDragon presence) || !presence.inTheVoid()) {
             return;
         }
         int width = graphics.guiWidth();

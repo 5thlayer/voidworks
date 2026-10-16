@@ -151,6 +151,8 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_GROWN = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
     /** Whether a presence carries its rider through its dragon's dive, which it holds them in until it sets them down: synced, so every client seats them down the shaft. */
     private static final EntityDataAccessor<Boolean> DATA_CARRYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
+    /** Whether a presence carrying its rider has taken them down into the shaft, their eyes below its rim, where they see only the void: synced, for their own client to draw. */
+    private static final EntityDataAccessor<Boolean> DATA_IN_THE_VOID = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
     /** Where a presence is as to its seat ({@link Perch}): synced, so every client poses it sitting, landing or taking off. */
     private static final EntityDataAccessor<Byte> DATA_PERCH = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
     /** The heading, as a mob's, a presence keeps as it lands, sits and takes off: synced, since its model follows it rather than its body. */
@@ -251,6 +253,7 @@ public final class VoidDragon extends PathfinderMob {
         super.defineSynchedData(entityData);
         entityData.define(DATA_GROWN, false);
         entityData.define(DATA_CARRYING, false);
+        entityData.define(DATA_IN_THE_VOID, false);
         entityData.define(DATA_PERCH, (byte) Perch.FLYING.ordinal());
         entityData.define(DATA_PERCH_YAW, 0.0F);
         entityData.define(DATA_SEAT, Optional.empty());
@@ -515,9 +518,13 @@ public final class VoidDragon extends PathfinderMob {
     /**
      * Emerging, it rises to its spot's {@code risen} and then flies about its {@code over} at work;
      * diving, it goes down to its {@code under} and is gone into the void, unless it carries its rider,
-     * whom it holds there, out of sight, until it sets them down.
+     * whom it holds there, out of sight, until it sets them down. Its rider watches it start down, and
+     * sees the void once their eyes are below the shaft's mouth, the first open air over its rim.
      */
     private void passOn(ServerLevel level) {
+        if (showing == Showing.DIVING && carrying() && !inTheVoid() && getFirstPassenger() instanceof Entity rider && eyesOf(rider) < spot.emerges().getY()) {
+            entityData.set(DATA_IN_THE_VOID, true);
+        }
         var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? spot.under() : spot.risen()).subtract(position());
         double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
         if (way.length() > speed && ++passageTicks < MOST_PASSAGE_TICKS) {
@@ -527,6 +534,7 @@ public final class VoidDragon extends PathfinderMob {
         setDeltaMovement(Vec3.ZERO);
         if (showing == Showing.DIVING) {
             if (carrying() && isVehicle()) {
+                entityData.set(DATA_IN_THE_VOID, true);
                 setInvisible(true);
                 return;
             }
@@ -612,6 +620,7 @@ public final class VoidDragon extends PathfinderMob {
         entityData.set(DATA_DIVE_UNTIL, shown.until());
         entityData.set(DATA_DIVE_COLOUR, shown.colour());
         entityData.set(DATA_CARRYING, true);
+        getPassengers().forEach(DragonRiding::hide);
         pass(Showing.DIVING);
     }
 
@@ -623,6 +632,7 @@ public final class VoidDragon extends PathfinderMob {
     /** It lets its rider go, as it sets them down. */
     void release() {
         entityData.set(DATA_CARRYING, false);
+        entityData.set(DATA_IN_THE_VOID, false);
         bringing = false;
     }
 
@@ -636,6 +646,16 @@ public final class VoidDragon extends PathfinderMob {
         return entityData.get(DATA_CARRYING);
     }
 
+    /** @return whether it has taken the rider it carries down into the shaft, where they see only the void */
+    public boolean inTheVoid() {
+        return entityData.get(DATA_IN_THE_VOID);
+    }
+
+    /** @return the height of {@code rider}'s eyes, seated as it is now, where they are set this tick, after it moves */
+    private double eyesOf(Entity rider) {
+        return getPassengerRidingPosition(rider).y - rider.getVehicleAttachmentPoint(this).y + rider.getEyeHeight();
+    }
+
     /** @return what its rider is shown of the dive it carries them through, while it does */
     public DiveShown diveShown() {
         return new DiveShown(entityData.get(DATA_DIVE_LABEL), entityData.get(DATA_DIVE_FROM), entityData.get(DATA_DIVE_UNTIL),
@@ -643,12 +663,12 @@ public final class VoidDragon extends PathfinderMob {
     }
 
     /**
-     * Its rider sits on its back where its wings meet, turned as its model is, and through the dive
+     * Its rider sits on its back where its wings meet, turned as its model is, and once in the void
      * stands at its feet, down the shaft with it.
      */
     @Override
     protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
-        if (carrying()) {
+        if (inTheVoid()) {
             return passenger.getVehicleAttachmentPoint(this);
         }
         // Its model is turned by the heading its flight history keeps, half a turn from its own, so its tail lies that way.

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -105,6 +106,8 @@ final class RideTests {
                 TICKS, RideTests::mountsAndGetsOff);
         tests.testAlone("a_rider_strafes_to_pick_a_well_and_jumps_and_the_dragon_holds_them_through_the_dive_and_sets_them_down_on_its_rim",
                 TICKS, RideTests::picksAndDives);
+        tests.testAlone("a_rider_watches_the_dragon_start_down_and_sees_the_void_only_once_their_eyes_go_below_the_wells_rim",
+                TICKS, RideTests::seesTheVoidInTheShaft);
         tests.testAlone("the_well_a_rider_picks_is_a_stop_added_to_the_trip_which_gets_what_it_is_short_of_and_the_rest_goes_on",
                 TICKS, RideTests::addedStop);
         tests.testAlone("its_owner_standing_in_a_wells_shaft_calls_a_void_dragon_there_which_waits_while_they_stay", TICKS, RideTests::calls);
@@ -425,6 +428,69 @@ final class RideTests {
                     helper.assertTrue(shown.isPresent() && shown.get().blockPosition().closerThan(helper.absolutePos(HIGH_WELL), VoidDragon.RESTING_RADIUS + 8),
                             "the dragon is not seen at the high Well");
                 })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /**
+     * Jumping on a dragon hovering over the test's Well, its rider watches it start down, still on its
+     * back and unseen, and sees the void only once their eyes have gone below the Well's rim, into the
+     * shaft, until the dragon emerging at the high Well brings them up.
+     */
+    private static void seesTheVoidInTheShaft(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        // The first open air over the rim.
+        int rim = WellStructure.shaft(helper.absolutePos(WELL), Direction.NORTH).above(DragonPresences.MOUTH).getY();
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        var seen = new AtomicReference<Double>();
+        var unseen = new AtomicBoolean(true);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id()))
+                .thenWaitUntil(() -> {
+                    var shown = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(shown.isPresent() && shown.get().showing() == Showing.RESTING, "the dragon is not seen resting at the Well");
+                    presence.set(shown.get());
+                })
+                .thenExecute(() -> {
+                    presence.get().interact(owner, InteractionHand.MAIN_HAND, presence.get().position());
+                    owner.setLastClientInput(RIGHT);
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(Input.EMPTY))
+                .thenWaitUntil(() -> helper.assertTrue(presence.get().perch() == VoidDragon.Perch.FLYING, "the mounted dragon has not taken off"))
+                .thenExecute(() -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    helper.assertTrue(presence.get().carrying() && DragonRiding.inTheDive(owner), "jumping did not dive");
+                    helper.assertTrue(!presence.get().inTheVoid(), "the rider sees the void with their eyes at " + owner.getEyeY() + ", over the rim at " + rim);
+                    helper.assertTrue(owner.getY() > presence.get().getY() + 0.5, "the rider at " + owner.position() + " is not on the back of the diving dragon at " + presence.get().position());
+                })
+                .thenWaitUntil(() -> {
+                    if (!presence.get().inTheVoid()) {
+                        seen.set(owner.getEyeY());
+                        unseen.compareAndSet(true, owner.hasEffect(MobEffects.INVISIBILITY));
+                    }
+                    helper.assertTrue(presence.get().inTheVoid(), "the rider does not see the void");
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(unseen.get(), "the rider is seen as the dragon starts down");
+                    // The dragon goes down the shaft 0.6 blocks a tick: the last tick the rider saw the world, their eyes were just over the rim.
+                    helper.assertTrue(seen.get() != null && seen.get() >= rim && seen.get() < rim + 1.0,
+                            "the rider last saw the world with their eyes at " + seen.get() + ", the rim's air at " + rim);
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(presence.get().isRemoved() || presence.get().inTheVoid(), "the rider stopped seeing the void in the dive");
+                    helper.assertTrue(owner.getVehicle() instanceof VoidDragon emerging && emerging != presence.get(), "the rider is not brought up at the high Well");
+                })
+                .thenExecute(() -> {
+                    var emerging = (VoidDragon) owner.getVehicle();
+                    helper.assertTrue(!emerging.inTheVoid(), "the rider brought up at the high Well still sees the void");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(!owner.isPassenger(), "the rider has not been set down"))
                 .thenExecute(() -> clearAway(helper, owner, Set.of()))
                 .thenSucceed();
     }

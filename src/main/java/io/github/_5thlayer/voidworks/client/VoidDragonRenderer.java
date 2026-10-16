@@ -127,11 +127,11 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
 
     /**
      * Not drawn while it is invisible, holding its rider out of sight down a shaft through a dive, nor
-     * ever to the rider it carries, who sees only the void.
+     * to the rider it has taken into the shaft, who sees only the void.
      */
     @Override
     public boolean shouldRender(VoidDragon dragon, Frustum culler, double camX, double camY, double camZ) {
-        if (dragon.isInvisible() || dragon.carrying() && dragon.hasPassenger(entity -> entity == Minecraft.getInstance().getCameraEntity())) {
+        if (dragon.isInvisible() || dragon.inTheVoid() && dragon.hasPassenger(entity -> entity == Minecraft.getInstance().getCameraEntity())) {
             return false;
         }
         return super.shouldRender(dragon, culler, camX, camY, camZ);

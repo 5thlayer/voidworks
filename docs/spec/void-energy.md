@@ -368,7 +368,8 @@ Dragonling or a Void Dragon, and only old age kills a Void Dragon
   dive carries no more motes a second than the same dive unridden. A dragon holding more than that
   as the rider jumps first unloads the excess into the Well it is at, as an ordinary unload; if the
   Well's network has no room for all of it, the dragon does not dive, and the rider is told so
-  above the hotbar, staying mounted. Through a ridden dive the rider sees the void, its motes
+  above the hotbar, staying mounted. The rider watches the dragon start down, unseen from the jump
+  on, and once it has taken them into the shaft, their eyes below the Well's rim, sees the void, its motes
   swirling in, and in the middle of the screen the picked Well's label, as the picker showed it,
   over a bar that fills as the dive goes, in the destination dimension's colour (Overworld blue,
   Nether red, End pale yellow-green, a datapack map naming others, and the void's purple for any it
