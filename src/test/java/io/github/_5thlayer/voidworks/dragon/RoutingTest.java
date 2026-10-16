@@ -33,8 +33,8 @@ import org.junit.jupiter.api.Test;
  * stop, judged by the highest of their targets, and another owner's Wells there never bind it. Each
  * time it has carried a set number of motes since its last egg, it lays one at a Well it stops at.
  * Ridden, it waits at its stop for its rider, and dives to the Well they pick, a stop added to its
- * trip; called, the next of the owner's dragons to finish its stop comes to them and waits while they
- * stay.
+ * trip; called, one of the owner's dragons stopped at the Well called waits there, else the next to
+ * finish its stop comes to them, and waits while they stay.
  */
 class RoutingTest {
 
@@ -638,7 +638,7 @@ class RoutingTest {
     }
 
     @Test
-    void aDragonWithNothingToDoAnswersItsOwnersCallAtOnceAndWaitsWhileTheyStayInTheShaft() {
+    void aDragonWithNothingToDoAnswersItsOwnersCallAtOnceAndWaitsWhileTheyStay() {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
@@ -688,6 +688,135 @@ class RoutingTest {
         runFor(1_000);
         assertEquals(Optional.of(Trip.Leg.WAITING), leg(first));
         assertEquals(Optional.empty(), leg(second));
+    }
+
+    @Test
+    void aCalledDragonsDiveTakesNoMoreThanARiddenDive() {
+        routing = new Routing(wells, owners, RIDDEN_DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        var dragon = dragons.add(ALICE, OVERWORLD_WELL);
+        owners.calling.put(ALICE, END_WELL);
+        runFor(1);
+        assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
+        assertTrue(DIVE.ticks(OVERWORLD_WELL, END_WELL) > RIDDEN);
+        runFor(RIDDEN);
+        assertEquals(Optional.of(Trip.Leg.WAITING), leg(dragon));
+        assertEquals(END_WELL, dragons.get(dragon.id()).orElseThrow().rest());
+    }
+
+    @Test
+    void aCalledDragonCarriesItsLoadCutAsARiddenDiveDoesPuttingTheRestBackWhereItIs() {
+        routing = new Routing(wells, owners, RIDDEN_DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 50L, 3, 300L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 3, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(1);
+        assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        owners.calling.put(ALICE, OVERWORLD_WELL);
+        runFor(STOP);
+        var called = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
+        // 60 ticks of 400: 15 of its 100.
+        assertEquals(Map.of(4, 15L), called.load());
+        assertEquals(15, called.trip().orElseThrow().claimed());
+        assertEquals(Map.of(4, 35L, 3, 300L), wells.motes(END_WELL));
+        assertEquals(0, called.cargo(), "the motes it put back counted toward its ageing");
+    }
+
+    @Test
+    void aCalledDragonAwayFromItsOwnersWellsCarryingNothingTakesNoMoreThanARiddenDive() {
+        routing = new Routing(wells, owners, RIDDEN_DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        var hatched = dragons.add(ALICE, new Place(OVERWORLD, new BlockPos(0, 64, 0)));
+        owners.calling.put(ALICE, END_WELL);
+        runFor(1);
+        var trip = dragons.get(hatched.id()).orElseThrow().trip().orElseThrow();
+        assertEquals(Trip.Leg.TO_CALL, trip.leg());
+        assertEquals(RIDDEN, trip.until() - trip.countedTo());
+    }
+
+    @Test
+    void aCalledDragonWhoseWellHasNoRoomForTheRestDivesTheWholeWayWithAllItCarries() {
+        routing = new Routing(wells, owners, RIDDEN_DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 300L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 3, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(1);
+        wells.put(END_WELL, 4, CAPACITY);
+        owners.calling.put(ALICE, OVERWORLD_WELL);
+        runFor(STOP);
+        var called = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
+        assertEquals(Map.of(4, LOAD), called.load());
+        var trip = called.trip().orElseThrow();
+        assertEquals(DIVE.ticks(END_WELL, OVERWORLD_WELL), trip.until() - trip.countedTo());
+    }
+
+    @Test
+    void theNearestOfTheDragonsWithNothingToDoAnswersACall() {
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        var far = dragons.add(ALICE, OVERWORLD_WELL);
+        var near = dragons.add(ALICE, END_WELL);
+        owners.calling.put(ALICE, OTHER_END_WELL);
+        runFor(1);
+        assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(near));
+        assertEquals(Optional.empty(), leg(far));
+        assertEquals(OVERWORLD_WELL, dragons.get(far.id()).orElseThrow().rest());
+    }
+
+    @Test
+    void aDragonThatHasNeverStoppedAtAWellDivesToItsOwnersNearestWellAndRestsThere() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        var hatched = dragons.add(ALICE, new Place(END, new BlockPos(0, 64, 60)));
+        runFor(1);
+        assertEquals(Optional.of(Trip.Leg.TO_DESTINATION), leg(hatched));
+        runFor(Dive.MINIMUM_TICKS);
+        assertEquals(Optional.empty(), leg(hatched));
+        assertEquals(OTHER_END_WELL, dragons.get(hatched.id()).orElseThrow().rest());
+        runFor(1_000);
+        assertEquals(OTHER_END_WELL, dragons.get(hatched.id()).orElseThrow().rest());
+    }
+
+    @Test
+    void aDragonRestingAtTheCalledWellAnswersByStayingThereAndNoOtherComes() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        var elsewhere = dragons.add(ALICE, END_WELL);
+        var there = dragons.add(ALICE, OTHER_END_WELL);
+        owners.calling.put(ALICE, OTHER_END_WELL);
+        runFor(1);
+        assertEquals(Optional.of(Trip.Leg.WAITING), leg(there));
+        runFor(1_000);
+        assertEquals(Optional.of(Trip.Leg.WAITING), leg(there));
+        assertEquals(OTHER_END_WELL, dragons.get(there.id()).orElseThrow().rest());
+        assertEquals(Optional.empty(), leg(elsewhere));
+        assertEquals(END_WELL, dragons.get(elsewhere.id()).orElseThrow().rest());
+        owners.calling.remove(ALICE);
+        runFor(1);
+        assertEquals(Optional.empty(), leg(there));
+    }
+
+    @Test
+    void aDragonThatSetsItsRiderDownAtTheWellTheyCallAtWaitsThereAfterItsStop() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        var idle = dragons.add(ALICE, END_WELL);
+        var ridden = dragons.add(ALICE, END_WELL);
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, ridden.id(), OTHER_END_WELL, now));
+        runFor(Dive.MINIMUM_TICKS + 1);
+        assertEquals(Optional.of(Trip.Leg.SETTING_DOWN), leg(ridden));
+        owners.calling.put(ALICE, OTHER_END_WELL);
+        runFor(STOP);
+        assertEquals(Optional.of(Trip.Leg.WAITING), leg(ridden));
+        assertEquals(OTHER_END_WELL, dragons.get(ridden.id()).orElseThrow().rest());
+        assertEquals(Optional.empty(), leg(idle));
+        assertEquals(END_WELL, dragons.get(idle.id()).orElseThrow().rest());
     }
 
     @Test

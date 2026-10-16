@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.dragon;
 
+import java.util.Comparator;
 import java.util.function.ToDoubleFunction;
 
 import net.minecraft.resources.Identifier;
@@ -40,6 +41,11 @@ public record Dive(int betweenDimensionsTicks, int blocksPerSecond, int riddenTi
         long distance = (long) Math.ceil(blocks(from, to) * TICKS_PER_SECOND / blocksPerSecond);
         long ticks = from.dimension().equals(to.dimension()) ? distance : betweenDimensionsTicks + distance;
         return Math.max(MINIMUM_TICKS, ticks);
+    }
+
+    /** @return places in the order a dive from {@code from} reaches them, soonest first, and of those it reaches as soon, the nearest */
+    Comparator<Place> soonestFrom(Place from) {
+        return Comparator.comparingLong((Place place) -> ticks(from, place)).thenComparingDouble(place -> blocks(from, place));
     }
 
     /** @return the ticks a dive that would take {@code ticks} unridden takes with a rider aboard */

@@ -20,6 +20,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 
 /**
@@ -86,6 +87,64 @@ public final class TouchingMotes {
         return stores.isEmpty()
                 ? Optional.empty()
                 : Optional.of(stores.stream().mapToLong(store -> worth(store.motes(), pressure)).reduce(0, LongMath::saturatedAdd));
+    }
+
+    /**
+     * @return what the stores touching {@code pos} are worth spent there with every store of their
+     *         networks, in void energy: what they can pay over time, as their networks' motes conduct
+     *         to them, where {@link #totalWorth} is what they hold now; a network or store reached on
+     *         several faces counts once
+     */
+    public static long networkWorth(ServerLevel level, BlockPos pos) {
+        int pressure = VoidPressure.at(level, pos);
+        var networks = VoidstoneNetworks.of(level);
+        var counted = Collections.newSetFromMap(new IdentityHashMap<>());
+        long worth = 0;
+        for (var store : distinct(at(level, pos))) {
+            var network = networks.at(store.pos());
+            if (network.isPresent()) {
+                if (counted.add(network.get())) {
+                    worth = LongMath.saturatedAdd(worth, VoidEnergy.worth(network.get().countByGrade(), pressure));
+                }
+            } else {
+                worth = LongMath.saturatedAdd(worth, worth(store.motes(), pressure));
+            }
+        }
+        return worth;
+    }
+
+    /**
+     * Soaks what it can, up to {@code most} void energy, from the stores touching a machine at
+     * {@code pos} or any of its {@code parts}, store by store, by the spend rule at {@code pos}, each
+     * store's motes flying in from it as butterflies, and marks them wanted so their networks' motes
+     * come to it: what a Dormant machine, or a Displacer's Zone upgrade, soaks each time.
+     *
+     * @return the void energy soaked, which may pass {@code most} by part of a mote
+     */
+    public static long soak(ServerLevel level, BlockPos pos, Set<BlockPos> parts, long most) {
+        var stores = at(level, pos, parts);
+        want(level, pos, stores);
+        long soaked = 0;
+        for (var store : stores) {
+            if (soaked >= most) {
+                break;
+            }
+            soaked += payInto(level, store.motes(), store.pos().getCenter(), pos, most - soaked);
+        }
+        return soaked;
+    }
+
+    /**
+     * Spends what it can of {@code motes}, up to {@code most} void energy, by the spend rule at
+     * {@code pos} ({@link VoidSpender#spendUpTo}), the motes flying from {@code from} to it as
+     * butterflies: one store's share of a soak, or a Void Siphon emptied into a machine.
+     *
+     * @return the void energy released, which may pass {@code most} by part of a mote
+     */
+    public static long payInto(ServerLevel level, ResourceHandler<MoteResource> motes, Vec3 from, BlockPos pos, long most) {
+        var spend = VoidSpender.spendUpTo(motes, level, pos, most);
+        spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
+        return spend.released();
     }
 
     /**

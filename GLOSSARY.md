@@ -89,8 +89,14 @@ _Avoid_: harvester, Void Well
 
 **Zone**:
 How many positions a Void Displacer harvests in its life. It is a count, not a region: the
-Displacer grows outward until its Zone is spent, and upgrades paid in motes raise it.
+Displacer grows outward until its Zone is spent, and Zone upgrades raise it.
 _Avoid_: area, range, radius
+
+**Zone upgrade**:
+One level more of a Void Displacer's Zone, bought with motes from its network. Each level a
+Displacer buys costs more than the last, with no last level, and a new Displacer starts again at
+the first.
+_Avoid_: zone level, expansion
 
 **Void Siphon**:
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It
@@ -125,8 +131,8 @@ from are the whole network's, its core and every Voidstone together.
 _Avoid_: roost, Void Displacer
 
 **Shaft**:
-The open 3×3 column inside a Void Well's walls, where its owner calls a dragon, a dragon dives and
-emerges and laid eggs pop out. It shows the Well's fill: a void fluid as high as the network is
+The open 3×3 column inside a Void Well's walls, where a dragon dives and emerges and laid eggs
+pop out. It shows the Well's fill: a void fluid as high as the network is
 full, with butterflies of the grades it holds.
 _Avoid_: pit, well hole
 
@@ -194,6 +200,13 @@ load no Well needs is stowed: carried to the owner's Well with most room. A stop
 trip: the Well its owner calls the dragon to, or the Well its rider picks, which it fills as it sets
 them down before it goes on.
 _Avoid_: route, job
+
+**Call**:
+An owner standing on the rim of one of their Void Wells, which brings a dragon of theirs there and
+keeps it waiting while they stay. It lasts only while they stand there; one dragon answers it, the
+nearest free, diving there as a ridden dive does, its load cut to match, its progress a bar over
+the caller's action bar.
+_Avoid_: summon, whistle
 
 **Life stage**:
 How old a grown Void Dragon is: **young**, **adult**, **senior** or **old**, reached by the cargo it

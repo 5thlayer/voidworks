@@ -112,7 +112,7 @@ A Displacer holds no motes and needs no network to start: it grows its own. It h
 positions touching it or the Voidstone it has already left, nearest first, so its first harvest is
 the position beside it and what it has harvested is the network its motes go into. It reaches only
 what is connected to it: a cave or an air pocket bounds it. Its **Zone** is how many positions it
-harvests in its life, a count and not a region; upgrades paid in motes raise it. Built touching an
+harvests in its life, a count and not a region; Zone upgrades raise it. Built touching an
 older network, a Displacer still grows only from itself, and the networks merge.
 
 Every harvest shows its motes. Each flies from the harvested position to whatever receives it, a
@@ -135,8 +135,29 @@ Each Displacer has one item output inventory with an item face. An empty hand ta
 with the output empty gives back its fed blocks. A full output inventory, tank or network stalls it. While its Zone is unspent and it can still reach something to convert — air,
 natural terrain, lava — it cannot be broken or moved; then, once its output is empty, it becomes Voidstone
 itself, its motes stay in the network, and relocating means building a new one. One that can reach nothing before
-its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Upgrades raise a Zone; relocation
-stays the main loop.
+its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Zone upgrades raise a Zone;
+relocation stays the main loop.
+
+**Zone upgrades.** A Displacer starts with the server's Zone (provisional: 64) and buys more one
+level at a time, with motes from its network. Sneak-using it with an empty hand quotes the next
+level in the action bar ("Zone 64 → 80 for 1,600 void energy, sneak-use again to confirm"), and the
+same player sneak-using it again within 5 seconds commits to it; anything else lets the quote lapse.
+A network whose motes are worth less than the price at the Displacer's block is told the price and
+what it is worth there, and arms nothing. Committed, the Displacer soaks the price as a Dormant
+machine does, from the stores touching it by the spend rule at its block, while it goes on
+harvesting, and its Zone rises once it is paid, the players near it told and hearing it; a payment
+in part is kept across a save. Sneak-using
+it while it soaks shows what is paid and offers to cancel, confirmed the same way; a cancelled
+upgrade loses what it paid, as any spend does. A Displacer can be upgraded while it is awake and
+not yet Voidstone: stalled, starved of fed blocks, or with its Zone spent and its output still
+emptying, when it waits for the upgrade's soak, unbreakable, and harvests on. A Dormant one cannot,
+nor one that can reach nothing; one left with nothing to reach while it soaks becomes Voidstone all
+the same, and what it paid is spent. Each level adds a step of positions and costs a first price times a
+growth per level bought, both datapack data per Displacer (provisional, all three: 16 positions,
+1,600 void energy, doubling), with no last level. The levels belong to the Displacer, so a new one
+starts at the first: the first two levels repay themselves at a middling Density, the third breaks
+even, and from the fourth a new Displacer is cheaper. Jade shows a Displacer's level, the next
+level's price, and an upgrade's soak.
 
 Only blocks a Density tag names can be harvested. Every other block is Density 0, nothing harvests
 it, and it leaves no Voidstone: the renewable and abundant blocks above all (cobblestone, stone,
@@ -279,7 +300,7 @@ Every control is in the world, with no screen:
 - **Name**: a name tag its owner uses on the core names the Well and is used up, as naming a mob
   is; anyone else's name tag is refused and tells them whose Well it is. Unnamed, a Well goes by
   its dimension and position.
-- **Calling**: its owner standing in its shaft calls a dragon (§ The Void Dragon).
+- **Calling**: its owner standing on its rim calls a dragon (§ The Void Dragon).
 
 ### The Void Dragon
 
@@ -352,20 +373,20 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
   load on to another of the owner's Wells that needs it, else to the one with most room; with no
   room anywhere it holds the load and rests until there is.
 - **Travel.** It flies visibly near its Wells and **dives** into the void between them, emerging
-  after a travel time: a time per block of distance in Overworld blocks, the Nether's counting
-  eight and the End's one, and a fixed time more for a dive between dimensions. Every dive takes at
-  least 2 seconds, so even between near Wells it is seen diving into one shaft and emerging from
-  the other. It is the only thing that carries motes between
-  dimensions at scale; a player carries a Siphon's worth. With nothing to do it rests at the Well
-  it last stopped at, neither weakening nor healing: it lands and sits astride the Well's rim over
-  its shaft, lengthwise along the core's wall so neither head nor tail covers the core, in the Ender
-  Dragon's sitting pose, its wings held still and down and its head turned to a nearby player,
-  never roaring or breathing at anyone. Where blocks fill the room it would sit in, it flies about
-  over the shaft instead, and lands once there is room. As it sets off it takes off, rising over
-  the shaft within its dive's time, then dives into the shaft. Holding a load it has
-  no room for, it rests the same way. At work there, loading, unloading, waiting for its owner or
-  setting a rider down, it stays in the air close about the Well. One that has never stopped at a
-  Well rests where it grew up, flying about.
+  after a travel time: a time per block of distance in Overworld blocks, the Nether's counting eight
+  and the End's one, and a fixed time more for a dive between dimensions. Every dive takes at least
+  2 seconds, so even between near Wells it is seen diving into one shaft and emerging from the
+  other. It is the only thing that carries motes between dimensions at scale; a player carries a
+  Siphon's worth. With nothing to do it rests at the Well it last stopped at, neither weakening nor
+  healing: it lands and sits astride the Well's rim over its shaft, lengthwise along the core's wall
+  so neither head nor tail covers the core, in the Ender Dragon's sitting pose, its wings held still
+  and down and its head turned to a nearby player, never roaring or breathing at anyone. Where
+  blocks fill the room it would sit in, it flies about over the shaft instead, and lands once there
+  is room. As it sets off it takes off, rising over the shaft within its dive's time, then dives
+  into the shaft. Holding a load it has no room for, it rests the same way. At work there, loading,
+  unloading, waiting for its owner or setting a rider down, it stays in the air close about the
+  Well. One with nothing to do away from its owner's Wells, whole and awake, such as one just grown or
+  one whose Well went Dormant or was broken, dives to the nearest of them and rests there.
 - **Riding.** Its owner uses a dragon stopped at one of their Wells, resting or at work there, and
   mounts it, with no harness; anyone else cannot. It hovers, taking off first if it sat resting
   (and landing again if they get off before a dive), and waits at its stop for as long as
@@ -388,10 +409,19 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
   as the picker showed it, over a bar that fills as the dive goes, in the destination dimension's colour (Overworld blue,
   Nether red, End pale yellow-green, a datapack map naming others, and the void's purple for any it
   does not). The Nether portal's hum rises toward emerging.
-- **Calling.** The owner standing in a Well's shaft calls a dragon: the next of theirs to finish its
-  stop, or one with nothing to do at once, comes to that Well, carrying what it carries and dropping
-  none of it there, the action bar telling them one is coming. It waits a stop's time at least, and
-  while the owner stays in the shaft, then goes on with its trip. Only one of the owner's dragons
+- **Calling.** The owner standing on the rim of one of their Wells for a second calls a dragon to
+  it, the block under their feet a rim block of that Well, whether or not they are on the ground; a
+  hop does not end a call, stepping off does. Anyone else's rim calls nothing and says nothing. A
+  dragon of theirs already stopped at that Well answers by staying there, the one that just set them
+  down or that they got off among them; otherwise the next of theirs to finish its stop, or one with
+  nothing to do at once, the nearest of those, comes to that Well as though its owner rode it
+  already: its dive takes no longer than a ridden dive, and it first puts what it holds beyond its
+  ridden load into the Well it is at, as for a ridden dive; with no room there for that, it dives
+  the whole way with all it carries. It drops none of its load at the called Well, the action bar
+  telling them one is coming, with a bar just over it that fills as its dive goes, in the colour of
+  the called Well's dimension, and once it waits there, that it waits for them. It waits a stop's
+  time at least, and while the owner stays on the rim, then goes on with its trip; one already on
+  its way when they step off still comes, and waits its stop's time. Only one of the owner's dragons
   answers a call.
 - **Harm.** It weakens as it dives, at a rate set by how far the Void Pressure at the worse of the
   dive's two ends is below the End's, so a trip to or from the Nether, where motes pay most, costs it
@@ -403,7 +433,11 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
 - **Seen in Jade.** Anyone looking at a dragon's presence sees what its record holds: what it is
   doing, its life stage, the Well it is bound for by name, what it carries (a Mote-line dragon's
   motes by grade and in total, a Matter-line dragon's load as § Moving matter shows it), its health
-  and its owner, with no line naming its Line, since its load already shows it; looking at a Dragonling, how far it has grown and its owner.
+  and its owner, with no line naming its Line, since its load already shows it; looking at a
+  Dragonling, how far it has grown and its owner.
+- **In the way of no one.** A dragon's presence pushes no one: a player stands on the rim beside a
+  dragon sitting astride it, or under one hovering at work, and is not moved. Nothing collides with
+  it. A Dragonling pushes and is pushed as any mob does.
 - **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
   runtime and tinted the void's purple, whatever its Line: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
   1.1, old 1.2), the
@@ -660,7 +694,7 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
 - **Numbers** — prices are datapack data and the rest server config
-  ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
+  ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8 but the egg Rung 1; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent

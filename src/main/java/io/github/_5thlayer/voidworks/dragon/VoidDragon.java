@@ -940,6 +940,14 @@ public final class VoidDragon extends PathfinderMob {
         return false;
     }
 
+    /** A presence pushes no one, so a player stands on the rim it sits astride or under it hovering; a Dragonling pushes as any mob does. */
+    @Override
+    protected void pushEntities() {
+        if (!grown()) {
+            super.pushEntities();
+        }
+    }
+
     @Override
     public boolean removeWhenFarAway(double distanceSquared) {
         return false;

@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.command.VoidworksCommands;
 import io.github._5thlayer.voidworks.displacer.Displacement;
+import io.github._5thlayer.voidworks.displacer.ZoneUpgrade;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
@@ -52,6 +53,7 @@ public final class Voidworks {
         Dormancy.register(modBus);
         DiveColour.register(modBus);
         EggPrice.register(modBus);
+        ZoneUpgrade.register(modBus);
         Families.register(modBus);
         UnmakingRecipes.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);
@@ -60,7 +62,7 @@ public final class Voidworks {
         NeoForge.EVENT_BUS.addListener(Conduction::onLevelTick);
         Hatching.register();
         DragonPresences.register();
-        DragonRouting.register();
+        DragonRouting.register(modBus);
         DragonRiding.register();
         VoidworksCommands.register();
         VoidworksGameTests.register(modBus);

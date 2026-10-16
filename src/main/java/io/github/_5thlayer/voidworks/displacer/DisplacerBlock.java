@@ -20,8 +20,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * What every Void Displacer's block shares: once placed it cannot be broken or moved, and it ends as
  * Voidstone ({@link DisplacerBlockEntity}). An empty hand takes its output, or, with that empty, its
- * fed blocks back, or, with none, is told how much of a Dormant one's cost is paid; a hand holding something, a Void Siphon paying
- * it above all, passes to its item.
+ * fed blocks back, or, with none, is told how much of a Dormant one's cost is paid; sneak-using an
+ * awake one with an empty hand buys a Zone upgrade ({@link DisplacerBlockEntity#sneakUse}); a hand
+ * holding something, a Void Siphon paying it above all, passes to its item.
  */
 public abstract class DisplacerBlock extends BaseEntityBlock {
 
@@ -40,11 +41,17 @@ public abstract class DisplacerBlock extends BaseEntityBlock {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+        var dormancy = displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake() ? machine.dormancy() : null;
+        if (player.isSecondaryUseActive() && dormancy == null) {
+            player.sendOverlayMessage(displacer.sneakUse((ServerLevel) level, player));
+            return InteractionResult.SUCCESS;
+        }
+        displacer.lapseQuote();
         if (displacer.giveOutput(player) || displacer.giveBackFed(player)) {
             return InteractionResult.SUCCESS;
         }
-        if (displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake()) {
-            player.sendOverlayMessage(machine.dormancy().status());
+        if (dormancy != null) {
+            player.sendOverlayMessage(dormancy.status());
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

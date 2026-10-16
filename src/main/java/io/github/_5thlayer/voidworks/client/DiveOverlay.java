@@ -34,11 +34,8 @@ final class DiveOverlay {
     private static final int DEEP = DiveColour.VOID;
     private static final int BRIGHT = ARGB.color(255, 230, 120, 255);
 
-    /** The progress bar's width and height, the gap between it and the label over it, its empty track's colour, and the label's. */
-    private static final int BAR_WIDTH = 120;
-    private static final int BAR_HEIGHT = 4;
+    /** The gap between the progress bar ({@link DiveBar}) and the label over it, and the label's colour. */
     private static final int BAR_GAP = 4;
-    private static final int BAR_TRACK = ARGB.color(255, 30, 10, 50);
     private static final int LABEL = ARGB.color(255, 255, 255, 255);
 
     private DiveOverlay() {
@@ -72,12 +69,10 @@ final class DiveOverlay {
         }
         var shown = presence.diveShown();
         var font = Minecraft.getInstance().font;
-        int barLeft = Math.round(centreX) - BAR_WIDTH / 2;
         int barTop = Math.round(centreY) + BAR_GAP / 2;
         graphics.centeredText(font, shown.label(), Math.round(centreX), barTop - BAR_GAP - font.lineHeight, LABEL);
-        graphics.fill(barLeft, barTop, barLeft + BAR_WIDTH, barTop + BAR_HEIGHT, BAR_TRACK);
         float progress = shown.progress(player.level().getGameTime(), deltaTracker.getGameTimeDeltaPartialTick(true));
-        graphics.fill(barLeft, barTop, barLeft + Math.round(BAR_WIDTH * progress), barTop + BAR_HEIGHT, shown.colour());
+        DiveBar.draw(graphics, Math.round(centreX), barTop, progress, shown.colour());
     }
 
     /** @return a number from 0 to 1 that stays the same for {@code index} and {@code salt} */
