@@ -24,7 +24,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 /**
  * What a Void Dragon's presence shows in Jade, read from its record: what it is doing, the Well it is
  * bound for by what it goes by, its load by grade, lowest first and tinted like each grade's butterflies, and its total,
- * its health of 100, and its owner.
+ * and its owner; its health of 100 is Jade's hearts, not a line.
  */
 class DragonReportTest {
 
@@ -42,12 +42,12 @@ class DragonReportTest {
         assertEquals(DragonReport.Doing.RESTING, report.doing());
         assertEquals(Optional.empty(), report.bound());
         var lines = report.lines();
-        assertEquals(5, lines.size());
+        assertEquals(100, report.health());
+        assertEquals(4, lines.size());
         assertLine(lines.get(0), "voidworks.jade.dragon.resting");
         assertLine(lines.get(1), "voidworks.jade.dragon.carrying_nothing");
-        assertLine(lines.get(2), "voidworks.jade.dragon.health", 100, 100);
-        assertLine(lines.get(3), "voidworks.jade.dragon.young");
-        assertLine(lines.get(4), "voidworks.jade.dragon.owner", "Alex");
+        assertLine(lines.get(2), "voidworks.jade.dragon.young");
+        assertLine(lines.get(3), "voidworks.jade.dragon.owner", "Alex");
     }
 
     @Test
@@ -56,7 +56,8 @@ class DragonReportTest {
 
         assertEquals(25, report.carried());
         var lines = report.lines();
-        assertEquals(8, lines.size());
+        assertEquals(63, report.health());
+        assertEquals(7, lines.size());
         assertLine(lines.get(0), "voidworks.jade.dragon.loading");
         assertLine(lines.get(1), "voidworks.jade.dragon.bound", THERE_NAME);
         assertLine(lines.get(2), "voidworks.jade.dragon.grade", 3, 20L);
@@ -64,9 +65,8 @@ class DragonReportTest {
         assertLine(lines.get(3), "voidworks.jade.dragon.grade", 7, 5L);
         assertEquals(TextColor.fromRgb(GradeColor.of(7)), lines.get(3).getStyle().getColor());
         assertLine(lines.get(4), "voidworks.jade.dragon.carrying", 25L);
-        assertLine(lines.get(5), "voidworks.jade.dragon.health", 63, 100);
-        assertLine(lines.get(6), "voidworks.jade.dragon.young");
-        assertLine(lines.get(7), "voidworks.jade.dragon.owner", "Alex");
+        assertLine(lines.get(5), "voidworks.jade.dragon.young");
+        assertLine(lines.get(6), "voidworks.jade.dragon.owner", "Alex");
     }
 
     @Test
@@ -76,7 +76,7 @@ class DragonReportTest {
         var report = report(old, Optional.empty());
 
         assertEquals(LifeStage.OLD, report.stage());
-        assertLine(report.lines().get(3), "voidworks.jade.dragon.old");
+        assertLine(report.lines().get(2), "voidworks.jade.dragon.old");
     }
 
     @Test
