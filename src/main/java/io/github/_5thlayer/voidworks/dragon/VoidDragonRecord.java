@@ -33,14 +33,12 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Load
     /** A whole dragon's speed: speeds count in hundredths of it. */
     public static final int WHOLE_SPEED = 100;
 
-    private static final Codec<Load> LOAD_CODEC = MoteLoad.CODEC.xmap(load -> load, load -> (MoteLoad) load);
-
     public static final Codec<VoidDragonRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             UUIDUtil.CODEC.fieldOf("id").forGetter(VoidDragonRecord::id),
             UUIDUtil.CODEC.fieldOf("owner").forGetter(VoidDragonRecord::owner),
             Codec.INT.fieldOf("health").forGetter(VoidDragonRecord::health),
             Place.CODEC.fieldOf("rest").forGetter(VoidDragonRecord::rest),
-            LOAD_CODEC.optionalFieldOf("load", MoteLoad.NONE).forGetter(VoidDragonRecord::load),
+            Load.CODEC.optionalFieldOf("load", MoteLoad.NONE).forGetter(VoidDragonRecord::load),
             Trip.CODEC.optionalFieldOf("trip").forGetter(VoidDragonRecord::trip),
             // A count saved before life stages, as "since_egg", is dropped: such a dragon starts young.
             Codec.LONG.optionalFieldOf("toward_egg", 0L).forGetter(VoidDragonRecord::towardEgg),
