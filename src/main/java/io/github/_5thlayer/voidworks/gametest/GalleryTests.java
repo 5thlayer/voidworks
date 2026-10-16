@@ -120,7 +120,7 @@ final class GalleryTests {
                     GalleryCheck.assertKeyBlocks(helper, helper.absolutePos(ORIGIN), Map.ofEntries(
                             Map.entry(RESERVOIR, VoidworksBlocks.VOID_WELL.get()),
                             Map.entry(SHORT, VoidworksBlocks.VOID_WELL.get()),
-                            Map.entry(scene(1, 14, 2, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
+                            Map.entry(scene(1, 14, 2, -4), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
                             // The game tests run in the Overworld, so the End and Nether scenes show
                             // their Displacers as item displays, over a pedestal behind their signs.
                             Map.entry(scene(2, SIGN), Blocks.OAK_SIGN),
@@ -229,8 +229,8 @@ final class GalleryTests {
     private static void overworldDisplacerDelivers(GameTestHelper helper) {
         var server = helper.getLevel().getServer();
         var source = operator(helper);
-        var displacer = helper.absolutePos(ORIGIN).offset(14, 2, -6);
-        var chest = helper.absolutePos(ORIGIN).offset(14, 0, -6);
+        var displacer = helper.absolutePos(ORIGIN).offset(14, 2, -4);
+        var chest = helper.absolutePos(ORIGIN).offset(14, 0, -4);
         var plot = new AABB(helper.absolutePos(ORIGIN).offset(10, -1, -10).getCenter(), helper.absolutePos(ORIGIN).offset(18, 6, -2).getCenter());
         clearAwayIfItFails(helper, source);
         var on = GalleryCheck.select(server, GalleryPack.ID, true);

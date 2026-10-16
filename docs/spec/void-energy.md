@@ -124,8 +124,8 @@ count is exact: like XP orbs, a butterfly stands for 1, 8 or 64 motes by its siz
 - **Nether**: displaces lava sources in its zone into an internal tank with a fluid output face, so
   any mod's pipe or tank, or a bucket, drains it (FactoryWorks [ADR-0121](https://github.com/5thlayer/factoryworks/blob/main/docs/adr/0121-fluid-is-carried-in-buckets-and-the-barrel-goes.md)).
 
-Each Displacer has one item output inventory with an item face. A full output inventory, tank or
-network stalls it. While its Zone is unspent and it can still reach something to convert — air,
+Each Displacer has one item output inventory with an item face. An empty hand takes its output, or
+with the output empty gives back its fed blocks. A full output inventory, tank or network stalls it. While its Zone is unspent and it can still reach something to convert — air,
 natural terrain, lava — it cannot be broken or moved; then, once its output is empty, it becomes Voidstone
 itself, its motes stay in the network, and relocating means building a new one. One that can reach nothing before
 its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Upgrades raise a Zone; relocation

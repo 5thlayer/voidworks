@@ -53,8 +53,8 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  *
  * <p>It works only where the harvest kind is its own: anywhere else it refuses on its first tick,
  * popping off as its item with what it holds, so it never stands there unbreakable. A full output
- * or tank, or a network that cannot take the harvest's motes, stalls it; a player takes back the fed blocks
- * with an empty hand, as nothing else can extract them. When its Zone is spent, or it can reach
+ * or tank, or a network that cannot take the harvest's motes, stalls it; an empty hand takes its output, then,
+ * with the output empty, the fed blocks, as nothing else can extract them. When its Zone is spent, or it can reach
  * nothing more, it waits for its output to empty, then becomes Voidstone itself and its network
  * keeps the motes; one that could reach nothing before its first harvest pops off instead, as
  * outside its dimension, even before it is {@linkplain #ready ready}.
@@ -346,6 +346,29 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     private void popOff(ServerLevel level) {
         Block.popResource(level, worldPosition, new ItemStack(getBlockState().getBlock()));
         level.setBlock(worldPosition, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /**
+     * Gives {@code player} what its output holds, the hand's way to empty it, as a hopper's or
+     * pipe's is its item face; a spent one then becomes Voidstone.
+     *
+     * @return whether there was anything to give
+     */
+    public boolean giveOutput(Player player) {
+        boolean gave = false;
+        for (int slot = 0; slot < output.size(); slot++) {
+            var resource = output.getResource(slot);
+            int count = output.getAmountAsInt(slot);
+            if (!resource.isEmpty() && count > 0) {
+                inventory.set(slot + 1, ItemResource.EMPTY, 0);
+                player.getInventory().placeItemBackInInventory(resource.toStack(count));
+                gave = true;
+            }
+        }
+        if (gave) {
+            setChanged();
+        }
+        return gave;
     }
 
     /**

@@ -40,7 +40,7 @@ public abstract class DisplacerBlock extends BaseEntityBlock {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
-        if (displacer.giveBackFed(player)) {
+        if (displacer.giveOutput(player) || displacer.giveBackFed(player)) {
             return InteractionResult.SUCCESS;
         }
         if (displacer instanceof Dormancy.Holder machine && !machine.dormancy().awake()) {

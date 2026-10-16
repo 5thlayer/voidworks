@@ -27,6 +27,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -70,6 +72,7 @@ final class DisplacerTests {
         tests.test("a_displacers_output_gets_the_terrain_block_for_a_density_the_table_does_not_name", TICKS, DisplacerTests::displacementTableDefault);
         tests.test("a_displacer_where_the_harvest_kind_is_not_overworld_harvests_nothing_and_pops_off", 1, DisplacerTests::refusesOutsideTheOverworldKind);
         tests.test("an_empty_hand_takes_back_a_displacers_fed_blocks", 1, DisplacerTests::givesBackFed);
+        tests.test("an_empty_hand_takes_a_displacers_output_before_its_fed_blocks", 1, DisplacerTests::givesOutputFirst);
         tests.test("a_displacers_report_names_its_fed_block_and_the_harvests_left_in_its_zone", TICKS, DisplacerTests::report);
     }
 
@@ -324,6 +327,25 @@ final class DisplacerTests {
         helper.assertTrue(displacer.inventory().getAmountAsInt(OverworldDisplacerBlockEntity.INPUT) == 0, "the input still holds its fed blocks");
         helper.assertTrue(player.getInventory().countItem(Items.DIAMOND_BLOCK) == 3,
                 "the player got " + player.getInventory().countItem(Items.DIAMOND_BLOCK) + " diamond blocks back, not 3");
+        helper.succeed();
+    }
+
+    /** One use takes the output, the fed blocks staying; the next, with the output empty, the fed blocks. */
+    private static void givesOutputFirst(GameTestHelper helper) {
+        var displacer = place(helper, DISPLACER, 2);
+        feed(displacer, Items.DIAMOND_BLOCK, 3);
+        displacer.inventory().set(1, ItemResource.of(Items.STONE), 5);
+        displacer.inventory().set(2, ItemResource.of(Items.FLINT), 2);
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        helper.useBlock(DISPLACER, player);
+        helper.assertTrue(output(displacer, Items.STONE) == 0 && output(displacer, Items.FLINT) == 0, "the output still holds what it gave");
+        helper.assertTrue(player.getInventory().countItem(Items.STONE) == 5 && player.getInventory().countItem(Items.FLINT) == 2,
+                "the player got " + player.getInventory().countItem(Items.STONE) + " stone and " + player.getInventory().countItem(Items.FLINT) + " flint, not 5 and 2");
+        helper.assertTrue(displacer.inventory().getAmountAsInt(OverworldDisplacerBlockEntity.INPUT) == 3, "the fed blocks went with the output");
+        // What it gave fills the selected slot first: the hand is emptied for the second use.
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        helper.useBlock(DISPLACER, player);
+        helper.assertTrue(player.getInventory().countItem(Items.DIAMOND_BLOCK) == 3, "the second use gave back no fed blocks");
         helper.succeed();
     }
 
