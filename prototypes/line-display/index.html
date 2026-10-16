@@ -1,0 +1,453 @@
+<title>Dragon Line Display</title>
+<!-- PROTOTYPE, throwaway: voidworks issue 94 "How a dragon's Line shows in game".
+     Three variants of how a player tells a Mote-line from a Matter-line egg, Dragonling and Void Dragon,
+     and how a network that can't pay its Toll shows. Switch with the bottom bar, the arrow keys, or #A / #B / #C. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of "scenes" (inventory, world, Jade, Toll) per variant, as the player meets them; a pill switcher floats at the bottom. Single dark look: the End at night. */
+:root {
+  --bg: #0e0b15;
+  --panel: #18141f;
+  --line: #2c2537;
+  --fg: #ebe6f2;
+  --muted: #9b93ab;
+  --mote: #be82ff;
+  --matter: #e3a656;
+  --bad: #ff6b6b;
+  --mc-grey: #aaaaaa;
+  --mc-white: #ffffff;
+  --mc-blue: #5555ff;
+  --mc-epic: #ff55ff;
+  --mc-red: #ff5555;
+  --tip-bg: rgba(16, 0, 16, 0.94);
+  --tip-hi: #5000ff;
+  --tip-lo: #28007f;
+  --f-display: "Pixelify Sans", ui-monospace, monospace;
+  --f-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body); }
+main { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 120px; display: grid; gap: 28px; }
+header { display: grid; gap: 8px; }
+.eyebrow { font: 600 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 600 clamp(26px, 5vw, 38px)/1.1 var(--f-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 22px/1.2 var(--f-display); margin: 0; text-wrap: balance; }
+h3 { font: 700 13px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+.key { display: inline-flex; gap: 14px; flex-wrap: wrap; font: 13px var(--f-mono); color: var(--muted); }
+.key b { font-weight: 600; }
+.chip { display: inline-block; width: .8em; height: .8em; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+
+.variant-head { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.variant-head .tag { font: 600 13px var(--f-mono); color: var(--matter); }
+
+.scene { display: grid; gap: 12px; }
+.scene > p { color: var(--muted); font-size: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.row > * { min-width: 0; }
+
+/* Inventory */
+.hotbar { display: flex; gap: 0; background: #8b8b8b; padding: 3px; border: 2px solid #373737; width: max-content; max-width: 100%; }
+.slot { width: 52px; height: 52px; background: #8b8b8b; border: 2px solid; border-color: #373737 #fff #fff #373737; display: grid; place-items: center; position: relative; cursor: pointer; }
+.slot canvas { width: 36px; height: 42px; image-rendering: pixelated; }
+.slot.on { outline: 3px solid #fff; outline-offset: -3px; }
+.slot .n { position: absolute; right: 3px; bottom: 0; font: 600 14px var(--f-display); color: #fff; text-shadow: 2px 2px #3f3f3f; }
+.inv { display: grid; gap: 10px; }
+
+/* Minecraft tooltip, the vanilla item one and Jade's */
+.tip { background: var(--tip-bg); border: 2px solid; border-image: linear-gradient(var(--tip-hi), var(--tip-lo)) 1; padding: 6px 9px; font: 16px/1.35 var(--f-display); color: var(--mc-white); max-width: 340px; display: grid; gap: 1px; text-shadow: 2px 2px 0 rgba(0,0,0,.45); }
+.tip .grey { color: var(--mc-grey); }
+.tip .mod { color: var(--mc-blue); font-style: italic; }
+.tip .hearts { color: var(--mc-red); letter-spacing: 1px; }
+.tip .item { display: flex; align-items: center; gap: 6px; }
+.tip .item i { width: 14px; height: 14px; display: inline-block; border: 1px solid rgba(0,0,0,.5); flex: none; }
+.jade { background: rgba(20, 16, 26, 0.9); border: 1px solid #3c3448; border-image: none; border-radius: 3px; }
+.jade-wrap { display: grid; gap: 6px; }
+.jade-wrap .looking { font: 12px var(--f-mono); color: var(--muted); }
+
+/* World */
+.world { width: 100%; max-width: 100%; aspect-ratio: 16 / 6; display: block; image-rendering: pixelated; background: #05030a; border: 1px solid var(--line); border-radius: 4px; }
+.caps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; font: 13px var(--f-mono); color: var(--muted); }
+
+/* What it costs to build */
+.cost { display: grid; gap: 6px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+.cost ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.cost li { max-width: 80ch; }
+code { font: 13px var(--f-mono); color: var(--fg); background: #241e2d; padding: 1px 4px; border-radius: 3px; }
+
+/* Switcher */
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 4px; padding: 6px; background: #f4efe6; color: #17121d; border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.55); font: 600 14px var(--f-mono); z-index: 10; max-width: calc(100% - 32px); }
+.switcher button { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; }
+.switcher button:hover, .switcher button:focus-visible { background: #17121d; color: #f4efe6; }
+.switcher span { padding-inline: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) { .slot { width: 44px; height: 44px; } .slot canvas { width: 30px; height: 35px; } .tip { font-size: 15px; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Prototype · Carry matter between dimensions · throwaway</div>
+    <h1>How a dragon's Line shows</h1>
+    <p class="lede">Three ways a player could tell a Mote-line egg, Dragonling and Void Dragon from a Matter-line one, and see a Well network too poor to pay its Toll. None needs a new model: each reuses the Ender Dragon model, the egg model and Jade. Click an egg in the hotbar to see its tooltip. Pick one variant, or take parts from several.</p>
+    <div class="key"><span><i class="chip" style="background:var(--mote)"></i><b>Mote line</b> carries motes, pays no Toll</span><span><i class="chip" style="background:var(--matter)"></i><b>Matter line</b> carries items, pays a Toll as it loads</span></div>
+  </header>
+  <section id="variant"></section>
+</main>
+
+<nav class="switcher" aria-label="Variant">
+  <button id="prev" aria-label="Previous variant">←</button>
+  <span id="label"></span>
+  <button id="next" aria-label="Next variant">→</button>
+</nav>
+
+<script>
+const DRAINED_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACFUlEQVR4nFWTz24cRRjEf/1nFsVr7IhIPBMHKyZRBBJB5LWCAMkHpATkHHgInoFDXiCK7dgBW7s73VUfhx4v4TCaUWu6qr76dae3f/0ZpVYODg7JpZBSBuDjzRVfPPqSWidscXnxjuOHjwDYbu6QRdvtyJIJEpJo80zvDYCUC5A4+eoxF+/fcXb2K+odSUjeP9UWtmi9k3MhMCmZUiqSAbDFZ6uJIGGZ1uf9epZMmxs311fci0UEdVohCYCD9RHPv39O7w37/wly642b60tevzoHMjbIIqXMN0+/5fX5KwDu7m5Rv98swkHrjSoJ26xW094x5wyM+JKIAFIiAEtAQh5CFRIH62OePnvCPM+UkhcBPhEwOVdaa4tBYbfbIJtsiQB2mw29zfuIdvDjLy/54bsX2EHOdT/3brslDJapkkkWDogBEMmkFMji57OfBjqP8azOP7cfefBgjSyybCwTEcPB2rP2kmT/LXH94ZI3539QygSRqK01cqmLcyerEClGgmWc0YX379U0Ld0EFQa2kgqSKTKRAbwkGT/mXNjuNqwPjzg5PaG3Ru99dJBlSq142YDE7e3ffH70cAgAEV4Qwm6zxSvTWhsH6b4kycyt8eHqgt9/Ox+CC29/cgcigtYasqkEg+cSPUfQe2eapkFj2C8ljwQRgxcB1fcNJxEEtMT68JjTr0+Z20yt038CFiXXMZKEZf4F3v72a/duBs8AAAAASUVORK5CYII=";
+
+const MOTE = [190, 130, 255], MATTER = [227, 166, 86];
+
+/* ---------- pixel masks ---------- */
+const EGG = [
+  "....####....",
+  "...######...",
+  "..########..",
+  ".##########.",
+  ".##########.",
+  "############",
+  "############",
+  "############",
+  "############",
+  "############",
+  ".##########.",
+  ".##########.",
+  "..########..",
+  "...######...",
+];
+const DRAGON = [
+  "...........#....................",
+  "..........###...................",
+  ".........#####..................",
+  "........#######.................",
+  ".......#########............###.",
+  "......###########..........#####",
+  "#....#############........##..##",
+  "##..###############......##.....",
+  ".#####################.###......",
+  "..###########################...",
+  "....#####.############.##.......",
+  "....##.....##......##..##.......",
+  "....#......#.......#...#........",
+];
+
+/* ---------- egg textures ---------- */
+let drainedPixels = null;
+function loadDrained() {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = c.height = 16;
+      const g = c.getContext("2d"); g.drawImage(img, 0, 0);
+      drainedPixels = g.getImageData(0, 0, 16, 16).data; res();
+    };
+    img.onerror = () => res();
+    img.src = DRAINED_SRC;
+  });
+}
+function rnd(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+/** The colour of an egg's texel: kind is vanilla (black, purple flecks), drained (Voidworks' own bone-white), or drained tinted. */
+function eggTexel(kind, x, y, tint, r) {
+  if (kind === "vanilla") {
+    const v = r();
+    return v > .86 ? [70, 30, 95] : v > .7 ? [36, 18, 48] : [14, 10, 18];
+  }
+  let px = [200, 196, 182];
+  if (drainedPixels) { const i = ((y % 16) * 16 + (x % 16)) * 4; px = [drainedPixels[i], drainedPixels[i+1], drainedPixels[i+2]]; }
+  if (tint) px = px.map((c, k) => Math.round(c * tint[k] / 255));
+  return px;
+}
+function drawEgg(g, ox, oy, scale, kind, tint, seed = 7) {
+  const r = rnd(seed);
+  EGG.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== "#") return;
+    const [a, b, c] = eggTexel(kind, x + 2, y + 1, tint, r);
+    g.fillStyle = `rgb(${a},${b},${c})`; g.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+  }));
+}
+function eggCanvas(kind, tint) {
+  const c = document.createElement("canvas"); c.width = 12; c.height = 14;
+  drawEgg(c.getContext("2d"), 0, 0, 1, kind, tint); return c;
+}
+
+/* ---------- the world ---------- */
+function drawDragon(g, ox, oy, s, tint, flip) {
+  const base = [44, 38, 52];
+  DRAGON.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== "#") return;
+    const shade = 1 - (y / DRAGON.length) * .35;
+    const col = base.map((c, k) => Math.min(255, Math.round((c + 60) * tint[k] / 255 * shade)));
+    g.fillStyle = `rgb(${col})`;
+    const xx = flip ? (DRAGON[0].length - 1 - x) : x;
+    g.fillRect(ox + xx * s, oy + y * s, s, s);
+  }));
+  // its eyes, the purple of the Ender Dragon's
+  g.fillStyle = "#e07bff";
+  const ex = flip ? (DRAGON[0].length - 1 - 30) : 30;
+  g.fillRect(ox + ex * s, oy + 5 * s, s, s);
+}
+function drawVoidstone(g, x, y, w, size) {
+  for (let i = 0; i < w; i++) {
+    g.fillStyle = (i % 2) ? "#1d1527" : "#231a2f"; g.fillRect(x + i * size, y, size, size);
+    g.fillStyle = "#3a2a4d"; g.fillRect(x + i * size + size * .3, y + size * .4, size * .15, size * .15);
+  }
+}
+function drawWell(g, x, y, size) {
+  for (let i = 0; i < 5; i++) {
+    g.fillStyle = i === 0 || i === 4 ? "#3b2f4a" : "#120c19"; g.fillRect(x + i * size, y, size, size);
+  }
+  g.fillStyle = "#6b2bbf"; g.fillRect(x + size, y + size * .15, size * 3, size * .2);
+}
+
+/* Each variant names what it draws for the dragons: a whole-body tint, a carried cargo, a mote trail, a floating name. */
+function drawWorld(canvas, v, t) {
+  const W = 320, H = 120; canvas.width = W; canvas.height = H;
+  const g = canvas.getContext("2d"); g.imageSmoothingEnabled = false;
+  g.fillStyle = "#05030a"; g.fillRect(0, 0, W, H);
+  const stars = rnd(3); g.fillStyle = "#3d3550";
+  for (let i = 0; i < 40; i++) g.fillRect(Math.floor(stars() * W), Math.floor(stars() * 70), 1, 1);
+  const ground = 100;
+  drawVoidstone(g, 0, ground, 40, 8);
+
+  // eggs soaking on Voidstone: vanilla, Mote-line drained, Matter-line
+  const eggs = [["vanilla", null, 16], ["drained", null, 34], ["drained", v.matterEggTint, 52]];
+  eggs.forEach(([k, tint, x], i) => {
+    drawEgg(g, x, ground - 14, 1, k, tint, 11 + i);
+    if (v.eggParticles) {
+      const col = i === 2 ? v.eggParticles.matter : v.eggParticles.mote;
+      for (let p = 0; p < 3; p++) {
+        const ph = ((t / 900) + p / 3 + i * .17) % 1;
+        g.fillStyle = col; g.globalAlpha = 1 - ph;
+        g.fillRect(x + 4 + ((p * 5 + i) % 8), ground - 16 - ph * 14, 1, 1);
+      }
+      g.globalAlpha = 1;
+    }
+  });
+
+  // Dragonlings
+  const bob = Math.round(Math.sin(t / 400));
+  drawDragon(g, 82, ground - 20 + bob, 1, v.dragonTint.mote, false);
+  drawDragon(g, 120, ground - 22 - bob, 1, v.dragonTint.matter, false);
+  if (v.cargo) { drawCargo(g, 135, ground - 8 - bob, 1, v.cargo.dragonling); }
+
+  // Wells with a grown dragon over each
+  drawWell(g, 168, ground - 8, 8);
+  drawWell(g, 248, ground - 8, 8);
+  const lift = Math.round(Math.sin(t / 600) * 2);
+  drawDragon(g, 160, ground - 48 + lift, 2, v.dragonTint.mote, true);
+  drawDragon(g, 240, ground - 50 - lift, 2, v.dragonTint.matter, true);
+  if (v.cargo) drawCargo(g, 266, ground - 22 - lift, 2, v.cargo.grown);
+  if (v.moteTrail) {
+    const greens = ["#7ad1ff", "#be82ff", "#ff8ad8"];
+    for (let p = 0; p < 9; p++) {
+      const ph = ((t / 1400) + p / 9) % 1;
+      g.fillStyle = greens[p % 3]; g.globalAlpha = 1 - ph;
+      g.fillRect(Math.round(222 - ph * 40), Math.round(ground - 34 + lift + Math.sin(p * 2 + t / 300) * 4), 2, 2);
+    }
+    g.globalAlpha = 1;
+  }
+  if (v.nameplates) {
+    g.font = "7px monospace"; g.textAlign = "center";
+    [["Mote line", 192, ground - 54 + lift], ["Matter line", 272, ground - 56 - lift]].forEach(([s, x, y]) => {
+      const w = g.measureText(s).width + 4;
+      g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(x - w / 2, y - 7, w, 9);
+      g.fillStyle = "#fff"; g.fillText(s, x, y);
+    });
+  }
+}
+function drawCargo(g, x, y, s, kind) {
+  if (kind === "shulker") {
+    g.fillStyle = "#8e5fa8"; g.fillRect(x, y, 8 * s, 7 * s);
+    g.fillStyle = "#6c4580"; g.fillRect(x, y + 3 * s, 8 * s, s);
+  } else if (kind === "block") {
+    g.fillStyle = "#62d8cf"; g.fillRect(x, y, 4 * s, 4 * s);
+    g.fillStyle = "#2f8f87"; g.fillRect(x + s, y + s, 2 * s, 2 * s);
+  }
+  g.fillStyle = "#555"; g.fillRect(x + 3 * s, y - 3 * s, s, 3 * s);
+}
+
+/* ---------- the variants ---------- */
+const VARIANTS = [
+  {
+    key: "A", name: "Colour is the Line",
+    pitch: "A Matter-line egg, Dragonling and Void Dragon wear amber where the Mote line wears the void's purple. You know a dragon's Line from across the End, and an egg's from its icon in a chest. Jade adds nothing about the Line; the colour already said it.",
+    dragonTint: { mote: MOTE, matter: MATTER },
+    matterEggTint: MATTER,
+    eggs: [
+      { kind: "vanilla", tint: null, count: "", tip: [["Dragon Egg", "epic"]] },
+      { kind: "drained", tint: null, count: "3", tip: [["Drained Dragon Egg", "white"]] },
+      { kind: "drained", tint: MATTER, count: "1", tip: [["Drained Dragon Egg", "matter"]] },
+    ],
+    worldCaps: ["Eggs: vanilla, Mote-line drained, Matter-line drained (amber)", "Dragonlings: purple, amber", "Grown at their Wells: purple, amber"],
+    jade: [
+      { looking: "Looking at the Matter-line Void Dragon", lines: [["Void Dragon", "matter"], ["♥♥♥♥♥♥♥♥♥♡", "hearts"], ["Diving"], ["Bound for End Base"], ["Carrying 6 stacks"], ["Adult"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "Looking at a Matter-line Dragonling", lines: [["Dragonling", "matter"], ["Grown up: 40%"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "Looking at a soaking Matter-line egg", lines: [["Soaking Dragon Egg", "matter"], ["Dormant: 12,000 of 40,000 void energy paid"], ["Voidworks", "mod"]] },
+    ],
+    tollPitch: "The Toll shows only where it bites: a provider hatch whose network can't pay names it in red, like a machine's stall.",
+    toll: [
+      { looking: "A provider hatch on a Nether Well, network short", lines: [["Well Hatch"], ["Provides: Diamond Block"], ["Holds 9 stacks"], ["Stalled: its network can't pay a Toll", "bad"], ["Voidworks", "mod"]] },
+    ],
+    cost: [
+      "<code>VoidDragonRenderer.TINT</code> becomes per Line: amber for Matter, read from the presence's synced Line.",
+      "The Matter-line egg is its own block and item, sharing the drained egg's model with a <code>tintindex</code>; a block and item colour handler tints it. No new texture.",
+      "Jade names take a Line colour. Item name colour by a <code>Rarity</code>-like style on the Matter egg.",
+      "Risk: colour alone fails colour-blind players and Jade's own name colour config; the purple/amber pair is chosen to differ in lightness too.",
+    ],
+  },
+  {
+    key: "B", name: "Words carry the Line",
+    pitch: "Nothing looks different. The Line is written: the Matter-line egg has its own name, every tooltip and Jade box has a Line line, and the Toll is a number you can read on the dragon and the Well. Precise, but you must look at a dragon to know its Line.",
+    dragonTint: { mote: MOTE, matter: MOTE },
+    matterEggTint: null,
+    nameplates: false,
+    eggs: [
+      { kind: "vanilla", tint: null, count: "", tip: [["Dragon Egg", "epic"], ["Mote line: carries motes", "grey"]] },
+      { kind: "drained", tint: null, count: "3", tip: [["Drained Dragon Egg", "white"], ["Mote line: carries motes", "grey"]] },
+      { kind: "drained", tint: null, count: "1", tip: [["Laden Dragon Egg", "white"], ["Matter line: carries items", "grey"], ["Pays a Toll as it loads", "grey"]] },
+    ],
+    worldCaps: ["Eggs: the drained ones look alike", "Dragonlings: both purple", "Grown: both purple; look at one to know"],
+    jade: [
+      { looking: "Looking at the Matter-line Void Dragon", lines: [["Void Dragon"], ["♥♥♥♥♥♥♥♥♥♡", "hearts"], ["Matter line", "grey"], ["Diving"], ["Bound for End Base"], ["Carrying 6 stacks"], ["Toll paid: 3,072 void energy", "grey"], ["Adult"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "Looking at a Matter-line Dragonling", lines: [["Dragonling"], ["Matter line", "grey"], ["Grown up: 40%"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "Looking at a soaking Matter-line egg", lines: [["Soaking Dragon Egg"], ["Matter line", "grey"], ["Dormant: 12,000 of 40,000 void energy paid"], ["Voidworks", "mod"]] },
+    ],
+    tollPitch: "The Toll is read at the Well, the face of its network: what a stack costs to each Well it could go to, and how many stacks the network can pay for. A network that can pay none says so.",
+    toll: [
+      { looking: "A Nether Well whose network can pay", lines: [["Void Well"], ["Fill target: none, a reservoir"], ["Toll a stack: End Base 1,024 · Overworld Hub 512", "grey"], ["Can pay for 2 stacks to End Base"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "The same Well, network short", lines: [["Void Well"], ["Fill target: none, a reservoir"], ["Toll a stack: End Base 1,024 · Overworld Hub 512", "grey"], ["Can't pay a Toll: Matter-line dragons don't load here", "bad"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+    ],
+    cost: [
+      "A Line line in <code>DragonReport</code>, <code>DragonlingReport</code> and the soaking egg's report; the record already knows its Line.",
+      "A <code>tollPaid</code> on the record, set at loading and cleared at unloading, for the dragon's Jade.",
+      "<code>WellReport</code> gains the Toll a stack to each Well and how many stacks the network can pay: it needs the spend rule's quote at the core, already run by routing.",
+      "Lang keys, and an item tooltip line on both eggs. The Matter egg's name (Laden here) is a placeholder.",
+    ],
+  },
+  {
+    key: "C", name: "The cargo is the Line",
+    pitch: "A dragon shows what it carries. A Matter-line dragon hangs its load under its body, the first stack's own item model (a shulker box when it carries one); a Mote-line dragon trails sparks in its grades' colours. Eggs show it as they soak: mote sparks rise from a Mote-line egg, item-break flecks from a Matter-line one. In Jade the load lines are the Line: grades for motes, items with icons for matter.",
+    dragonTint: { mote: MOTE, matter: MOTE },
+    matterEggTint: [150, 205, 200],
+    moteTrail: true,
+    cargo: { dragonling: "block", grown: "shulker" },
+    eggParticles: { mote: "#be82ff", matter: "#62d8cf" },
+    eggs: [
+      { kind: "vanilla", tint: null, count: "", tip: [["Dragon Egg", "epic"]] },
+      { kind: "drained", tint: null, count: "3", tip: [["Drained Dragon Egg", "white"], ["Hatches a dragon that carries motes", "grey"]] },
+      { kind: "drained", tint: [150, 205, 200], count: "1", tip: [["Matter Dragon Egg", "white"], ["Hatches a dragon that carries items", "grey"]] },
+    ],
+    worldCaps: ["Eggs: Matter-line one pale teal, each throws its own particles", "Dragonlings: the Matter one holds a block", "Grown: Matter hangs its load; Mote trails grade sparks"],
+    jade: [
+      { looking: "Looking at the Matter-line Void Dragon", lines: [["Void Dragon"], ["♥♥♥♥♥♥♥♥♥♡", "hearts"], ["Diving"], ["Bound for End Base"], [{ item: "#62d8cf", text: "Diamond Block × 4 stacks" }], [{ item: "#d8d8d8", text: "Iron Block × 1 stack" }], [{ item: "#8e5fa8", text: "Shulker Box (Gold Block × 27)" }], ["6 of 27 stacks, Toll 3,072 paid", "grey"], ["Adult"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+      { looking: "Looking at the Mote-line Void Dragon, for comparison", lines: [["Void Dragon"], ["♥♥♥♥♥♥♥♥♥♥", "hearts"], ["Diving"], ["Bound for End Base"], ["Grade 2: 18,000 motes", "g2"], ["Grade 3: 4,200 motes", "g3"], ["Carrying 22,200 motes"], ["Young"], ["Owner: kc00l"], ["Voidworks", "mod"]] },
+    ],
+    tollPitch: "The Toll shows on the hatch that would pay it, against what it holds: how many of its stacks the network can pay to lift, as a stall line when that is none.",
+    toll: [
+      { looking: "A provider hatch on a Nether Well, network can pay part", lines: [["Well Hatch"], ["Provides: Diamond Block"], ["Holds 9 stacks; its network can pay the Toll for 2", "grey"], ["Voidworks", "mod"]] },
+      { looking: "The same hatch, network short", lines: [["Well Hatch"], ["Provides: Diamond Block"], ["Holds 9 stacks"], ["Stalled: its network can't pay the Toll for one", "bad"], ["Voidworks", "mod"]] },
+    ],
+    cost: [
+      "A render layer in <code>VoidDragonRenderer</code> draws the first carried stack's item model under the body, through the item renderer: no model of ours. The client needs the first stack synced with the presence.",
+      "Mote trail and egg flecks are vanilla particle types (<code>DUST</code> in grade colours, <code>ITEM</code> of the egg). Cheap, but particles cost frames with many dragons.",
+      "Jade's item elements for load lines; the Mote line keeps its grade lines as now.",
+      "The Matter-line egg is its own block and item; it needs a pale palette swap of the drained texture, or a <code>tintindex</code> as in A.",
+    ],
+  },
+];
+
+const COLOURS = { epic: "var(--mc-epic)", white: "var(--mc-white)", grey: "var(--mc-grey)", matter: "var(--matter)", bad: "var(--bad)", g2: "#ff8a5c", g3: "#7ad1ff" };
+
+function tipLines(lines) {
+  return lines.map(([t, style]) => {
+    if (typeof t === "object") return `<div class="item"><i style="background:${t.item}"></i>${t.text}</div>`;
+    if (style === "mod") return `<div class="mod">${t}</div>`;
+    if (style === "hearts") return `<div class="hearts">${t}</div>`;
+    return `<div style="color:${COLOURS[style] || "var(--mc-white)"}">${t}</div>`;
+  }).join("");
+}
+function jadeBlock(b) {
+  return `<div class="jade-wrap"><div class="looking">${b.looking}</div><div class="tip jade">${tipLines(b.lines)}</div></div>`;
+}
+
+let current = 0, raf = 0, selectedEgg = 2;
+function render() {
+  const v = VARIANTS[current];
+  document.getElementById("label").textContent = `${v.key} · ${v.name}`;
+  const el = document.getElementById("variant");
+  el.innerHTML = `
+    <div style="display:grid;gap:28px">
+      <div class="variant-head">
+        <div class="tag">Variant ${v.key}</div>
+        <h2>${v.name}</h2>
+        <p>${v.pitch}</p>
+      </div>
+      <div class="scene">
+        <h3>In a chest or the hotbar</h3>
+        <div class="row inv">
+          <div class="hotbar" id="hotbar"></div>
+          <div class="tip" id="itemtip"></div>
+        </div>
+      </div>
+      <div class="scene">
+        <h3>In the world</h3>
+        <canvas class="world" id="world" role="img" aria-label="Eggs soaking on Voidstone, two Dragonlings, and a grown dragon over each of two Wells: Mote line left, Matter line right"></canvas>
+        <div class="caps">${v.worldCaps.map(c => `<div>${c}</div>`).join("")}</div>
+      </div>
+      <div class="scene">
+        <h3>In Jade</h3>
+        <div class="row">${v.jade.map(jadeBlock).join("")}</div>
+      </div>
+      <div class="scene">
+        <h3>A network that can't pay its Toll</h3>
+        <p>${v.tollPitch}</p>
+        <div class="row">${v.toll.map(jadeBlock).join("")}</div>
+      </div>
+      <div class="cost">
+        <h3>What it takes to build</h3>
+        <ul>${v.cost.map(c => `<li>${c}</li>`).join("")}</ul>
+      </div>
+    </div>`;
+  const bar = document.getElementById("hotbar");
+  v.eggs.forEach((e, i) => {
+    const s = document.createElement("div"); s.className = "slot" + (i === selectedEgg ? " on" : "");
+    s.tabIndex = 0; s.setAttribute("role", "button"); s.setAttribute("aria-label", e.tip[0][0]);
+    s.appendChild(eggCanvas(e.kind, e.tint));
+    if (e.count) { const n = document.createElement("span"); n.className = "n"; n.textContent = e.count; s.appendChild(n); }
+    const pick = () => { selectedEgg = i; render(); };
+    s.addEventListener("click", pick); s.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+    bar.appendChild(s);
+  });
+  for (let i = 0; i < 6; i++) { const s = document.createElement("div"); s.className = "slot"; bar.appendChild(s); }
+  document.getElementById("itemtip").innerHTML = tipLines(v.eggs[selectedEgg].tip.concat([["Voidworks", "mod"]]));
+  const canvas = document.getElementById("world");
+  cancelAnimationFrame(raf);
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const loop = t => { drawWorld(canvas, v, t); if (!still) raf = requestAnimationFrame(loop); };
+  loop(0);
+}
+function go(i) {
+  current = (i + VARIANTS.length) % VARIANTS.length;
+  try { history.replaceState(null, "", "#" + VARIANTS[current].key); } catch (e) {}
+  render();
+}
+document.getElementById("prev").onclick = () => go(current - 1);
+document.getElementById("next").onclick = () => go(current + 1);
+addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input,textarea,[contenteditable]")) return;
+  if (e.key === "ArrowLeft") go(current - 1);
+  if (e.key === "ArrowRight") go(current + 1);
+});
+const fromHash = VARIANTS.findIndex(v => "#" + v.key === location.hash);
+loadDrained().then(() => go(fromHash < 0 ? 0 : fromHash));
+</script>
