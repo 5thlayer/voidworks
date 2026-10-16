@@ -143,7 +143,8 @@ it while it soaks shows what is paid and offers to cancel, confirmed the same wa
 upgrade loses what it paid, as any spend does. A Displacer can be upgraded while it is awake and
 not yet Voidstone: stalled, starved of fed blocks, or with its Zone spent and its output still
 emptying, when it waits for the upgrade's soak, unbreakable, and harvests on. A Dormant one cannot,
-nor one that can reach nothing. Each level adds a step of positions and costs a first price times a
+nor one that can reach nothing; one left with nothing to reach while it soaks becomes Voidstone all
+the same, and what it paid is spent. Each level adds a step of positions and costs a first price times a
 growth per level bought, both datapack data per Displacer (provisional, all three: 16 positions,
 1,600 void energy, doubling), with no last level. The levels belong to the Displacer, so a new one
 starts at the first: the first two levels repay themselves at a middling Density, the third breaks
