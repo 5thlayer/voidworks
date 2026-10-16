@@ -206,17 +206,24 @@ A Void Dragon before it grows, not yet in any life stage, hatched from an egg so
 it hatched, follows a player holding a Void Siphon, and grows faster for the motes a Siphon feeds it.
 
 **Drained Dragon Egg**:
-The egg an adult Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
-the founder of the Mote line, both soak motes once a player places them touching Voidstone, as a
-Dormant machine soaks its cost, and hatch once they have soaked enough; broken first, an egg loses
-what it soaked.
+The egg an adult Mote-line Void Dragon lays as it works: a dragon egg drained of void. It, the
+vanilla egg, the founder of the Mote line, and the Matter Dragon Egg all soak motes once a player
+places them touching Voidstone, as a Dormant machine soaks its cost, and hatch once they have soaked
+enough; broken first, an egg loses what it soaked.
 _Avoid_: lesser egg
+
+**Matter Dragon Egg**:
+The Matter line's egg: a Drained Dragon Egg tinted amber, made by upgrading a Mote-line egg by
+Mutation and laid by adult Matter-line dragons. Its colour tells it from a Mote-line egg in a chest;
+the dragon it hatches looks like any other until it carries.
+_Avoid_: laden egg, freight egg
 
 **Line**:
 A Void Dragon's inherited kind, fixed in its egg, which says what it carries: the Mote line carries
 motes, the Matter line items, and never both. A dragon lays eggs of its own Line. The vanilla egg
-founds the Mote line; the Matter line is founded by upgrading a Mote-line egg by Mutation, never the
-other way.
+founds the Mote line; the Matter line is founded by upgrading a Mote-line egg to a Matter Dragon Egg
+by Mutation, never the other way. A grown dragon shows its Line by what it carries: a Matter-line one
+hangs its first stack under its body, a Mote-line one trails sparks in its grades' colours.
 _Avoid_: breed, strain, class
 
 ### Mutation
