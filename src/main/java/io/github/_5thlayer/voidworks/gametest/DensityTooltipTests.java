@@ -15,9 +15,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.GameType;
 
 /**
- * A Density item's tooltip, built on a real server with the server's config: the line
- * under a Density item's name, with the motes a Displacer yields from it, and no line for a block of
- * Density 0.
+ * A Density item's tooltip, built on a real server with the server's config: the line under its
+ * name, with the motes a Displacer yields from it, and no line for a block of Density 0.
  */
 final class DensityTooltipTests {
 
