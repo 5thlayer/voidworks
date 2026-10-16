@@ -60,7 +60,7 @@ final class WellHatchTests {
                 WellHatchTests::placedOnlyAgainstWallCasing);
         tests.test("a_well_hatch_is_refused_against_another_player_s_void_well", TICKS, WellHatchTests::refusedAgainstAnothersWell);
         tests.test("a_well_hatch_is_emptied_by_a_hopper_under_it_and_filled_by_one_above_it", TICKS, WellHatchTests::hoppers);
-        tests.test("a_well_hatch_takes_nothing_in_by_hand_and_its_owner_s_empty_hand_takes_a_stack_out_anyone_else_s_being_told_whose_it_is", TICKS,
+        tests.test("a_well_hatch_takes_nothing_by_hand_but_gives_its_owner_a_stack", TICKS,
                 WellHatchTests::byHand);
         tests.test("a_well_hatch_keeps_its_contents_in_saved_data_across_a_save_and_reload", TICKS, WellHatchTests::savedContents);
         tests.test("a_well_hatch_keeps_its_contents_while_its_well_is_not_whole_and_is_a_plain_container_once_its_core_is_broken", TICKS,
@@ -153,15 +153,21 @@ final class WellHatchTests {
         var contents = hatch(helper, HATCH).contents();
         insert(contents, Items.ENDER_PEARL, 16);
         insert(contents, Items.COBBLESTONE, 40);
-        owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.ENDER_PEARL, 5));
+        // A block, whose own use would place it against the hatch.
+        owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COBBLESTONE, 5));
         helper.useBlock(HATCH, owner);
-        helper.assertTrue(owner.getMainHandItem().getCount() == 5, "the owner's hand put " + (5 - owner.getMainHandItem().getCount()) + " ender pearls in");
-        helper.assertTrue(held(contents, Items.ENDER_PEARL) == 16, "the hatch holds " + held(contents, Items.ENDER_PEARL) + " ender pearls, not 16");
+        helper.assertTrue(owner.getMainHandItem().getCount() == 5, "the owner's hand put " + (5 - owner.getMainHandItem().getCount()) + " cobblestone in or down");
+        helper.assertTrue(held(contents, Items.COBBLESTONE) == 40, "the hatch holds " + held(contents, Items.COBBLESTONE) + " cobblestone, not 40");
+        var facesOnly = Component.translatable("voidworks.hatch.faces_only");
+        helper.assertTrue(owner.overlays.getLast().equals(facesOnly), "the owner was told " + owner.overlays.getLast() + ", not to set a hopper on it");
 
         var other = new WellTests.Listener(helper, "someone-else");
         var whose = Component.translatable("voidworks.hatch.owned_by", owner.getGameProfile().name());
+        other.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COBBLESTONE, 5));
         helper.useBlock(HATCH, other);
-        helper.assertTrue(other.overlays.equals(List.of(whose)), "another player was told " + other.overlays + ", not whose hatch it is");
+        other.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        helper.useBlock(HATCH, other);
+        helper.assertTrue(other.overlays.equals(List.of(whose, whose)), "another player was told " + other.overlays + ", not whose hatch it is");
         helper.assertTrue(other.getMainHandItem().isEmpty() && held(contents, Items.ENDER_PEARL) == 16, "another player's empty hand took a stack");
 
         owner.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);

@@ -199,6 +199,7 @@
   "voidworks.siphon.tooltip.held": "%s of %s motes",
   "voidworks.siphon.tooltip.worth": "Worth %s void energy here",
   "voidworks.siphon.tooltip.fe": "Charges %s FE here into what you wear or hold",
+  "voidworks.hatch.faces_only": "A Well hatch fills only through its faces: set a hopper on it",
   "voidworks.hatch.not_on_wall": "A Well hatch goes against the outer face of a Void Well's wall casing",
   "voidworks.hatch.owned_by": "This Well hatch is %s's",
   "voidworks.well.not_whole": "The Void Well is not whole: a 3×3 floor, a 5×5 ring of casing walls three high around it, a rim on top, and this core in the middle of a wall",

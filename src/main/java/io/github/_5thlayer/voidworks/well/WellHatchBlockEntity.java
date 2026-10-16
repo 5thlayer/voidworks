@@ -26,10 +26,10 @@ import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 public final class WellHatchBlockEntity extends BlockEntity {
 
     /**
-     * A watcher's item face: it knows nothing of what the hatch holds, but has a face, so a mod there
-     * that asks whether a block holds items, as Jade does before asking the server for them, asks.
+     * A watcher's item face, with no slots: it knows nothing of what the hatch holds, but a mod there
+     * that looks for a face before asking the server what a block holds, as Jade does, finds one.
      */
-    private static final ResourceHandler<ItemResource> WATCHED = new ItemStacksResourceHandler(0);
+    private static final ResourceHandler<ItemResource> EMPTY = new ItemStacksResourceHandler(0);
 
     public WellHatchBlockEntity(BlockPos pos, BlockState state) {
         super(VoidworksBlocks.WELL_HATCH_ENTITY.get(), pos, state);
@@ -47,7 +47,7 @@ public final class WellHatchBlockEntity extends BlockEntity {
 
     /** @return what it holds, the same on every face: hoppers, belts and pipes fill and empty it; for a watcher, a face holding nothing */
     public ResourceHandler<ItemResource> itemFace() {
-        return hatch().<ResourceHandler<ItemResource>>map(WellHatches.Hatch::contents).orElse(WATCHED);
+        return hatch().<ResourceHandler<ItemResource>>map(WellHatches.Hatch::contents).orElse(EMPTY);
     }
 
     /** Broken, it leaves the server's hatches and drops what it held. */

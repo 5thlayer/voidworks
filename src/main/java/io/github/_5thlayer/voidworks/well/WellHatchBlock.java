@@ -147,6 +147,22 @@ public final class WellHatchBlock extends BaseEntityBlock {
         }
     }
 
+    /**
+     * Used with an item it takes nothing, as it fills only through its faces, and tells its owner so;
+     * anyone else is told whose it is. The item's own use never runs, so a block is not placed against
+     * it but by sneaking, as against a chest.
+     */
+    @Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
+            BlockHitResult hitResult) {
+        if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof WellHatchBlockEntity entity)) {
+            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+        }
+        entity.hatch().filter(hatch -> usableBy(hatch, player))
+                .ifPresent(hatch -> player.sendOverlayMessage(Component.translatable("voidworks.hatch.faces_only")));
+        return InteractionResult.SUCCESS;
+    }
+
     /** Its owner using it with an empty hand takes the first stack it holds; anyone else is told whose it is. */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
