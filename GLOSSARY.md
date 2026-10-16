@@ -153,6 +153,12 @@ distance the dragon covers at its speed, slower as it weakens on the way, and no
 sees the dragon, or its rider, while it lasts.
 _Avoid_: teleport, flight
 
+**Ridden dive**:
+A dive with its owner riding, to the Well they picked. It takes at most a short set time, and its
+load shrinks by the share of time saved, so riding never carries more motes a second. The rider
+sees its progress as a bar in the destination dimension's colour.
+_Avoid_: fast dive, rider dive
+
 **Trip**:
 A Void Dragon's errand: to a source Well to load, a dive, and on to the destination Well to unload.
 It is claimed as it is planned, so a network's need counts the motes already on their way to any
