@@ -21,6 +21,7 @@ import io.github._5thlayer.voidworks.mutation.UnmakingRecipes;
 import io.github._5thlayer.voidworks.network.Conduction;
 import io.github._5thlayer.voidworks.pressure.DimensionPressure;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
+import io.github._5thlayer.voidworks.taking.VoidTaking;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -53,6 +54,7 @@ public final class Voidworks {
         VoidworksEntities.register(modBus);
         modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
+        VoidTaking.register(modBus);
         DensityTooltip.register();
         Dormancy.register(modBus);
         DiveColour.register(modBus);

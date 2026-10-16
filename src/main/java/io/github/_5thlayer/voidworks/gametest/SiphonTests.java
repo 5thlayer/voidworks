@@ -69,6 +69,10 @@ final class SiphonTests {
         tests.test("a_siphon_smithed_with_an_echo_shard_becomes_resonant_keeping_its_motes_and_toggle", 1, SiphonTests::smithsToResonant);
         tests.test("a_resonant_siphon_smithed_with_dragons_breath_becomes_draconic_keeping_its_motes_and_toggle", 1, SiphonTests::smithsToDraconic);
         tests.test("a_resonant_siphon_holds_more_than_a_siphon", 1, SiphonTests::resonantHoldsMore);
+        tests.test("void_takes_the_terrain_a_siphon_harvests", 1, SiphonTests::takesTerrain);
+        tests.test("void_takes_the_lava_a_siphon_harvests", 1, SiphonTests::takesLava);
+        tests.test("void_takes_the_air_a_siphon_harvests", 1, SiphonTests::takesAir);
+        tests.test("void_takes_nothing_from_a_refused_siphon_harvest", 1, SiphonTests::takesNothingRefused);
         tests.test("a_draconic_siphon_on_voidstone_charges_at_its_own_rate", 1, SiphonTests::draconicChargesFaster);
     }
 
@@ -290,6 +294,44 @@ final class SiphonTests {
         int moved = SiphonCharging.exchange(helper.getLevel(), player);
         helper.assertTrue(moved == rate, "it moved " + moved + " motes, not the Draconic rate's " + rate);
         assertMotes(helper, player, Map.of(3, rate));
+        helper.succeed();
+    }
+
+    private static void takesTerrain(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var player = player(helper, new ItemStack(Items.COPPER_BLOCK));
+        harvest(helper, player, FLOOR, HarvestKind.OVERWORLD);
+        takings.stop();
+        takings.assertTook(FLOOR, Blocks.STONE.defaultBlockState());
+        helper.succeed();
+    }
+
+    private static void takesLava(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var player = player(helper, new ItemStack(Items.IRON_BLOCK));
+        player.getInventory().setItem(3, new ItemStack(Items.BUCKET));
+        helper.setBlock(FLOOR, Blocks.LAVA);
+        harvest(helper, player, FLOOR, HarvestKind.NETHER);
+        takings.stop();
+        takings.assertTook(FLOOR, Blocks.LAVA.defaultBlockState());
+        helper.succeed();
+    }
+
+    private static void takesAir(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var player = player(helper, new ItemStack(Items.DIAMOND_BLOCK));
+        harvest(helper, player, FLOOR, HarvestKind.END);
+        takings.stop();
+        takings.assertTook(ABOVE, Blocks.AIR.defaultBlockState());
+        helper.succeed();
+    }
+
+    private static void takesNothingRefused(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var player = player(helper, new ItemStack(Items.COBBLESTONE));
+        harvest(helper, player, FLOOR, HarvestKind.OVERWORLD);
+        takings.stop();
+        helper.assertTrue(takings.at(FLOOR) == null, "a refused harvest took " + takings.at(FLOOR));
         helper.succeed();
     }
 

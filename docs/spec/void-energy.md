@@ -120,6 +120,17 @@ Displacer or the player's Void Siphon, as a small butterfly with flapping wings,
 our own sprite, after Boulder Dash's butterflies. They are cosmetic and credited at once, but the
 count is exact: like XP orbs, a butterfly stands for 1, 8 or 64 motes by its size.
 
+Every harvest also shows the void taking the block, over 20 ticks, a Displacer's or a Siphon's alike,
+so a Displacer's growth reads as a continuous wave. Like the butterflies it is only a look: the
+position is Voidstone from the harvest's tick, for its network, the next harvest and anyone mining,
+and the motes and what is given back arrive then too. Each client draws what was harvested over the
+new Voidstone and eats it away through 12 irregular stages, after Just Dire Things' goo, each face
+on its own and turned by the position so neighbours differ. A solid block is drawn as its own model
+and sheds crumbs as it goes; a lava source as a full cube of still lava, bright; air as the End's
+starfield, which recedes as if the void hardened into Voidstone. The harvest's sound plays as it
+starts. A spent Displacer becoming Voidstone shows the same, its own casing eaten away. A chunk that
+unloads drops the effect, and nothing of it is saved.
+
 - **End**: places fed blocks into the empty air of its zone. It faces the way its placer looked and
   grows only into the space ahead of that face, so it never walls in its other faces.
 - **Overworld**: swaps fed blocks with natural terrain in its zone — the blocks in a natural-block

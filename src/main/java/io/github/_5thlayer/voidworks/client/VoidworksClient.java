@@ -15,6 +15,7 @@ import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
 import io.github._5thlayer.voidworks.mutation.KnownBreakdowns;
 import io.github._5thlayer.voidworks.pressure.KnownPressure;
 import io.github._5thlayer.voidworks.pressure.PressurePayload;
+import io.github._5thlayer.voidworks.taking.VoidTaking;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.SpriteSet;
@@ -35,8 +36,8 @@ import net.neoforged.neoforge.common.NeoForge;
 /**
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
- * ({@link VoidWellRenderer}, {@link ShaftButterflies}) and the Void Dragon
- * ({@link VoidDragonRenderer}), and keeps the Void Pressure
+ * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the Void Dragon
+ * ({@link VoidDragonRenderer}) and the void taking a block ({@link VoidTakings}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
@@ -49,6 +50,7 @@ public final class VoidworksClient {
         modBus.addListener(VoidworksClient::registerParticles);
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         modBus.addListener(VoidworksClient::registerRenderers);
+        VoidTakings.register(modBus);
         // Over the world but under the hotbar: a dragon's rider sees only the void through its dive.
         modBus.addListener((RegisterGuiLayersEvent event) -> event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS,
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "dive"), DiveOverlay::render));
@@ -100,5 +102,6 @@ public final class VoidworksClient {
         event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));
         event.register(BreakdownsPayload.TYPE, (payload, context) -> KnownBreakdowns.receive(payload));
         event.register(CallPayload.TYPE, (payload, context) -> CallOverlay.receive(payload));
+        event.register(VoidTaking.TYPE, (taking, context) -> VoidTakings.receive(taking));
     }
 }

@@ -53,9 +53,15 @@ the egg seen from the front, so it fits the egg's shape. Only an egg, its first 
 soaking, its cracks spread at each of the four stages and glow the brighter in amethyst, each stage's
 cracks a sprite of their own laid over the shell.
 
+The void's 12 stage masks, which a block it takes is eaten away through, are placeholders until they
+are drawn (#107): the void spreads from a few spots, each pixel reached as soon as the nearest spot,
+its distance roughened by noise, comes to it, the same share of the face more at every stage. A mask
+paints, in the void's darkest purple, every pixel reached by its stage, so each covers the last.
+
 Run from the repository root; it needs Pillow.
 """
 
+import random
 import shutil
 from pathlib import Path
 
@@ -112,6 +118,13 @@ EGG_CRACKS = [
 # The first crack's shade on an egg that is not soaking, and the cracks' glow at each stage.
 EGG_CRACK_DARK = (0x3E, 0x38, 0x30)
 EGG_GLOW = [(0x7A, 0x3C, 0xB0), (0xA0, 0x5A, 0xE0), (0xC8, 0x8C, 0xFF), (0xE8, 0xB0, 0xFF)]
+
+# The void's stage masks: how many stages, the spots it spreads from on a face, how rough its edge is,
+# in pixels, and the seed that fixes both, so the placeholders come out the same on every run.
+TAKING_STAGES = 12
+TAKING_SPOTS = 3
+TAKING_ROUGHNESS = 3.0
+TAKING_SEED = 98
 
 # The abyssium's darkest and middling purples, which Voidstone's darkest and lightest pixels become.
 VOIDSTONE_DARK = (0x0F, 0x00, 0x1D)
@@ -294,6 +307,32 @@ def drained_dragon_egg():
         save(cracks, TEXTURES / "block" / f"drained_dragon_egg_cracks_{stage}.png")
 
 
+def taking_masks():
+    rng = random.Random(TAKING_SEED)
+    spots = [(rng.uniform(0, 16), rng.uniform(0, 16)) for _ in range(TAKING_SPOTS)]
+    # Value noise on a coarse grid, read smoothly between its points, so the edge is ragged, not round.
+    grid = [[rng.uniform(0, TAKING_ROUGHNESS) for _ in range(6)] for _ in range(6)]
+
+    def noise(x, y):
+        gx, gy = x / 3.2, y / 3.2
+        x0, y0 = int(gx), int(gy)
+        fx, fy = gx - x0, gy - y0
+        top = grid[y0][x0] * (1 - fx) + grid[y0][x0 + 1] * fx
+        bottom = grid[y0 + 1][x0] * (1 - fx) + grid[y0 + 1][x0 + 1] * fx
+        return top * (1 - fy) + bottom * fy
+
+    def reached(pixel):
+        x, y = pixel[0] + 0.5, pixel[1] + 0.5
+        return min(((x - sx) ** 2 + (y - sy) ** 2) ** 0.5 for sx, sy in spots) + noise(x, y) + rng.uniform(0, 0.5)
+
+    order = sorted(((x, y) for y in range(16) for x in range(16)), key=reached)
+    for stage in range(1, TAKING_STAGES + 1):
+        mask = Image.new("RGBA", (16, 16))
+        for pixel in order[: round(len(order) * stage / TAKING_STAGES)]:
+            mask.putpixel(pixel, (*VOIDSTONE_DARK, 255))
+        save(mask, TEXTURES / "void_taking" / f"stage_{stage}.png")
+
+
 def main():
     void_siphon()
     void_siphon("resonant_void_siphon", RESONANT_CRYSTAL)
@@ -316,6 +355,7 @@ def main():
     void_crucible(abyssium)
     void_well()
     drained_dragon_egg()
+    taking_masks()
 
 
 if __name__ == "__main__":

@@ -73,6 +73,8 @@ final class DisplacerTests {
         tests.test("a_displacer_where_the_harvest_kind_is_not_overworld_harvests_nothing_and_pops_off", 1, DisplacerTests::refusesOutsideTheOverworldKind);
         tests.test("an_empty_hand_takes_back_a_displacers_fed_blocks", 1, DisplacerTests::givesBackFed);
         tests.test("an_empty_hand_takes_a_displacers_output_before_its_fed_blocks", 1, DisplacerTests::givesOutputFirst);
+        tests.test("void_takes_the_terrain_a_displacer_harvests", TICKS, DisplacerTests::takesTerrain);
+        tests.test("void_takes_a_spent_displacer_as_it_becomes_voidstone", TICKS, DisplacerTests::takesSpentDisplacer);
         tests.test("a_displacers_report_names_its_fed_block_and_the_harvests_left_in_its_zone", TICKS, DisplacerTests::report);
     }
 
@@ -363,6 +365,33 @@ final class DisplacerTests {
             helper.assertTrue(report.harvestsLeft() == 4, "it reports " + report.harvestsLeft() + " harvests left, not 4");
             helper.assertTrue(report.stall().isEmpty(), "it reports stalled by " + report.stall());
         });
+    }
+
+    private static void takesTerrain(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var displacer = place(helper, DISPLACER, 2);
+        feed(displacer, Items.COPPER_BLOCK, 1);
+        helper.succeedWhen(() -> {
+            takings.assertTook(BELOW, Blocks.STONE.defaultBlockState());
+            takings.stop();
+        });
+    }
+
+    /** It takes itself only once its output is empty, so what it takes is the Displacer, not Voidstone. */
+    private static void takesSpentDisplacer(GameTestHelper helper) {
+        var takings = Takings.watch(helper);
+        var displacer = place(helper, DISPLACER, 1);
+        var state = helper.getBlockState(DISPLACER);
+        feed(displacer, Items.COPPER_BLOCK, 1);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(output(displacer, Items.STONE) == 1, "it has not harvested"))
+                .thenExecute(() -> {
+                    helper.assertTrue(takings.at(DISPLACER) == null, "the void took the Displacer before its output was empty");
+                    emptyOutput(displacer);
+                })
+                .thenWaitUntil(() -> takings.assertTook(DISPLACER, state))
+                .thenExecute(takings::stop)
+                .thenSucceed();
     }
 
     private static OverworldDisplacerBlockEntity place(GameTestHelper helper, BlockPos pos, int zone) {

@@ -19,10 +19,9 @@ import io.github._5thlayer.voidworks.inventory.ItemFace;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.HarvestKind;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
+import io.github._5thlayer.voidworks.taking.VoidTaking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -48,7 +47,7 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * What every Void Displacer shares: it harvests the positions touching it or the Voidstone it has
  * left, nearest first, each harvest taking one fed block, turning the position into Voidstone and
  * putting the fed block's motes, at one grade above the Void Pressure there, into the network its
- * Voidstone forms, with a sound, and anything solid it displaced crumbling. It holds no motes
+ * Voidstone forms, with a sound, and the void seen taking what it displaced ({@link VoidTaking}). It holds no motes
  * itself. What it harvests, and what its output and tank get for it, is its dimension's
  * ({@link OverworldDisplacerBlockEntity}, {@link EndDisplacerBlockEntity},
  * {@link NetherDisplacerBlockEntity}).
@@ -250,11 +249,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
             transaction.commit();
         }
         level.setBlock(target, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
-        if (!harvested.isAir() && harvested.getFluidState().isEmpty()) {
-            // What solid was displaced crumbles as if broken, without its breaking sound.
-            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, harvested),
-                    target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 30, 0.3, 0.3, 0.3, 0.05);
-        }
+        VoidTaking.show(level, target, harvested);
         grown.add(target.immutable());
         try (var transaction = Transaction.openRoot()) {
             // The room was asked for above, so the network takes them all.
@@ -367,7 +362,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
 
     /** Its Zone spent or nothing left in reach, and its output empty: it becomes Voidstone, joining its network; {@link #preRemoveSideEffects} drops its fed blocks. */
     private void becomeVoidstone(ServerLevel level) {
+        var itself = getBlockState();
         level.setBlock(worldPosition, VoidworksBlocks.VOIDSTONE.get().in(level), Block.UPDATE_ALL);
+        VoidTaking.show(level, worldPosition, itself);
     }
 
     /** Where it cannot work, or never could harvest: it goes back to its item, and {@link #preRemoveSideEffects} drops what it held. */
