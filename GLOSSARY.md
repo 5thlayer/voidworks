@@ -144,7 +144,7 @@ _Avoid_: tamer, master
 **Void Dragon**:
 A dragon raised on void that carries motes or matter, as its Line says, between Void Wells, diving
 through the void between them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens on dives
-outside the End, heals at its Wells, and never dies.
+outside the End and heals at its Wells. It ages through its life stages and dies of old age.
 _Avoid_: Ender Dragon (the boss), tamed dragon
 
 **Dive**:
@@ -162,12 +162,18 @@ trip: the Well its owner calls the dragon to, or the Well its rider picks, which
 them down before it goes on.
 _Avoid_: route, job
 
+**Life stage**:
+How old a grown Void Dragon is: **young**, **adult**, **senior** or **old**, reached by the cargo it
+has carried. Each later stage is slower and carries more; only an adult lays eggs, and an old dragon
+dies when its stage runs out.
+_Avoid_: age class, tier
+
 **Dragonling**:
-A young Void Dragon, hatched from an egg soaked in motes. It cannot carry yet; it stays near where
+A Void Dragon before it grows, not yet in any life stage, hatched from an egg soaked in motes. It cannot carry yet; it stays near where
 it hatched, follows a player holding a Void Siphon, and grows faster for the motes a Siphon feeds it.
 
 **Drained Dragon Egg**:
-The egg a grown Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
+The egg an adult Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
 the founder of the Mote line, both soak motes once a player places them touching Voidstone, as a
 Dormant machine soaks its cost, and hatch once they have soaked enough; broken first, an egg loses
 what it soaked.

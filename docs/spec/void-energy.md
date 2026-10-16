@@ -274,28 +274,44 @@ player who placed its egg, and it serves only its owner's Wells
 is server state, not an entity: it routes, dives, weakens and heals with no chunk loaded, and the
 dragon a player sees near a Well is only its presence
 ([ADR 0005](../adr/0005-a-void-dragon-is-server-state-not-an-entity.md)). Nothing hurts a
-Dragonling or a Void Dragon.
+Dragonling or a Void Dragon, and only old age kills a Void Dragon
+([ADR 0010](../adr/0010-a-void-dragon-dies-of-old-age.md)).
 
 - **Eggs.** The first dragon kill gives the vanilla egg, the founder of every line. Later kills give
   nothing, but while no player has hatched a dragon in the world, a kill places a vanilla egg on the
   exit portal again, so a lost founder is replaced. Every other egg is a **Drained Dragon Egg**,
-  laid by a grown Void Dragon each time it has carried a set number of motes since its last, counted
-  as it unloads them, a stowed load too: it pops out of the shaft of the next Well it stops at, to
+  laid by an adult Void Dragon each time it has carried a set number of motes since its last, or
+  since it became adult, counted as it unloads them, a stowed load too: it pops out of the shaft of the next Well it stops at, to
   load or unload, as an item, so eggs are given and traded. A Well whose chunk is not loaded lays
   none: the dragon owes the egg, with any others it comes to owe, to its next stop at a loaded Well,
-  where it lays them all, so its eggs follow only the motes it carries. Until it
+  where it lays them all, so its eggs follow only the motes it carries; eggs still owed as it turns
+  senior are laid the same way, and none after. A dragon lays eggs of its own Line, so 8 in its life. Until it
   soaks, a Drained Dragon Egg falls and teleports when hit, as the vanilla egg does.
 - **Hatching.** Either egg, placed by a player touching a Voidstone network, soaks up motes from it
   by the spend rule at the egg's block, in four visible stages, until it hatches a Dragonling its
   placer owns. A soaking egg neither falls nor teleports. Its price is fixed when it starts soaking
-  and grows, doubling by default, with every dragon its owner has hatched or is soaking, so carriers grow as fast as an
-  owner can pay for them, and an egg given away starts its new owner cheap. An egg no player placed
+  and grows, doubling by default, with every living dragon its owner has, Dragonling or Void Dragon of
+  either Line, and every egg they are soaking, so carriers grow as fast as an owner can pay for them,
+  a dead dragon's replacement costs what it did, and an egg given away starts its new owner cheap. An egg no player placed
   never soaks. Broken while soaking, it drops the egg it was and loses what it soaked.
-- **Growing.** A **Dragonling** is a young Void Dragon, an ordinary creature until it grows. It stays
+- **Growing.** A **Dragonling** is a Void Dragon before it grows, an ordinary creature until then. It stays
   near where it hatched, follows a player holding a Void Siphon, and grows up over a set time while
   its chunk is loaded. Its owner feeds it by using a Siphon on it, which empties into it by the spend
   rule at the Dragonling, and the void energy takes time off its growing. It cannot carry, and does
   not weaken.
+- **Ageing.** A grown Void Dragon ages through four **life stages**, **young**, **adult**, **senior**
+  and **old**, by the cargo it unloads, in its Line's unit: each stage lasts the same amount, so a
+  stage changes only at a stop, as it unloads. Its load takes the new stage's size from its next
+  load, and its speed from its next dive; a load it holds is never cut. Each stage multiplies the
+  Line's speed and load (provisional: young 1 and 1, adult 0.6 and 2, senior 0.35 and 3.5, old 0.2
+  and 6), so a young dragon is a quick courier and an old one a slow freighter, carrying about as
+  much an hour either way. Stages are not inherited: every dragon lives all four, and bred traits,
+  if they come, multiply on top of them. An old dragon whose stage runs out **dies**, only at a stop
+  and after unloading: it sets any rider down on the rim, lays the eggs it owes, then its presence
+  rises over the Well in a short Ender Dragon death, beams and sound, and leaves nothing. Nothing
+  else tells its owner. Dragons from before life stages start young, their count toward an egg
+  dropped. Matching a dragon's stage to a trip, fast for far and big for large shortfalls, is left
+  to routing as it is, and to a later ticket if play needs it.
 - **Routing.** A Void Dragon serves all its owner's Void Wells in every dimension. It flies only to a
   Well below its fill target, and takes from the owner's Well of highest network pressure that holds
   something worth delivering there, a reservoir or a Well above its target, which gives its excess;
@@ -344,15 +360,16 @@ Dragonling or a Void Dragon.
 - **Harm.** It weakens as it dives, at a rate set by how far the Void Pressure at the worse of the
   dive's two ends is below the End's, so a trip to or from the Nether, where motes pay most, costs it
   most, and one between End Wells nothing. Stopped at a Well or resting, it does not weaken. Hurt, it
-  flies more slowly, down to a quarter of its speed, and a dive slows as it weakens during it, so a
-  long dive to or from the Nether takes longer still; it cannot die. It never dives from a Well before
+  flies more slowly, its health's share of its stage's speed, never below a quarter of it, and a dive slows as it weakens during it, so a
+  long dive to or from the Nether takes longer still; weakening never kills it. It never dives from a Well before
   that Well has healed it, from its store, a fixed number of motes per point of health, lowest grade
   first and not by the spend rule, as far as the motes go; an empty Well heals nothing.
 - **Seen in Jade.** Anyone looking at a dragon's presence sees what its record holds: what it is
-  doing, the Well it is bound for by name, the motes it carries by grade and in total, its health
+  doing, its life stage, the Well it is bound for by name, the motes it carries by grade and in total, its health
   and its owner; looking at a Dragonling, how far it has grown and its owner.
 - **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
-  runtime and tinted the void's purple: the Void Dragon about half the Ender Dragon's size, the
+  runtime and tinted the void's purple: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
+  1.1, old 1.2), the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
   own. The Drained Dragon Egg is a pale, cracked dragon egg on the vanilla egg's shape, its cracks dark
   while it is only an egg. Soaking, either egg wears that look, the vanilla egg too, though it is still
@@ -514,11 +531,11 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
   the Void Siphon's capacity per tier, the FE a void energy charges (provisional: 10, tuned against
   Gearworks' Gear, whose battery upgrade holds 100,000; a server config value), and the network pressure cap, and the Void Dragon's (provisional:
   the first egg 25,600 void energy, doubling per dragon; Dragonling growth 40 minutes, 1 minute off
-  per 1,000 void energy fed; a load of 8,192 motes; about 5 seconds a stop; 1 second a dive per 64
+  per 1,000 void energy fed; a young dragon's load of 8,192 motes; a life stage 524,288 motes carried; about 5 seconds a stop; 1 second a dive per 64
   blocks, and 10 seconds more between dimensions; 100 health, weakening by the pressure gap per 10 seconds, healing 1 per 16
   motes; an egg laid each 65,536 motes carried).
-- **Void Dragon life stages** — young, adult, senior and old, trading speed for load, and death in
-  old age ([#54](https://github.com/5thlayer/voidworks/issues/54)).
+- **A Matter-line dragon's life** — its cargo unit, base load, stage length and egg cost, set with
+  its throughput ([#86](https://github.com/5thlayer/voidworks/issues/86)).
 - **FE from a network** — a Voidstone network or a Void Well turning motes into FE for any mod's
   cables: base power, which balancing void energy against FE generation makes a design of its own.
 - **Teams** — after the first major version: players sharing Wells and dragons as a team, beyond
