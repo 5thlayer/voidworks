@@ -11,10 +11,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
-import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
-import io.github._5thlayer.voidworks.energy.VoidSpender;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -150,13 +148,13 @@ public final class Dormancy {
     }
 
     private void soakFromNeighbours(ServerLevel level) {
-        var stores = TouchingMotes.at(level, machine.getBlockPos(), parts());
-        TouchingMotes.want(level, machine.getBlockPos(), stores);
-        for (var store : stores) {
-            if (paid >= cost()) {
-                return;
-            }
-            payFrom(level, store.motes(), store.pos().getCenter());
+        addPaid(TouchingMotes.soak(level, machine.getBlockPos(), parts(), cost() - paid));
+    }
+
+    private void addPaid(long released) {
+        if (released > 0) {
+            paid += released;
+            machine.setChanged();
         }
     }
 
@@ -173,14 +171,9 @@ public final class Dormancy {
         if (awake || owed <= 0) {
             return 0;
         }
-        var pos = machine.getBlockPos();
-        var spend = VoidSpender.spendUpTo(motes, level, pos, owed);
-        if (spend.released() > 0) {
-            paid += spend.released();
-            machine.setChanged();
-            spend.motes().forEach((grade, count) -> MoteFlight.toBlock(level, from, pos, grade, count));
-        }
-        return spend.released();
+        long released = TouchingMotes.payInto(level, motes, from, machine.getBlockPos(), owed);
+        addPaid(released);
+        return released;
     }
 
     /** Pays the rest of the cost from nowhere, as an operator's command does; it wakes on its next tick. */

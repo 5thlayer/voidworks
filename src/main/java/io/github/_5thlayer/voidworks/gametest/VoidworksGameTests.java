@@ -100,6 +100,7 @@ public final class VoidworksGameTests {
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
         WellTests.register(tests);
+        ZoneUpgradeTests.register(tests);
     }
 
     private static Identifier id(String path) {

@@ -89,8 +89,14 @@ _Avoid_: harvester, Void Well
 
 **Zone**:
 How many positions a Void Displacer harvests in its life. It is a count, not a region: the
-Displacer grows outward until its Zone is spent, and upgrades paid in motes raise it.
+Displacer grows outward until its Zone is spent, and Zone upgrades raise it.
 _Avoid_: area, range, radius
+
+**Zone upgrade**:
+One level more of a Void Displacer's Zone, bought with motes from its network. Each level a
+Displacer buys costs more than the last, with no last level, and a new Displacer starts again at
+the first.
+_Avoid_: zone level, expansion
 
 **Void Siphon**:
 The item a player harvests motes with by hand, at a far worse yield than a Void Displacer's. It

@@ -105,7 +105,7 @@ A Displacer holds no motes and needs no network to start: it grows its own. It h
 positions touching it or the Voidstone it has already left, nearest first, so its first harvest is
 the position beside it and what it has harvested is the network its motes go into. It reaches only
 what is connected to it: a cave or an air pocket bounds it. Its **Zone** is how many positions it
-harvests in its life, a count and not a region; upgrades paid in motes raise it. Built touching an
+harvests in its life, a count and not a region; Zone upgrades raise it. Built touching an
 older network, a Displacer still grows only from itself, and the networks merge.
 
 Every harvest shows its motes. Each flies from the harvested position to whatever receives it, a
@@ -139,8 +139,29 @@ Each Displacer has one item output inventory with an item face. An empty hand ta
 with the output empty gives back its fed blocks. A full output inventory, tank or network stalls it. While its Zone is unspent and it can still reach something to convert — air,
 natural terrain, lava — it cannot be broken or moved; then, once its output is empty, it becomes Voidstone
 itself, its motes stay in the network, and relocating means building a new one. One that can reach nothing before
-its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Upgrades raise a Zone; relocation
-stays the main loop.
+its first harvest was misplaced, and pops off as its item rather than becoming Voidstone. Zone upgrades raise a Zone;
+relocation stays the main loop.
+
+**Zone upgrades.** A Displacer starts with the server's Zone (provisional: 64) and buys more one
+level at a time, with motes from its network. Sneak-using it with an empty hand quotes the next
+level in the action bar ("Zone 64 → 80 for 1,600 void energy, sneak-use again to confirm"), and the
+same player sneak-using it again within 5 seconds commits to it; anything else lets the quote lapse.
+A network whose motes are worth less than the price at the Displacer's block is told the price and
+what it is worth there, and arms nothing. Committed, the Displacer soaks the price as a Dormant
+machine does, from the stores touching it by the spend rule at its block, while it goes on
+harvesting, and its Zone rises once it is paid, the players near it told and hearing it; a payment
+in part is kept across a save. Sneak-using
+it while it soaks shows what is paid and offers to cancel, confirmed the same way; a cancelled
+upgrade loses what it paid, as any spend does. A Displacer can be upgraded while it is awake and
+not yet Voidstone: stalled, starved of fed blocks, or with its Zone spent and its output still
+emptying, when it waits for the upgrade's soak, unbreakable, and harvests on. A Dormant one cannot,
+nor one that can reach nothing; one left with nothing to reach while it soaks becomes Voidstone all
+the same, and what it paid is spent. Each level adds a step of positions and costs a first price times a
+growth per level bought, both datapack data per Displacer (provisional, all three: 16 positions,
+1,600 void energy, doubling), with no last level. The levels belong to the Displacer, so a new one
+starts at the first: the first two levels repay themselves at a middling Density, the third breaks
+even, and from the fourth a new Displacer is cheaper. Jade shows a Displacer's level, the next
+level's price, and an upgrade's soak.
 
 Only blocks a Density tag names can be harvested. Every other block is Density 0, nothing harvests
 it, and it leaves no Voidstone: the renewable and abundant blocks above all (cobblestone, stone,
@@ -567,7 +588,7 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
 - **Numbers** — prices are datapack data and the rest server config
-  ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
+  ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
   and dust Rungs count 1, drop Rungs 2, steep Rungs 8; a Rung's cost is 100 void energy times its place up
   the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
