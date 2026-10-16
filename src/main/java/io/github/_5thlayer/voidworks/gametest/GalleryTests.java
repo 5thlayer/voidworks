@@ -34,6 +34,8 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -60,7 +62,7 @@ final class GalleryTests {
     /** How many scenes a row holds. */
     private static final int ROW = 3;
     /** How many scenes {@code build} lays, the Void Dragon's first. */
-    private static final int SCENES = 11;
+    private static final int SCENES = 12;
 
     /** Where the gallery is run from: the platform's south-west corner, its plots spilling north and east of the platform. */
     private static final BlockPos ORIGIN = new BlockPos(0, 1, 8);
@@ -69,7 +71,7 @@ final class GalleryTests {
     private static final BlockPos SHORT = new BlockPos(20, 2, -4);
     /** Where a scene's sign stands, from where the scene is run. */
     private static final BlockPos SIGN = new BlockPos(14, 0, 0);
-    /** The Density scene's four Displacers, from where it is run, coal's to diamond's, each over its one stone. */
+    /** The Density scene's four Displacers, from where it is run, coal's to diamond's, each on its pad of Voidstone. */
     private static final int[] DENSITY_XS = {5, 10, 15, 20};
     /** A scene's plot, from where it is run, its floor included. */
     private static final BlockPos PLOT_FROM = new BlockPos(2, -1, -12);
@@ -116,11 +118,12 @@ final class GalleryTests {
                             Map.entry(scene(3, SIGN), Blocks.OAK_SIGN),
                             Map.entry(scene(4, 20, 1, -6), VoidworksBlocks.OVERWORLD_DISPLACER.get()),
                             Map.entry(scene(5, 5, 0, -6), VoidworksBlocks.VOIDSTONE.get()),
-                            Map.entry(scene(6, 14, 0, -3), Blocks.CHEST),
-                            Map.entry(scene(7, 14, 0, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
-                            Map.entry(scene(8, 14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
-                            Map.entry(scene(9, 14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
-                            Map.entry(scene(10, 14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get())));
+                            Map.entry(scene(6, 14, 0, -2), Blocks.CHEST),
+                            Map.entry(scene(7, 14, 0, -2), Blocks.CHEST),
+                            Map.entry(scene(8, 14, 0, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
+                            Map.entry(scene(9, 14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
+                            Map.entry(scene(10, 14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
+                            Map.entry(scene(11, 14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get())));
                     for (int index : new int[] {2, 3}) {
                         var over = helper.absolutePos(ORIGIN.offset(scene(index, 14, 1, -2)));
                         var shown = helper.getLevel().getEntitiesOfClass(Display.ItemDisplay.class, new AABB(over));
@@ -161,7 +164,7 @@ final class GalleryTests {
     }
 
     /**
-     * The Density scene: each Displacer, fed one block, harvests the stone under it, so its network
+     * The Density scene: each Displacer, fed one block, harvests the stone beside it, so its network
      * holds the motes one harvest of that Density yields.
      */
     private static void densityYields(GameTestHelper helper) {
@@ -175,6 +178,10 @@ final class GalleryTests {
                 .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DENSITY))
                 .thenWaitUntil(() -> {
                     for (int density = 1; density <= DENSITY_XS.length; density++) {
+                        var face = helper.absolutePos(ORIGIN).offset(DENSITY_XS[density - 1], 1, -5);
+                        var framed = helper.getLevel().getEntitiesOfClass(ItemFrame.class, new AABB(face));
+                        helper.assertTrue(framed.size() == 1 && !framed.getFirst().getItem().isEmpty(),
+                                "Density " + density + "'s Displacer shows " + framed + " on its face, not one framed block");
                         var stone = helper.absolutePos(ORIGIN).offset(DENSITY_XS[density - 1], 0, -6);
                         long motes = VoidstoneNetworks.of(helper.getLevel()).at(stone).map(MoteNetwork::total).orElse(0L);
                         long yield = VoidworksConfig.motes(density);
@@ -223,6 +230,9 @@ final class GalleryTests {
                             "the scene's sign runs no command when clicked");
                     helper.assertTrue(helper.getLevel().getBlockState(crucible).is(VoidworksBlocks.VOID_CRUCIBLE.get()),
                             "clicking the sign did not build the Crucible again where it stood");
+                    var plot = AABB.encapsulatingFullBlocks(helper.absolutePos(ORIGIN.offset(PLOT_FROM)), helper.absolutePos(ORIGIN.offset(PLOT_TO)));
+                    var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, plot);
+                    helper.assertTrue(loose.isEmpty(), "building the scene again left items loose: " + loose.stream().map(ItemEntity::getItem).toList());
                     off.set(clearAway(helper, source));
                 })
                 .thenWaitUntil(() -> assertOff(helper, off))
@@ -280,6 +290,7 @@ final class GalleryTests {
             commands.performPrefixedCommand(source, "fill " + box + " minecraft:air");
         }
         commands.performPrefixedCommand(source, "kill @e[type=minecraft:item_display,distance=..200]");
+        commands.performPrefixedCommand(source, "kill @e[type=minecraft:item_frame,distance=..200]");
         forceLoad(helper, false);
         return GalleryCheck.select(helper.getLevel().getServer(), GalleryPack.ID, false);
     }
