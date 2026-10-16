@@ -491,7 +491,8 @@ Factorio's chests.
   whole again.
 - **Requester or provider.** It is placed a provider, and its owner switches it by sneak-using it
   with an empty hand. A **provider** offers whatever it holds to its owner's requesters elsewhere,
-  and never asks; using it with a stack puts the stack in, and with an empty hand takes one out.
+  and never asks; it fills only through its item faces, never by hand, as befits mass transport, so a
+  player filling one by hand sets a hopper on it, and its owner's empty hand takes a stack out.
   A **requester** asks for one item, so many stacks of it, and never gives; it empties only through
   its item faces. Using an item on it sets its request to that item's kind, components ignored, and
   adds a stack per use, up to 27, shown above the hotbar; another item replaces the request and

@@ -40,7 +40,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  * A Well hatch, on its own, with no dragon: it is placed only against the outer face of a Void Well's
  * wall casing, on any course, and only by the Well's owner, joining that Well; it holds 27 slots in
  * the server's saved data, not in its block, so they survive a reload; a hopper under it empties it
- * and one above fills it, and its owner's hand puts a stack in and takes one out. Its Well no longer
+ * and one above fills it, but no hand does; its owner's empty hand takes a stack out. Its Well no longer
  * whole, it keeps what it holds; its core broken, it is a plain container still; broken itself, it
  * drops what it held.
  */
@@ -60,7 +60,7 @@ final class WellHatchTests {
                 WellHatchTests::placedOnlyAgainstWallCasing);
         tests.test("a_well_hatch_is_refused_against_another_player_s_void_well", TICKS, WellHatchTests::refusedAgainstAnothersWell);
         tests.test("a_well_hatch_is_emptied_by_a_hopper_under_it_and_filled_by_one_above_it", TICKS, WellHatchTests::hoppers);
-        tests.test("a_well_hatch_s_owner_puts_a_stack_in_and_takes_one_out_by_hand_and_anyone_else_is_told_whose_it_is", TICKS,
+        tests.test("a_well_hatch_takes_nothing_in_by_hand_and_its_owner_s_empty_hand_takes_a_stack_out_anyone_else_s_being_told_whose_it_is", TICKS,
                 WellHatchTests::byHand);
         tests.test("a_well_hatch_keeps_its_contents_in_saved_data_across_a_save_and_reload", TICKS, WellHatchTests::savedContents);
         tests.test("a_well_hatch_keeps_its_contents_while_its_well_is_not_whole_and_is_a_plain_container_once_its_core_is_broken", TICKS,
@@ -151,22 +151,18 @@ final class WellHatchTests {
         WellTests.placeCore(helper, owner);
         helper.assertTrue(placeHatch(helper, owner, HATCH_AGAINST, Direction.EAST), "no hatch was placed");
         var contents = hatch(helper, HATCH).contents();
-        owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.ENDER_PEARL, 16));
+        insert(contents, Items.ENDER_PEARL, 16);
+        insert(contents, Items.COBBLESTONE, 40);
+        owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.ENDER_PEARL, 5));
         helper.useBlock(HATCH, owner);
-        helper.assertTrue(owner.getMainHandItem().isEmpty(), "the owner still holds " + owner.getMainHandItem());
+        helper.assertTrue(owner.getMainHandItem().getCount() == 5, "the owner's hand put " + (5 - owner.getMainHandItem().getCount()) + " ender pearls in");
         helper.assertTrue(held(contents, Items.ENDER_PEARL) == 16, "the hatch holds " + held(contents, Items.ENDER_PEARL) + " ender pearls, not 16");
-        owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COBBLESTONE, 40));
-        helper.useBlock(HATCH, owner);
-        helper.assertTrue(held(contents, Items.COBBLESTONE) == 40, "the hatch holds " + held(contents, Items.COBBLESTONE) + " cobblestone, not 40");
 
         var other = new WellTests.Listener(helper, "someone-else");
         var whose = Component.translatable("voidworks.hatch.owned_by", owner.getGameProfile().name());
-        other.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIRT, 3));
         helper.useBlock(HATCH, other);
-        other.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        helper.useBlock(HATCH, other);
-        helper.assertTrue(other.overlays.equals(List.of(whose, whose)), "another player was told " + other.overlays + ", not whose hatch it is");
-        helper.assertTrue(held(contents, Items.DIRT) == 0 && held(contents, Items.ENDER_PEARL) == 16, "another player's hand changed what the hatch holds");
+        helper.assertTrue(other.overlays.equals(List.of(whose)), "another player was told " + other.overlays + ", not whose hatch it is");
+        helper.assertTrue(other.getMainHandItem().isEmpty() && held(contents, Items.ENDER_PEARL) == 16, "another player's empty hand took a stack");
 
         owner.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         helper.useBlock(HATCH, owner);
@@ -230,11 +226,12 @@ final class WellHatchTests {
                     helper.assertTrue(hatch.well().equals(Optional.of(wellPlace)), "the hatch of a broken core no longer remembers its Well");
                     insert(itemFace(helper), Items.GOLD_INGOT, 4);
                     helper.setBlock(HATCH.below(), Blocks.HOPPER);
-                    owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COPPER_INGOT, 2));
+                    owner.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                     helper.useBlock(HATCH, owner);
-                    helper.assertTrue(held(hatch.contents(), Items.COPPER_INGOT) == 2, "the hatch of a broken core refused its owner's hand");
+                    helper.assertTrue(owner.getMainHandItem().is(Items.IRON_INGOT) && owner.getMainHandItem().getCount() == 30,
+                            "the owner's empty hand took " + owner.getMainHandItem() + " from the hatch of a broken core");
                 })
-                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockEntity(HATCH.below(), HopperBlockEntity.class).countItem(Items.IRON_INGOT) > 0,
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockEntity(HATCH.below(), HopperBlockEntity.class).countItem(Items.GOLD_INGOT) > 0,
                         "a hopper under the hatch of a broken core pulls nothing"))
                 .thenSucceed();
     }

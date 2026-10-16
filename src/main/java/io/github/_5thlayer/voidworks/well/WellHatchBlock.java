@@ -31,8 +31,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jspecify.annotations.Nullable;
 
@@ -43,10 +41,10 @@ import org.jspecify.annotations.Nullable;
  * places one, and only they use it by hand; anywhere else, and against another's Well, it is refused.
  *
  * <p>What it holds is in the server's {@link WellHatches} ({@link WellHatchBlockEntity}), filled and
- * emptied through every face. It is a provider: its owner using it with a stack puts the stack in, as
- * much as fits, and with an empty hand takes the first stack out. Its Well no longer whole, it is idle
- * and keeps what it holds; its core broken, it is a plain container until a new core there makes the
- * Well whole again. Broken, it drops what it holds.
+ * emptied through every face. It is a provider: filled only through its faces, never by hand, as
+ * befits mass transport, while its owner's empty hand takes the first stack out. Its Well no longer
+ * whole, it is idle and keeps what it holds; its core broken, it is a plain container until a new core
+ * there makes the Well whole again. Broken, it drops what it holds.
  */
 public final class WellHatchBlock extends BaseEntityBlock {
 
@@ -147,23 +145,6 @@ public final class WellHatchBlock extends BaseEntityBlock {
             hatches.put(Place.of(server, pos), well.map(core -> Place.of(server, core.getBlockPos())),
                     well.flatMap(VoidWellBlockEntity::owner), VoidworksConfig.wellHatchSlots());
         }
-    }
-
-    /** Its owner using it with a stack puts in as much of it as fits; anyone else is told whose it is. */
-    @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
-            BlockHitResult hitResult) {
-        if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof WellHatchBlockEntity entity)) {
-            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
-        }
-        entity.hatch().filter(hatch -> usableBy(hatch, player)).ifPresent(hatch -> {
-            try (var transaction = Transaction.openRoot()) {
-                int inserted = ResourceHandlerUtil.insertStacking(hatch.contents(), ItemResource.of(stack), stack.getCount(), transaction);
-                transaction.commit();
-                stack.shrink(inserted);
-            }
-        });
-        return InteractionResult.SUCCESS;
     }
 
     /** Its owner using it with an empty hand takes the first stack it holds; anyone else is told whose it is. */
