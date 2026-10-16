@@ -27,12 +27,12 @@ import org.jspecify.annotations.Nullable;
  * surface of a translucent void fluid across the shaft, as high as the network is full, easing to a
  * new level. It is drawn only, so the shaft stays open air: the casing walls hide its sides, and seen
  * from below, from in the shaft, its surface is a ceiling of void. Water's moving surface, darkened to
- * the void's purple-black, and drawn bright, so it glows faintly at night without lighting anything.
+ * the void's purple-black, and drawn emissive, so it glows faintly at night without lighting anything.
  */
 final class VoidWellRenderer implements BlockEntityRenderer<VoidWellBlockEntity, VoidWellRenderer.RenderState> {
 
-    /** Deep void purple-black, about 60% opaque. */
-    private static final int COLOUR = 0x99_2A_12_45;
+    /** Deep void purple-black, about 80% opaque. */
+    private static final int COLOUR = 0xCC_2A_12_45;
     private static final Identifier SURFACE = Identifier.withDefaultNamespace("block/water_still");
     /** How far below the rim's course the surface of a full shaft stands, so it never meets the rim's faces. */
     private static final float BELOW_TOP = 0.01F;
@@ -72,8 +72,9 @@ final class VoidWellRenderer implements BlockEntityRenderer<VoidWellBlockEntity,
         float x1 = (float) fluid.maxX;
         float z0 = (float) fluid.minZ;
         float z1 = (float) fluid.maxZ;
-        // The sprite once over the whole shaft, one quad, seen from below too as the render type does not cull.
-        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS, false), (pose, buffer) -> {
+        // The sprite once over the whole shaft, one quad, seen from below too as the render type does not cull. It
+        // writes no depth, so the butterflies under it, drawn after it with the particles, still show through.
+        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS, false), (pose, buffer) -> {
             vertex(pose, buffer, x0, y, z0, sprite.getU0(), sprite.getV0());
             vertex(pose, buffer, x0, y, z1, sprite.getU0(), sprite.getV1());
             vertex(pose, buffer, x1, y, z1, sprite.getU1(), sprite.getV1());
