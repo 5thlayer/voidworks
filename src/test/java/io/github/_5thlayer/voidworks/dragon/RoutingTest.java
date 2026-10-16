@@ -96,7 +96,7 @@ class RoutingTest {
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
         // The load is 100: all 70 of grade 5, then 30 of grade 3, and none of grade 2.
-        assertEquals(Map.of(5, 70L, 3, 30L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(5, 70L, 3, 30L)), dragons.get(dragon.id()).orElseThrow().load());
         assertEquals(Map.of(2, 300L, 3, 30L), wells.motes(END_WELL));
     }
 
@@ -179,7 +179,7 @@ class RoutingTest {
         runFor(400);
         assertTrue(dragons.get(dragon.id()).orElseThrow().load().isEmpty(), "the dragon loaded before its dive ended");
         runFor(1);
-        assertEquals(Map.of(4, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L)), dragons.get(dragon.id()).orElseThrow().load());
     }
 
     @Test
@@ -224,7 +224,7 @@ class RoutingTest {
         wells.put(NETHER_WELL, 4, CAPACITY);
         runFor(20_000);
         var holding = dragons.get(dragon.id()).orElseThrow();
-        assertEquals(Map.of(4, 50L), holding.load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L)), holding.load());
         assertTrue(holding.trip().isEmpty(), "the dragon is still on a trip");
         assertEquals(NETHER_WELL, holding.rest());
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of());
@@ -332,7 +332,7 @@ class RoutingTest {
         // It loads 50 of grade 5, highest first, and heals only as it leaves.
         var loading = dragons.get(dragon.id()).orElseThrow();
         assertEquals(70, loading.health());
-        assertEquals(Map.of(5, 50L), loading.load());
+        assertEquals(MoteLoad.of(Map.of(5, 50L)), loading.load());
         runFor(STOP);
         // 30 points at 16 motes each, 480: all 300 of grade 2 and 180 of grade 5.
         var leaving = dragons.get(dragon.id()).orElseThrow();
@@ -351,7 +351,7 @@ class RoutingTest {
         // It loads 50 of grade 4; the 90 left heal 5 points, 80 of them, grade 2 first.
         var leaving = dragons.get(dragon.id()).orElseThrow();
         assertEquals(55, leaving.health());
-        assertEquals(Map.of(4, 50L), leaving.load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L)), leaving.load());
         assertEquals(Map.of(4, 10L), wells.motes(END_WELL));
     }
 
@@ -569,11 +569,11 @@ class RoutingTest {
         wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(30), 3, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
-        assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L, 3, 50L)), dragons.get(dragon.id()).orElseThrow().load());
         assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OTHER_END_WELL, now));
         runFor(Dive.MINIMUM_TICKS + 1);
         assertEquals(Map.of(4, 30L), wells.motes(OTHER_END_WELL));
-        assertEquals(Map.of(4, 20L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 20L, 3, 50L)), dragons.get(dragon.id()).orElseThrow().load());
         // A stop to set the rider down, then a dive of 401 ticks to the Nether.
         runFor(STOP + 410);
         assertEquals(Map.of(4, 20L, 3, 50L), wells.motes(NETHER_WELL));
@@ -613,11 +613,11 @@ class RoutingTest {
         wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
-        assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L, 3, 50L)), dragons.get(dragon.id()).orElseThrow().load());
         assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
         var riding = dragons.get(dragon.id()).orElseThrow();
         // 60 ticks of 400: 15 of its 100.
-        assertEquals(Map.of(4, 15L), riding.load());
+        assertEquals(MoteLoad.of(Map.of(4, 15L)), riding.load());
         assertEquals(15, riding.trip().orElseThrow().claimed());
         assertEquals(Map.of(4, 35L, 3, 300L), wells.motes(END_WELL));
         assertEquals(0, riding.cargo(), "the motes it put back counted toward its ageing");
@@ -670,7 +670,7 @@ class RoutingTest {
         assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
         runFor(Dive.MINIMUM_TICKS);
         assertEquals(Optional.of(Trip.Leg.WAITING), leg(dragon));
-        assertEquals(Map.of(4, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L)), dragons.get(dragon.id()).orElseThrow().load());
         assertEquals(Map.of(), wells.motes(OTHER_END_WELL));
         owners.calling.remove(ALICE);
         runFor(20_000);
@@ -713,13 +713,13 @@ class RoutingTest {
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 3, Map.of());
         var dragon = dragons.add(ALICE, END_WELL);
         runFor(1);
-        assertEquals(Map.of(4, 50L, 3, 50L), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(MoteLoad.of(Map.of(4, 50L, 3, 50L)), dragons.get(dragon.id()).orElseThrow().load());
         owners.calling.put(ALICE, OVERWORLD_WELL);
         runFor(STOP);
         var called = dragons.get(dragon.id()).orElseThrow();
         assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
         // 60 ticks of 400: 15 of its 100.
-        assertEquals(Map.of(4, 15L), called.load());
+        assertEquals(MoteLoad.of(Map.of(4, 15L)), called.load());
         assertEquals(15, called.trip().orElseThrow().claimed());
         assertEquals(Map.of(4, 35L, 3, 300L), wells.motes(END_WELL));
         assertEquals(0, called.cargo(), "the motes it put back counted toward its ageing");
@@ -750,7 +750,7 @@ class RoutingTest {
         runFor(STOP);
         var called = dragons.get(dragon.id()).orElseThrow();
         assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
-        assertEquals(Map.of(4, LOAD), called.load());
+        assertEquals(MoteLoad.of(Map.of(4, LOAD)), called.load());
         var trip = called.trip().orElseThrow();
         assertEquals(DIVE.ticks(END_WELL, OVERWORLD_WELL), trip.until() - trip.countedTo());
     }
@@ -1038,7 +1038,7 @@ class RoutingTest {
 
     /** @return a new dragon of {@code owner}'s of {@code health}, resting at {@code rest} with {@code load} and no trip */
     private VoidDragonRecord carrying(UUID owner, Place rest, int health, Map<Integer, Long> load) {
-        var dragon = hurt(dragons.add(owner, rest), health).carrying(new TreeMap<>(load));
+        var dragon = hurt(dragons.add(owner, rest), health).carrying(MoteLoad.of(load));
         dragons.update(dragon);
         return dragon;
     }

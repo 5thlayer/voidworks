@@ -69,7 +69,10 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
         // Stopped at a Well other than where it loads, it is there for that Well, or for its owner.
         var bound = dragon.trip().filter(trip -> doing != Doing.UNLOADING && doing != Doing.WAITING && doing != Doing.SETTING_DOWN)
                 .map(Trip::destination).map(labels);
-        return new DragonReport(doing, bound, dragon.load(), dragon.health(), stages.of(dragon.cargo()), owner);
+        var motes = switch (dragon.load()) {
+            case MoteLoad load -> load.motes();
+        };
+        return new DragonReport(doing, bound, motes, dragon.health(), stages.of(dragon.cargo()), owner);
     }
 
     /** @return what the dragon whose presence {@code presence} is shows, empty for a Dragonling or a presence whose dragon is gone */

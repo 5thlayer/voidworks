@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Trip;
@@ -141,7 +142,7 @@ final class RoutingTests {
             var leaving = dragons.get(dragon.id()).orElseThrow();
             helper.assertTrue(leaving.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.TO_DESTINATION)), "the dragon has not left the reservoir");
             helper.assertTrue(leaving.health() == VoidDragonRecord.FULL_HEALTH, "the dragon left the reservoir with " + leaving.health() + " health");
-            helper.assertTrue(leaving.load().equals(Map.of(4, (long) SHORT)), "the dragon loaded " + leaving.load());
+            helper.assertTrue(leaving.load().equals(MoteLoad.of(Map.of(4, (long) SHORT))), "the dragon loaded " + leaving.load());
             var left = byGrade(end, HEALING_END_WELL);
             helper.assertTrue(left.equals(Map.of(4, 1_300L - healing - SHORT)), "the reservoir holds " + left);
             assertUnloaded(helper, end, HEALING_END_WELL);
@@ -189,7 +190,7 @@ final class RoutingTests {
             // Seen the tick it sets off, before a step of its dive could weaken it.
             var leaving = dragons.get(dragon.id()).orElseThrow();
             helper.assertTrue(leaving.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.TO_DESTINATION)), "the dragon has not left the reservoir");
-            helper.assertTrue(leaving.load().equals(Map.of(4, (long) STAIRCASE_SHORT)), "the dragon loaded " + leaving.load());
+            helper.assertTrue(leaving.load().equals(MoteLoad.of(Map.of(4, (long) STAIRCASE_SHORT))), "the dragon loaded " + leaving.load());
             helper.assertTrue(leaving.health() == VoidDragonRecord.FULL_HEALTH, "the dragon left the reservoir with " + leaving.health() + " health");
             long held = networks.at(STAIRCASE_WELL).orElseThrow().total();
             helper.assertTrue(held == left, "the reservoir's network holds " + held + ", not " + left);

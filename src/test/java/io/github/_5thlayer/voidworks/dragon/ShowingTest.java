@@ -6,7 +6,6 @@ package io.github._5thlayer.voidworks.dragon;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -54,7 +53,7 @@ class ShowingTest {
     }
 
     private static VoidDragonRecord dragon(Optional<Trip> trip) {
-        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), VoidDragonRecord.FULL_HEALTH, HERE, new TreeMap<>(), trip, 0, 0);
+        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), VoidDragonRecord.FULL_HEALTH, HERE, MoteLoad.NONE, trip, 0, 0);
     }
 
     private static Optional<Trip> trip(Trip.Leg leg, long until) {

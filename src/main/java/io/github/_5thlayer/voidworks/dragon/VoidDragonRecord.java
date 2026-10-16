@@ -3,11 +3,7 @@
 
 package io.github._5thlayer.voidworks.dragon;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import com.mojang.serialization.Codec;
@@ -24,12 +20,12 @@ import net.minecraft.core.UUIDUtil;
  * @param id the dragon's own, which its presence names
  * @param health its health, of {@link #FULL_HEALTH}
  * @param rest where it rests, or last stopped while it is on a trip
- * @param load the motes it carries, grade to count
+ * @param load what it carries, in its Line's unit
  * @param towardEgg the motes it has carried toward its next egg, counted as it unloads them as an adult,
  *        less those of every egg it has laid
  * @param cargo the motes it has unloaded over its life, by which it ages ({@link LifeStages})
  */
-public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, SortedMap<Integer, Long> load, Optional<Trip> trip, long towardEgg, long cargo) {
+public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Load load, Optional<Trip> trip, long towardEgg, long cargo) {
 
     /** A Void Dragon's health while it is whole. Provisional, like every number. */
     public static final int FULL_HEALTH = 100;
@@ -37,33 +33,29 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Sort
     /** A whole dragon's speed: speeds count in hundredths of it. */
     public static final int WHOLE_SPEED = 100;
 
-    private static final Codec<Map<Integer, Long>> LOAD_CODEC = Codec.unboundedMap(Codec.STRING.xmap(Integer::parseInt, String::valueOf), Codec.LONG);
+    private static final Codec<Load> LOAD_CODEC = MoteLoad.CODEC.xmap(load -> load, load -> (MoteLoad) load);
 
     public static final Codec<VoidDragonRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             UUIDUtil.CODEC.fieldOf("id").forGetter(VoidDragonRecord::id),
             UUIDUtil.CODEC.fieldOf("owner").forGetter(VoidDragonRecord::owner),
             Codec.INT.fieldOf("health").forGetter(VoidDragonRecord::health),
             Place.CODEC.fieldOf("rest").forGetter(VoidDragonRecord::rest),
-            LOAD_CODEC.optionalFieldOf("load", Map.of()).forGetter(VoidDragonRecord::load),
+            LOAD_CODEC.optionalFieldOf("load", MoteLoad.NONE).forGetter(VoidDragonRecord::load),
             Trip.CODEC.optionalFieldOf("trip").forGetter(VoidDragonRecord::trip),
             // A count saved before life stages, as "since_egg", is dropped: such a dragon starts young.
             Codec.LONG.optionalFieldOf("toward_egg", 0L).forGetter(VoidDragonRecord::towardEgg),
             Codec.LONG.optionalFieldOf("cargo", 0L).forGetter(VoidDragonRecord::cargo)
-    ).apply(instance, (id, owner, health, rest, load, trip, towardEgg, cargo) -> new VoidDragonRecord(id, owner, health, rest, new TreeMap<>(load), trip,
+    ).apply(instance, (id, owner, health, rest, load, trip, towardEgg, cargo) -> new VoidDragonRecord(id, owner, health, rest, load, trip,
             towardEgg, cargo)));
-
-    public VoidDragonRecord {
-        load = Collections.unmodifiableSortedMap(new TreeMap<>(load));
-    }
 
     /** @return a new dragon of {@code owner}'s, at full health, carrying nothing and resting at {@code rest} */
     static VoidDragonRecord grown(UUID owner, Place rest) {
-        return new VoidDragonRecord(UUID.randomUUID(), owner, FULL_HEALTH, rest, new TreeMap<>(), Optional.empty(), 0, 0);
+        return new VoidDragonRecord(UUID.randomUUID(), owner, FULL_HEALTH, rest, MoteLoad.NONE, Optional.empty(), 0, 0);
     }
 
-    /** @return how many motes it carries, of every grade together */
+    /** @return how much it carries, in its Line's unit */
     public long carried() {
-        return load.values().stream().mapToLong(Long::longValue).sum();
+        return load.amount();
     }
 
     /** @return this dragon {@code points} of health weaker, though never below 1: it cannot die */
@@ -80,7 +72,7 @@ public record VoidDragonRecord(UUID id, UUID owner, int health, Place rest, Sort
         return new VoidDragonRecord(id, owner, health, rest, load, trip, towardEgg, cargo);
     }
 
-    VoidDragonRecord carrying(SortedMap<Integer, Long> load) {
+    VoidDragonRecord carrying(Load load) {
         return new VoidDragonRecord(id, owner, health, rest, load, trip, towardEgg, cargo);
     }
 

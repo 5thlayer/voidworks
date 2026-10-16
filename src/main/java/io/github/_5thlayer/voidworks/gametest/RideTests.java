@@ -21,6 +21,7 @@ import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.LifeStage;
+import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
@@ -561,7 +562,7 @@ final class RideTests {
                     assertOnTheRim(helper, owner, HIGH_WELL);
                     var setDown = SavedVoidDragons.of(server).get(dragonId.get()).orElseThrow();
                     helper.assertTrue(total(helper, HIGH_WELL) == target, "the high Well holds " + total(helper, HIGH_WELL) + ", not its target " + target);
-                    helper.assertTrue(setDown.load().equals(Map.of(PresenceTests.GRADE, (long) SHORT)), "the dragon carries " + setDown.load() + " on");
+                    helper.assertTrue(setDown.load().equals(MoteLoad.of(Map.of(PresenceTests.GRADE, (long) SHORT))), "the dragon carries " + setDown.load() + " on");
                     // Staying on the rim would call the dragon to wait there for them.
                     stepOff(helper, owner);
                 })

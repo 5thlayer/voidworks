@@ -12,8 +12,9 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
-import io.github._5thlayer.voidworks.dragon.LifeStage;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
+import io.github._5thlayer.voidworks.dragon.LifeStage;
+import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Trip;
@@ -74,7 +75,7 @@ final class DragonReportTests {
                     var load = new TreeMap<Integer, Long>();
                     load.put(GRADE, 30L);
                     var d = dragon.get();
-                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), 80, d.rest(), load, d.trip(), d.towardEgg(), d.cargo()));
+                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), 80, d.rest(), MoteLoad.of(load), d.trip(), d.towardEgg(), d.cargo()));
                     var changed = report(helper, presence.get());
                     helper.assertTrue(changed.carried() == 30 && changed.load().equals(load) && changed.health() == 80,
                             "loaded and weakened, the dragon shows " + changed);

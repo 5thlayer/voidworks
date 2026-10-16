@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import com.google.gson.JsonParser;
@@ -93,7 +92,7 @@ class VoidDragonsTest {
     void aSaveAndReloadKeepsALoadAndAClaimedTrip() {
         var dragon = dragons.add(ALICE, HERE);
         var trip = new Trip(Optional.of(HERE), THERE, 70, false, Trip.Leg.TO_DESTINATION, 1_234, 1_000, 23_400);
-        var carrying = dragon.carrying(new TreeMap<>(Map.of(5, 40L, 3, 30L))).on(Optional.of(trip));
+        var carrying = dragon.carrying(MoteLoad.of(Map.of(5, 40L, 3, 30L))).on(Optional.of(trip));
         dragons.update(carrying);
         var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
@@ -142,6 +141,18 @@ class VoidDragonsTest {
         assertTrue(read.trip().isEmpty());
         assertEquals(0, read.towardEgg());
         assertEquals(HERE, read.rest());
+    }
+
+    @Test
+    void aLoadSavedBeforeTheCargoSeamReadsIntact() {
+        var saved = JsonParser.parseString("""
+                [{"id": [0, 0, 0, 1], "owner": [0, 0, 0, 2], "health": 100,
+                  "rest": {"dimension": "minecraft:overworld", "pos": [1, 64, 2]}, "load": {"5": 40, "3": 30}}]
+                """);
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
+        assertEquals(MoteLoad.of(Map.of(5, 40L, 3, 30L)), read.load());
+        assertEquals(70, read.carried());
+        assertEquals(saved, VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow()).getOrThrow());
     }
 
     @Test
