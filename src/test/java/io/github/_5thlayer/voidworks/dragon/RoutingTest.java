@@ -7,16 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -70,7 +65,7 @@ class RoutingTest {
     private static final Place OTHER_WELL = new Place(OVERWORLD, new BlockPos(64, 64, 640));
     private static final Place OTHER_END_WELL = new Place(END, new BlockPos(0, 64, 64));
 
-    private final FakeWells wells = new FakeWells();
+    private final FakeWells wells = new FakeWells(CAPACITY);
     private final FakeOwners owners = new FakeOwners();
     private final VoidDragons dragons = new VoidDragons();
     private Routing routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
@@ -1082,119 +1077,6 @@ class RoutingTest {
     private void runFor(long ticks) {
         for (long end = now + ticks; now < end; now++) {
             died.addAll(routing.step(dragons, now));
-        }
-    }
-
-    /** Owners as plain data: where each stands calling a dragon, and which dragons their owners ride. */
-    private static final class FakeOwners implements Owners {
-
-        final Map<UUID, Place> calling = new HashMap<>();
-        final Set<UUID> riding = new HashSet<>();
-
-        @Override
-        public Optional<Place> calling(UUID owner) {
-            return Optional.ofNullable(calling.get(owner));
-        }
-
-        @Override
-        public boolean riding(UUID dragonId) {
-            return riding.contains(dragonId);
-        }
-    }
-
-    /** Wells as plain data, each its owner's, whole and awake until broken; Wells on one network share its motes. */
-    private static final class FakeWells implements Wells {
-
-        /** One network: the places of its Wells, whoever's, and the motes they share, {@link #CAPACITY} a Well. */
-        private record Network(Set<Place> wells, TreeMap<Integer, Long> motes) {
-
-            long capacity() {
-                return CAPACITY * wells.size();
-            }
-        }
-
-        private record Entry(UUID owner, OptionalLong target, int pressure, Network network) {
-        }
-
-        private final Map<Place, Entry> wells = new LinkedHashMap<>();
-        /** Where an egg was laid, egg by egg. */
-        final List<Place> laid = new ArrayList<>();
-        /** The Wells whose chunks are not loaded, where no egg is laid. */
-        final Set<Place> unseen = new LinkedHashSet<>();
-
-        /** Adds {@code owner}'s Well at {@code place}, on a network of its own holding {@code motes}. */
-        void add(UUID owner, Place place, OptionalLong target, int pressure, Map<Integer, Long> motes) {
-            wells.put(place, new Entry(owner, target, pressure, new Network(new LinkedHashSet<>(Set.of(place)), new TreeMap<>(motes))));
-        }
-
-        /** Adds {@code owner}'s Well at {@code place} to the network of the Well at {@code onNetworkOf}, sharing its motes. */
-        void join(UUID owner, Place place, OptionalLong target, Place onNetworkOf) {
-            var on = wells.get(onNetworkOf);
-            on.network().wells().add(place);
-            wells.put(place, new Entry(owner, target, on.pressure(), on.network()));
-        }
-
-        void remove(Place place) {
-            var removed = wells.remove(place);
-            if (removed != null) {
-                removed.network().wells().remove(place);
-            }
-        }
-
-        /** @return what the network of the Well at {@code place} holds, of the grades it holds any of */
-        Map<Integer, Long> motes(Place place) {
-            var motes = new TreeMap<>(wells.get(place).network().motes());
-            motes.values().removeIf(count -> count == 0);
-            return motes;
-        }
-
-        @Override
-        public List<Well> of(UUID owner) {
-            var owned = new ArrayList<Well>();
-            wells.forEach((place, entry) -> {
-                if (entry.owner().equals(owner)) {
-                    var network = entry.network();
-                    owned.add(new Well(place, entry.target(), entry.pressure(), network.capacity(), network.motes(), Set.copyOf(network.wells())));
-                }
-            });
-            return owned;
-        }
-
-        @Override
-        public long take(Place place, int grade, long count) {
-            if (!wells.containsKey(place)) {
-                return 0;
-            }
-            var motes = wells.get(place).network().motes();
-            long taken = Math.min(count, motes.getOrDefault(grade, 0L));
-            motes.merge(grade, -taken, Long::sum);
-            return taken;
-        }
-
-        @Override
-        public long put(Place place, int grade, long count) {
-            if (!wells.containsKey(place)) {
-                return 0;
-            }
-            var network = wells.get(place).network();
-            long total = network.motes().values().stream().mapToLong(Long::longValue).sum();
-            long put = Math.min(count, network.capacity() - total);
-            network.motes().merge(grade, put, Long::sum);
-            return put;
-        }
-
-        @Override
-        public boolean loaded(Place place) {
-            return wells.containsKey(place) && !unseen.contains(place);
-        }
-
-        @Override
-        public boolean lay(Place place) {
-            if (!wells.containsKey(place) || unseen.contains(place)) {
-                return false;
-            }
-            laid.add(place);
-            return true;
         }
     }
 }

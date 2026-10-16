@@ -34,6 +34,7 @@ class DragonReportTest {
     private static final Place CALLED = new Place(OVERWORLD, new BlockPos(0, 64, 640));
     private static final LifeStages STAGES = new LifeStages(1_000, LifeStages.DEFAULTS);
     private static final Component THERE_NAME = Component.literal("Smeltery");
+    private static final long MATTER_LOAD = 27;
 
     @Test
     void restingWithNothingItSaysSoAndItsHealthAndOwner() {
@@ -48,6 +49,32 @@ class DragonReportTest {
         assertLine(lines.get(1), "voidworks.jade.dragon.carrying_nothing");
         assertLine(lines.get(2), "voidworks.jade.dragon.young");
         assertLine(lines.get(3), "voidworks.jade.dragon.owner", "Alex");
+    }
+
+    @Test
+    void aMatterLineDragonsItemsAreNoLinesButItsStacksOfItsLoadAre() {
+        var cobblestone = Ware.of(Identifier.withDefaultNamespace("cobblestone"), 64, 5 * 64 + 1);
+        var box = Ware.of(Identifier.withDefaultNamespace("shulker_box"), 1, 1);
+        var adult = new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), Line.MATTER, VoidDragonRecord.FULL_HEALTH, HERE,
+                new MatterLoad(List.of(cobblestone, box)), trip(Trip.Leg.TO_DESTINATION), 0, STAGES.start(LifeStage.ADULT));
+        var report = report(adult, Optional.of("Alex"));
+
+        assertEquals(List.of(cobblestone, box), report.items());
+        assertEquals(7, report.stacks());
+        var lines = report.lines();
+        assertEquals(5, lines.size());
+        assertLine(lines.get(0), "voidworks.jade.dragon.diving");
+        assertLine(lines.get(1), "voidworks.jade.dragon.bound", THERE_NAME);
+        assertLine(lines.get(2), "voidworks.jade.dragon.stacks", 7L, 54L);
+        assertLine(lines.get(3), "voidworks.jade.dragon.adult");
+        assertEquals(report.lines().subList(0, 2), report.head());
+    }
+
+    @Test
+    void aMatterLineDragonCarryingNothingSaysSo() {
+        var dragon = new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), Line.MATTER, VoidDragonRecord.FULL_HEALTH, HERE,
+                MatterLoad.NONE, Optional.empty(), 0, 0);
+        assertLine(report(dragon, Optional.empty()).lines().get(1), "voidworks.jade.dragon.carrying_nothing");
     }
 
     @Test
@@ -121,7 +148,7 @@ class DragonReportTest {
     }
 
     private static DragonReport report(VoidDragonRecord dragon, Optional<String> owner) {
-        return DragonReport.of(dragon, place -> place.equals(THERE) ? THERE_NAME : Component.literal("elsewhere"), owner, STAGES);
+        return DragonReport.of(dragon, place -> place.equals(THERE) ? THERE_NAME : Component.literal("elsewhere"), owner, STAGES, MATTER_LOAD);
     }
 
     private static VoidDragonRecord dragon(Optional<Trip> trip, SortedMap<Integer, Long> load, int health) {

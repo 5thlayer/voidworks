@@ -14,6 +14,7 @@ import io.github._5thlayer.voidworks.displacer.DisplacerReport;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
+import io.github._5thlayer.voidworks.dragon.StackWares;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
@@ -33,15 +34,19 @@ import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import io.github._5thlayer.voidworks.well.WellHatchBlock;
 import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
 import io.github._5thlayer.voidworks.well.WellReport;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
+import snownee.jade.api.EntityAccessor;
+import snownee.jade.api.ITooltip;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
 import snownee.jade.api.IWailaPlugin;
@@ -142,6 +147,23 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return !dragonling.grown() && dragonling.level() instanceof ServerLevel level ? DragonlingReport.of(dragonling, level.getServer()) : null;
     }
 
+    /**
+     * A dragon's report, a Matter-line dragon's items between its head and tail: one line per item, its
+     * icon and name and how many, a filled container followed by the icons of what it holds. Client-only.
+     */
+    private static void showDragon(DragonReport report, ITooltip tooltip, EntityAccessor accessor) {
+        report.head().forEach(tooltip::add);
+        var registries = accessor.getLevel().registryAccess();
+        for (var ware : report.items()) {
+            var stack = StackWares.stack(ware, registries);
+            tooltip.add(JadeUI.item(stack.copyWithCount(1)));
+            tooltip.append(JadeUI.text(Component.translatable("voidworks.jade.dragon.item", stack.getHoverName(), ware.count())).alignSelfCenter());
+            var held = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
+            held.forEach(inside -> tooltip.append(JadeUI.item(inside, 0.75F)));
+        }
+        report.tail().forEach(tooltip::add);
+    }
+
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
@@ -176,7 +198,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
             report.lines().forEach(line -> tooltip.add(JadeUI.text(line).alignSelfCenter()));
             report.request().ifPresent(asked -> tooltip.append(JadeUI.item(new ItemStack(asked.item()), 1, Integer.toString(asked.stacks()))));
         }), WellHatchBlock.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines,
+        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, VoidworksJadePlugin::showDragon,
                 report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
     }

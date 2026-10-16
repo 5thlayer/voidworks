@@ -21,15 +21,19 @@ import io.github._5thlayer.voidworks.network.VoidNetworks;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.SavedWellHatches;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWells;
+import io.github._5thlayer.voidworks.well.WellHatches;
 import io.github._5thlayer.voidworks.well.WellStructure;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -41,6 +45,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
@@ -158,8 +163,8 @@ public final class DragonRouting {
             var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
-        return new Routing(new ServerWells(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks(),
-                VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
+        return new Routing(new ServerWells(server), new ServerHatches(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(),
+                VoidworksConfig.dragonMatterLoad(), VoidworksConfig.dragonStopTicks(), VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
     }
 
     /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */
@@ -227,6 +232,69 @@ public final class DragonRouting {
         @Override
         public boolean riding(UUID dragonId) {
             return DragonPresences.ridden(server, dragonId);
+        }
+    }
+
+    /**
+     * The server's Well hatches, from its saved data: a Well's are those its owner placed against it, so
+     * a dragon loads and unloads them with no chunk loaded.
+     */
+    private record ServerHatches(MinecraftServer server) implements Hatches {
+
+        @Override
+        public List<Hatch> on(Place well) {
+            var owner = SavedVoidWells.of(server).at(well).map(VoidWells.Entry::owner);
+            if (owner.isEmpty()) {
+                return List.of();
+            }
+            return SavedWellHatches.of(server).on(well).stream()
+                    .filter(hatch -> hatch.owner().map(NameAndId::id).equals(owner))
+                    .map(this::seen)
+                    .toList();
+        }
+
+        @Override
+        public long take(Place hatch, Ware ware) {
+            return SavedWellHatches.of(server).at(hatch).map(found -> move(ware, (resource, amount, transaction) ->
+                    found.contents().extract(resource, amount, transaction))).orElse(0L);
+        }
+
+        @Override
+        public long put(Place hatch, Ware ware) {
+            return SavedWellHatches.of(server).at(hatch).map(found -> move(ware, (resource, amount, transaction) ->
+                    found.contents().insert(resource, amount, transaction))).orElse(0L);
+        }
+
+        /** @return {@code hatch} as a dragon sees it: what it asks for and what it holds, items alike together */
+        private Hatch seen(WellHatches.Hatch hatch) {
+            var registries = server.registryAccess();
+            var contents = new ArrayList<Ware>();
+            int empty = 0;
+            for (var stack : hatch.contents().copyToList()) {
+                if (stack.isEmpty()) {
+                    empty++;
+                } else {
+                    contents.add(StackWares.of(stack, registries));
+                }
+            }
+            var request = hatch.request().map(asked -> new Request(BuiltInRegistries.ITEM.getKey(asked.item()),
+                    new ItemStack(asked.item()).getMaxStackSize(), asked.stacks()));
+            return new Hatch(hatch.place(), hatch.mode() == WellHatches.Mode.REQUESTER, request, new MatterLoad(contents).wares(), empty);
+        }
+
+        private long move(Ware ware, ItemMove move) {
+            if (ware.count() == 0) {
+                return 0;
+            }
+            try (var transaction = Transaction.openRoot()) {
+                long moved = move.of(StackWares.resource(ware, server.registryAccess()), (int) Math.min(Integer.MAX_VALUE, ware.count()), transaction);
+                transaction.commit();
+                return moved;
+            }
+        }
+
+        private interface ItemMove {
+            int of(ItemResource resource, int amount, TransactionContext transaction);
         }
     }
 

@@ -196,8 +196,9 @@ _Avoid_: fast dive, rider dive
 **Trip**:
 A Void Dragon's errand: to a source Well to load, a dive, and on to the destination Well to unload.
 It is claimed as it is planned, so a network's need counts the motes already on their way to any
-Well on it, whoever's dragon carries them. A
-load no Well needs is stowed: carried to the owner's Well with most room. A stop may be added to a
+Well on it, whoever's dragon carries them; a Matter-line trip claims items by kind, against the
+requests it fills and the provider it loads from. A load no Well needs is stowed: carried to the
+owner's Well with most room, or for items, to their providers with room. A stop may be added to a
 trip: the Well its owner calls the dragon to, or the Well its rider picks, which it fills as it sets
 them down before it goes on.
 _Avoid_: route, job

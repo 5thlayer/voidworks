@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.dragon;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.SortedMap;
@@ -19,15 +20,24 @@ import java.util.TreeMap;
 final class MoteCargo implements Cargo {
 
     private final Wells wells;
+    private final long load;
 
-    MoteCargo(Wells wells) {
+    /** @param load the most motes a young dragon carries */
+    MoteCargo(Wells wells, long load) {
         this.wells = wells;
+        this.load = load;
     }
 
     @Override
-    public long shortfall(Stop stop) {
+    public long load() {
+        return load;
+    }
+
+    /** What it lacks of its target, less every mote on its way to it, whatever its grade. */
+    @Override
+    public long shortfall(Stop stop, List<Trip> bound) {
         var target = target(stop);
-        return target.isPresent() ? Math.max(0, target.getAsLong() - stop.total()) : 0;
+        return target.isPresent() ? Math.max(0, target.getAsLong() - stop.total() - claimed(bound)) : 0;
     }
 
     @Override
@@ -35,11 +45,11 @@ final class MoteCargo implements Cargo {
         return Math.max(0, capacity(stop) - stop.total()) + healing;
     }
 
-    /** @return of {@code from}'s excess, no more than it holds of grades worth something at {@code to} */
+    /** Of {@code from}'s excess, no more than it holds of grades worth something at {@code to}, less every mote spoken for there. */
     @Override
-    public long offer(Stop from, Stop to) {
+    public long offer(Stop from, Stop to, List<Trip> loading, List<Trip> bound) {
         long worth = from.motes().entrySet().stream().filter(held -> worth(to, held.getKey())).mapToLong(Map.Entry::getValue).sum();
-        return Math.min(excess(from), worth);
+        return Math.max(0, Math.min(excess(from), worth) - claimed(loading));
     }
 
     /** The fullest first, by which its network pressure rises. */
@@ -53,11 +63,17 @@ final class MoteCargo implements Cargo {
         return motes(load).keySet().stream().anyMatch(grade -> worth(stop, grade));
     }
 
-    /** Highest grade first. */
+    /** A claim on as many motes as {@code to} still needs and {@code from} still offers, whatever their grades. */
     @Override
-    public Load take(Stop from, Place place, Stop to, long most) {
+    public Trip planning(Trip trip, Stop from, Stop to, long most, List<Trip> loading, List<Trip> bound) {
+        return trip.claiming(Math.min(most, Math.min(shortfall(to, bound), offer(from, to, loading, bound))), Map.of());
+    }
+
+    /** Highest grade first, as many as {@code to} still needs and {@code from} still offers. */
+    @Override
+    public Load take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
         var taken = new TreeMap<Integer, Long>();
-        long left = most;
+        long left = Math.min(most, Math.min(shortfall(to, bound), offer(from, to, loading, bound)));
         for (var grade : from.motes().sequencedKeySet().reversed()) {
             if (left == 0) {
                 break;
@@ -113,10 +129,17 @@ final class MoteCargo implements Cargo {
         return new MoteLoad(left);
     }
 
+    /** @return the motes of {@code load}, grade to count: none of a load of items, which a Mote-line dragon never takes up */
     private static SortedMap<Integer, Long> motes(Load load) {
         return switch (load) {
             case MoteLoad motes -> motes.motes();
+            case MatterLoad matter -> MoteLoad.NONE.motes();
         };
+    }
+
+    /** @return the motes claimed on {@code trips}, whatever their grades */
+    private static long claimed(List<Trip> trips) {
+        return trips.stream().mapToLong(Trip::claimed).sum();
     }
 
     /** @return the highest of {@code stop}'s Wells' targets; empty, a reservoir, when none has one */

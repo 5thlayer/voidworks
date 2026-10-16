@@ -44,6 +44,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGONLING_GROW_TICKS;
     private static final ModConfigSpec.LongValue DRAGONLING_FEED_ENERGY;
     private static final ModConfigSpec.IntValue DRAGON_LOAD;
+    private static final ModConfigSpec.IntValue DRAGON_MATTER_LOAD;
     private static final ModConfigSpec.IntValue DRAGON_STOP_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_DIVE_BLOCKS_PER_SECOND;
@@ -140,6 +141,10 @@ public final class VoidworksConfig {
         DRAGON_LOAD = builder
                 .comment("How many motes a Void Dragon carries on a trip, of every grade together, at most.")
                 .defineInRange("dragonLoad", 8_192, 1, 1 << 30);
+        DRAGON_MATTER_LOAD = builder
+                .comment("How many stacks a young Matter-line Void Dragon carries on a trip, each full by its item's stack size;",
+                        "a filled container, such as a shulker box, takes one. Its life stage multiplies it.")
+                .defineInRange("dragonMatterLoad", 27, 1, 1 << 20);
         DRAGON_STOP_TICKS = builder
                 .comment("Ticks a Void Dragon stops at a Void Well to load or unload.")
                 .defineInRange("dragonStopTicks", 100, 0, 24000);
@@ -297,6 +302,11 @@ public final class VoidworksConfig {
     /** @return the most motes a Void Dragon carries on a trip */
     public static int dragonLoad() {
         return DRAGON_LOAD.getAsInt();
+    }
+
+    /** @return the most stacks a young Matter-line Void Dragon carries on a trip */
+    public static int dragonMatterLoad() {
+        return DRAGON_MATTER_LOAD.getAsInt();
     }
 
     /** @return ticks a Void Dragon stops at a Well to load or unload */

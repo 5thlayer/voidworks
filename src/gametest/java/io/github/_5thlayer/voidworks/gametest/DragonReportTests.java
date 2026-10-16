@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -14,6 +15,7 @@ import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
 import io.github._5thlayer.voidworks.dragon.LifeStage;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
@@ -69,7 +71,7 @@ final class DragonReportTests {
                 })
                 .thenExecute(() -> {
                     var report = report(helper, presence.get());
-                    helper.assertTrue(report.equals(new DragonReport(DragonReport.Doing.RESTING, Optional.empty(), new TreeMap<>(),
+                    helper.assertTrue(report.equals(new DragonReport(DragonReport.Doing.RESTING, Optional.empty(), new TreeMap<>(), Line.MOTE, List.of(), 0,
                             VoidDragonRecord.FULL_HEALTH, LifeStage.YOUNG, Optional.of("dragon-owner"))), "the resting dragon shows " + report);
                     helper.assertTrue(DragonReport.of(presence.get(), server).isPresent(), "a presence shows nothing");
                     var load = new TreeMap<Integer, Long>();

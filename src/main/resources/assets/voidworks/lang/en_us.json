@@ -155,6 +155,8 @@
   "voidworks.jade.dragon.owner": "Owner: %s",
   "voidworks.jade.dragon.resting": "Resting",
   "voidworks.jade.dragon.setting_down": "Setting its rider down",
+  "voidworks.jade.dragon.item": "%s × %s",
+  "voidworks.jade.dragon.stacks": "%s of %s stacks",
   "voidworks.jade.dragon.unknown_owner": "Owner unknown",
   "voidworks.jade.dragon.unloading": "Unloading",
   "voidworks.jade.dragon.waiting": "Waiting for its owner",

@@ -78,6 +78,11 @@ public final class WellHatches {
         return Optional.ofNullable(hatches.get(place));
     }
 
+    /** @return the hatches that joined the Well whose core is at {@code well}, in the order they were placed */
+    public List<Hatch> on(Place well) {
+        return hatches.values().stream().filter(hatch -> hatch.well.equals(Optional.of(well))).toList();
+    }
+
     private static WellHatches read(List<Entry> entries) {
         var hatches = new WellHatches();
         entries.forEach(entry -> hatches.hatches.put(entry.place(), entry.hatch(hatches)));

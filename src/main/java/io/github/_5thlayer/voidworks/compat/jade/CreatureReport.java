@@ -65,18 +65,18 @@ final class CreatureReport<E extends Entity, D> implements StreamServerDataProvi
     static final class Client<D> implements IEntityComponentProvider {
 
         private final CreatureReport<?, D> report;
-        private final Function<D, List<Component>> lines;
+        private final Shows<D> shows;
         private final Function<D, Optional<Health>> health;
 
         /** On {@code report}'s uid, decoding with its codec, adding the lines {@code lines} words its data as, and no hearts. */
         Client(CreatureReport<?, D> report, Function<D, List<Component>> lines) {
-            this(report, lines, data -> Optional.empty());
+            this(report, (data, tooltip, accessor) -> lines.apply(data).forEach(tooltip::add), data -> Optional.empty());
         }
 
-        /** As {@link #Client(CreatureReport, Function)}, with hearts for the health {@code health} reads from its data first. */
-        Client(CreatureReport<?, D> report, Function<D, List<Component>> lines, Function<D, Optional<Health>> health) {
+        /** As {@link #Client(CreatureReport, Function)}, adding what {@code shows} draws of its data, with hearts for the health {@code health} reads from it first. */
+        Client(CreatureReport<?, D> report, Shows<D> shows, Function<D, Optional<Health>> health) {
             this.report = report;
-            this.lines = lines;
+            this.shows = shows;
             this.health = health;
         }
 
@@ -90,7 +90,7 @@ final class CreatureReport<E extends Entity, D> implements StreamServerDataProvi
                     health.apply(data).ifPresent(shown ->
                             tooltip.add(new HealthElement(Gui.HeartType.NORMAL, shown.max(), shown.current(), 0).tag(JadeIds.MC_ENTITY_HEALTH)));
                 }
-                lines.apply(data).forEach(tooltip::add);
+                shows.add(data, tooltip, accessor);
             });
         }
 
@@ -98,6 +98,12 @@ final class CreatureReport<E extends Entity, D> implements StreamServerDataProvi
         public Identifier getUid() {
             return report.getUid();
         }
+    }
+
+    /** What a creature's data adds to its tooltip. */
+    interface Shows<D> {
+
+        void add(D data, ITooltip tooltip, EntityAccessor accessor);
     }
 
     /** A creature's health of its full health, as Jade's hearts show it. */

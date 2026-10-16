@@ -62,7 +62,6 @@ public final class Routing {
     private final Owners owners;
     private final Dive dive;
     private final Harm harm;
-    private final long load;
     private final int stopTicks;
     private final long eggMotes;
     private final LifeStages stages;
@@ -70,22 +69,28 @@ public final class Routing {
     private final Map<Line, Cargo> cargoes = new EnumMap<>(Line.class);
 
     /**
-     * @param load the most motes a dragon carries
+     * @param load the most motes a young Mote-line dragon carries
+     * @param matterLoad the most stacks a young Matter-line dragon carries
      * @param stopTicks how long a dragon stops at a Well to load or unload
      * @param eggMotes how many motes a dragon carries as an adult for each egg it lays
      * @param stages how it ages, which multiplies its speed and load
      */
-    public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes, LifeStages stages) {
+    public Routing(Wells wells, Hatches hatches, Owners owners, Dive dive, Harm harm, long load, long matterLoad, int stopTicks, long eggMotes,
+            LifeStages stages) {
         this.wells = wells;
         this.owners = owners;
         this.dive = dive;
         this.harm = harm;
-        this.load = load;
         this.stopTicks = stopTicks;
         this.eggMotes = eggMotes;
         this.stages = stages;
-        cargoes.put(Line.MOTE, new MoteCargo(wells));
-        cargoes.put(Line.MATTER, new MatterCargo());
+        cargoes.put(Line.MOTE, new MoteCargo(wells, load));
+        cargoes.put(Line.MATTER, new MatterCargo(hatches, matterLoad));
+    }
+
+    /** A routing with no Well hatches, so its Matter-line dragons, which find nothing to carry, carry a stack at most. */
+    public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes, LifeStages stages) {
+        this(wells, Hatches.NONE, owners, dive, harm, load, 1, stopTicks, eggMotes, stages);
     }
 
     /**
@@ -229,7 +234,7 @@ public final class Routing {
         }
         var lightened = excess > 0 ? dragon.carrying(cargo(dragon).putBack(dragon.load(), dragon.rest(), excess)) : dragon;
         var healed = healed(lightened);
-        return Optional.of(healed.on(Optional.of(trip.claiming(Math.min(trip.claimed(), healed.carried())).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
+        return Optional.of(healed.on(Optional.of(trip.claimingAtMost(healed.load()).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
     }
 
     /** What came of a rider's pick. */
@@ -314,7 +319,7 @@ public final class Routing {
         var after = stop(dragon.owner(), place).map(stop -> stopped.carrying(cargo(dragon).put(stopped.load(), place, stop, need(dragons, stop, dragon), false))).orElse(stopped);
         long dropped = stopped.carried() - after.carried();
         var laid = dropped > 0 ? laying(unloaded(after, dropped), place) : after;
-        return laid.on(Optional.of(trip.claiming(Math.min(trip.claimed(), laid.carried())).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
+        return laid.on(Optional.of(trip.claimingAtMost(laid.load()).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
     }
 
     /** A dragon with nothing to do and nothing carried: a trip to the stop that needs most, from the fullest that can give it something; or none. */
@@ -329,10 +334,10 @@ public final class Routing {
                     .filter(stop -> deliverable(dragons, stop, destination, dragon) > 0)
                     .max(cargo(dragon).sources(destination));
             if (source.isPresent()) {
-                long claimed = Math.min(loadOf(dragon), Math.min(need(dragons, destination, dragon), deliverable(dragons, source.get(), destination, dragon)));
                 var from = source.get().nearest(dragon.rest(), dive);
-                return setOff(dragon, Trip.planned(Optional.of(from), destination.nearest(from, dive), claimed, false,
-                        Trip.Leg.TO_SOURCE), now);
+                var planned = Trip.planned(Optional.of(from), destination.nearest(from, dive), 0, false, Trip.Leg.TO_SOURCE);
+                return setOff(dragon, cargo(dragon).planning(planned, source.get(), destination, loadOf(dragon),
+                        loading(dragons, source.get(), dragon), bound(dragons, destination, dragon)), now);
             }
         }
         return dragon;
@@ -347,12 +352,11 @@ public final class Routing {
         if (from.isEmpty() || to.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        long most = Math.min(loadOf(dragon), Math.min(need(dragons, to.get(), dragon), deliverable(dragons, from.get(), to.get(), dragon)));
-        var loaded = cargo(dragon).take(from.get(), source, to.get(), most);
+        var loaded = cargo(dragon).take(from.get(), source, to.get(), loadOf(dragon), loading(dragons, from.get(), dragon), bound(dragons, to.get(), dragon));
         if (loaded.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        return laying(stopped.carrying(loaded), source).on(Optional.of(trip.claiming(loaded.amount()).then(Trip.Leg.LOADING, now + stopTicks)));
+        return laying(stopped.carrying(loaded), source).on(Optional.of(trip.claiming(loaded).then(Trip.Leg.LOADING, now + stopTicks)));
     }
 
     /**
@@ -369,7 +373,7 @@ public final class Routing {
         if (put == 0) {
             return stopped.on(Optional.empty());
         }
-        return laying(unloaded(after, put), trip.destination()).on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+        return laying(unloaded(after, put), trip.destination()).on(Optional.of(trip.claimingNothing().then(Trip.Leg.UNLOADING, now + stopTicks)));
     }
 
     /** @return {@code dragon} having unloaded {@code motes}, which it has carried over its life, and as an adult toward its eggs */
@@ -377,9 +381,9 @@ public final class Routing {
         return dragon.unloaded(motes, stages.towardEggs(dragon.cargo(), motes));
     }
 
-    /** @return the most {@code dragon} loads now: the base load times its stage's factor */
+    /** @return the most {@code dragon} loads now: its Line's base load times its stage's factor */
     private long loadOf(VoidDragonRecord dragon) {
-        return stages.load(load, dragon.cargo());
+        return stages.load(cargo(dragon).load(), dragon.cargo());
     }
 
     /**
@@ -406,8 +410,8 @@ public final class Routing {
                 .filter(stop -> need(dragons, stop, dragon) > 0);
         if (needing.isPresent()) {
             long claimed = Math.min(dragon.carried(), need(dragons, needing.get(), dragon));
-            return setOff(dragon, Trip.planned(Optional.empty(), needing.get().nearest(dragon.rest(), dive), claimed, false,
-                    Trip.Leg.TO_DESTINATION), now);
+            return setOff(dragon, Trip.planned(Optional.empty(), needing.get().nearest(dragon.rest(), dive), 0, false,
+                    Trip.Leg.TO_DESTINATION).claiming(claimed, dragon.load().items()), now);
         }
         var roomiest = owned.stream()
                 .max(Comparator.comparingLong(stop -> room(dragons, stop, dragon)))
@@ -494,36 +498,39 @@ public final class Routing {
      *         is spoken for
      */
     private long deliverable(VoidDragons dragons, Stop from, Stop to, VoidDragonRecord dragon) {
-        long spokenFor = claimed(dragons, dragon,
-                trip -> trip.leg() == Trip.Leg.TO_SOURCE && trip.source().filter(from.network()::contains).isPresent());
-        return Math.max(0, cargo(dragon).offer(from, to) - spokenFor);
+        return cargo(dragon).offer(from, to, loading(dragons, from, dragon), bound(dragons, to, dragon));
     }
 
     /** @return how much {@code stop} is short of ({@link Cargo#shortfall}) of what {@code dragon} carries, less what other dragons of its Line have claimed for its network */
     private long need(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
-        return Math.max(0, cargo(dragon).shortfall(stop) - claimedFor(dragons, stop, dragon));
+        return cargo(dragon).shortfall(stop, bound(dragons, stop, dragon));
     }
 
     /** @return how much more of what {@code dragon} carries {@code stop} takes ({@link Cargo#room}), less what other dragons of its Line have claimed for its network */
     private long room(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
-        return Math.max(0, cargo(dragon).room(stop) - claimedFor(dragons, stop, dragon));
+        long claimed = bound(dragons, stop, dragon).stream().mapToLong(Trip::claimed).sum();
+        return Math.max(0, cargo(dragon).room(stop) - claimed);
     }
 
-    /** @return what is on its way to any Well on {@code stop}'s network on the trips of every dragon of {@code dragon}'s Line but it, whoever's */
-    private static long claimedFor(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
-        return claimed(dragons, dragon, trip -> stop.network().contains(trip.destination()));
+    /** @return the trips of every dragon of {@code dragon}'s Line but it, whoever's, on their way to any Well on {@code stop}'s network */
+    private static List<Trip> bound(VoidDragons dragons, Stop stop, VoidDragonRecord dragon) {
+        return trips(dragons, dragon, trip -> stop.network().contains(trip.destination()));
+    }
+
+    /** @return the trips of every dragon of {@code dragon}'s Line but it, whoever's, on their way to load on {@code from}'s network */
+    private static List<Trip> loading(VoidDragons dragons, Stop from, VoidDragonRecord dragon) {
+        return trips(dragons, dragon, trip -> trip.leg() == Trip.Leg.TO_SOURCE && trip.source().filter(from.network()::contains).isPresent());
     }
 
     /**
-     * @return what is claimed on the trips that are {@code such} of every dragon of {@code dragon}'s Line but
-     *         it, whoever's: claims count in their Line's unit, so another Line's never bind it
+     * @return the trips that are {@code such} of every dragon of {@code dragon}'s Line but it, whoever's:
+     *         claims count in their Line's unit, so another Line's never bind it
      */
-    private static long claimed(VoidDragons dragons, VoidDragonRecord dragon, Predicate<Trip> such) {
+    private static List<Trip> trips(VoidDragons dragons, VoidDragonRecord dragon, Predicate<Trip> such) {
         return dragons.all().stream()
                 .filter(other -> !other.id().equals(dragon.id()) && other.line() == dragon.line())
                 .flatMap(other -> other.trip().stream())
                 .filter(such)
-                .mapToLong(Trip::claimed)
-                .sum();
+                .toList();
     }
 }
