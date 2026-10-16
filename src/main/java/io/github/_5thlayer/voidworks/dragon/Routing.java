@@ -163,17 +163,66 @@ public final class Routing {
     /**
      * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}: it
      * dives there at once, healing first as it leaves a Well, carrying them, a stop added to its trip.
+     * The dive takes no more than a ridden dive does ({@link Dive#ridden}), and its load is cut by the
+     * share of time saved, so it carries no more motes a second than unridden: it first puts what it
+     * holds beyond that into the Well it is at, lowest grade first, which counts toward neither its
+     * ageing nor its eggs.
      *
-     * @return the dragon on its way; empty, with nothing changed, while it is not stopped at one of its
-     *         owner's Wells or when {@code picked} is not one of theirs
+     * @return the dragon on its way; none, with nothing changed, while it is not stopped at one of its
+     *         owner's Wells, when {@code picked} is not one of theirs, or when the Well it is at has no
+     *         room for what it holds beyond its ridden load
      */
-    public Optional<VoidDragonRecord> ride(VoidDragons dragons, UUID id, Place picked, long now) {
-        var riding = dragons.get(id)
+    public Ride ride(VoidDragons dragons, UUID id, Place picked, long now) {
+        var found = dragons.get(id)
                 .filter(dragon -> dragon.trip().flatMap(Trip::divingTo).isEmpty())
-                .filter(dragon -> stop(dragon.owner(), dragon.rest()).isPresent() && stop(dragon.owner(), picked).isPresent())
-                .map(dragon -> setOff(dragon, dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked), now));
-        riding.ifPresent(dragons::update);
-        return riding;
+                .filter(dragon -> stop(dragon.owner(), picked).isPresent());
+        var at = found.flatMap(dragon -> stop(dragon.owner(), dragon.rest()));
+        if (at.isEmpty()) {
+            return Ride.CANNOT;
+        }
+        var dragon = found.get();
+        // Timed at the speed it will dive at, healed as it leaves, which frees the room its healing takes.
+        int healing = healing(dragon, at.get());
+        int speed = stages.speed(dragon.healed(healing));
+        long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), picked) * VoidDragonRecord.WHOLE_SPEED, speed);
+        long ridden = dive.ridden(unridden);
+        long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
+        if (excess > at.get().room() + (long) healing * harm.motesPerPoint()) {
+            return Ride.NO_ROOM;
+        }
+        var lightened = excess > 0 ? putBack(dragon, excess) : dragon;
+        var trip = dragon.trip().orElseGet(() -> alone(picked)).adding(Trip.Leg.TO_PICKED, picked);
+        var healed = healed(lightened);
+        dragons.update(healed.on(Optional.of(trip.claiming(Math.min(trip.claimed(), healed.carried())).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
+        return Ride.DIVING;
+    }
+
+    /** @return {@code dragon} having put {@code motes} of its load into the Well where it is, lowest grade first */
+    private VoidDragonRecord putBack(VoidDragonRecord dragon, long motes) {
+        var left = new TreeMap<>(dragon.load());
+        long rest = motes;
+        for (var grade : dragon.load().sequencedKeySet()) {
+            if (rest == 0) {
+                break;
+            }
+            long put = wells.put(dragon.rest(), grade, Math.min(rest, left.get(grade)));
+            rest -= put;
+            if (left.merge(grade, -put, Long::sum) == 0) {
+                left.remove(grade);
+            }
+        }
+        return dragon.carrying(left);
+    }
+
+    /** What came of a rider's pick. */
+    public enum Ride {
+
+        /** The dragon dives, carrying them. */
+        DIVING,
+        /** It is not stopped at one of its owner's Wells, or the Well picked is not one of theirs. */
+        CANNOT,
+        /** The Well it is at has no room for what it holds beyond its ridden load. */
+        NO_ROOM
     }
 
     /**
@@ -387,7 +436,7 @@ public final class Routing {
         if (stop.isEmpty()) {
             return dragon;
         }
-        long owed = Math.min(VoidDragonRecord.FULL_HEALTH - dragon.health(), stop.get().total() / harm.motesPerPoint()) * harm.motesPerPoint();
+        long owed = (long) healing(dragon, stop.get()) * harm.motesPerPoint();
         long paid = 0;
         for (var held : stop.get().motes().entrySet()) {
             if (paid == owed) {
@@ -396,6 +445,11 @@ public final class Routing {
             paid += wells.take(place, held.getKey(), Math.min(owed - paid, held.getValue()));
         }
         return dragon.healed(Math.toIntExact(paid / harm.motesPerPoint()));
+    }
+
+    /** @return the points of health {@code dragon} heals from the Wells of {@code stop}, where it is, as far as their motes go */
+    private int healing(VoidDragonRecord dragon, Stop stop) {
+        return (int) Math.min(VoidDragonRecord.FULL_HEALTH - dragon.health(), stop.total() / harm.motesPerPoint());
     }
 
     /** @return {@code owner}'s stops: their Wells, those on one network together */

@@ -85,9 +85,9 @@ public final class DragonRouting {
      * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}:
      * it dives there now, carrying them ({@link Routing#ride}).
      *
-     * @return the dragon on its way; empty when it cannot dive there
+     * @return what came of it
      */
-    public static Optional<VoidDragonRecord> ride(MinecraftServer server, UUID id, Place picked) {
+    public static Routing.Ride ride(MinecraftServer server, UUID id, Place picked) {
         return routing(server, new ServerOwners(server)).ride(SavedVoidDragons.of(server), id, picked, server.overworld().getGameTime());
     }
 
@@ -109,7 +109,7 @@ public final class DragonRouting {
 
     /** @return the dragons' routing on {@code server}, its Wells read from the server and its owners from {@code owners}, at the configured numbers */
     private static Routing routing(MinecraftServer server, Owners owners) {
-        var dive = new Dive(VoidworksConfig.dragonDiveTicks(), VoidworksConfig.dragonDiveBlocksPerSecond(), dimension -> {
+        var dive = new Dive(VoidworksConfig.dragonDiveTicks(), VoidworksConfig.dragonDiveBlocksPerSecond(), VoidworksConfig.dragonRiddenDiveTicks(), dimension -> {
             var level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });

@@ -27,7 +27,7 @@ import net.minecraft.server.players.NameAndId;
  * What a Void Dragon's presence shows a player looking at it, in Jade, read from its record, which
  * is server state (ADR 0005), as a Well's {@code WellReport} is from its core: what it is doing, the
  * Well it is bound for, the motes it carries by grade and in total, its health of
- * {@link VoidDragonRecord#FULL_HEALTH}, its life stage, and its owner. Anyone looking sees it all. Read on the
+ * {@link VoidDragonRecord#FULL_HEALTH}, shown as Jade's hearts, its life stage, and its owner. Anyone looking sees it all. Read on the
  * server each time Jade asks, so it follows the record, and sent to the client, which words it with
  * {@link #lines}.
  *
@@ -96,8 +96,8 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
 
     /**
      * @return what it is doing; the Well it is bound for, if any; a line per grade it carries, tinted
-     *         like that grade's butterflies, then their total, or that it carries nothing; its health;
-     *         its life stage; and whose it is
+     *         like that grade's butterflies, then their total, or that it carries nothing; its life
+     *         stage; and whose it is. Its health is no line: Jade draws it as hearts, as the Ender Dragon's
      */
     public List<Component> lines() {
         var lines = new ArrayList<Component>();
@@ -107,7 +107,6 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
         lines.add(load.isEmpty()
                 ? Component.translatable("voidworks.jade.dragon.carrying_nothing")
                 : Component.translatable("voidworks.jade.dragon.carrying", carried()));
-        lines.add(Component.translatable("voidworks.jade.dragon.health", health, VoidDragonRecord.FULL_HEALTH));
         lines.add(Component.translatable(stageKey(stage)));
         lines.add(ownerLine(owner));
         return lines;

@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.compat.jade;
 
 import java.util.List;
+import java.util.Optional;
 
 import io.github._5thlayer.libworks.machine.jade.MachineReport;
 import io.github._5thlayer.voidworks.Voidworks;
@@ -14,6 +15,7 @@ import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
+import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.mutation.ChamberReport;
 import io.github._5thlayer.voidworks.mutation.CrucibleReport;
@@ -50,7 +52,8 @@ import snownee.jade.api.WailaPlugin;
  * {@link WellReport}, its name, target and owner, beside its network and payment. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
  * A Void Dragon's presence shows its record's {@link DragonReport}, and a Dragonling its
- * {@link DragonlingReport}, each a {@link CreatureReport} in place of Jade's hearts.
+ * {@link DragonlingReport}, each a {@link CreatureReport} in place of Jade's hearts;
+ * a dragon's own hearts show its record's health, as the Ender Dragon's show its own.
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
  *
@@ -155,7 +158,8 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 VoidCrucibleBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidWellBlock.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines), VoidDragon.class);
+        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines,
+                report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
     }
 }

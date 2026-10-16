@@ -13,13 +13,19 @@ import net.minecraft.resources.Identifier;
  * scale, the Nether's eight and the End's one, and a fixed time more between dimensions. Height
  * counts nothing. A dive takes at least {@link #MINIMUM_TICKS}, so even between near Wells its
  * presence is seen diving into one shaft and emerging from the other. A stop at the Well it is
- * already at is no dive.
+ * already at is no dive. A ridden dive takes no more than {@link #riddenTicks}, nor less than the least.
  *
  * @param betweenDimensionsTicks what a dive between dimensions takes more
  * @param blocksPerSecond how many Overworld blocks of distance add a second
+ * @param riddenTicks the most a dive with a rider aboard takes
  * @param scale each dimension's Overworld blocks to one of its own, by its id
  */
-public record Dive(int betweenDimensionsTicks, int blocksPerSecond, ToDoubleFunction<Identifier> scale) {
+public record Dive(int betweenDimensionsTicks, int blocksPerSecond, int riddenTicks, ToDoubleFunction<Identifier> scale) {
+
+    /** A dive whose rider makes it no shorter. */
+    public Dive(int betweenDimensionsTicks, int blocksPerSecond, ToDoubleFunction<Identifier> scale) {
+        this(betweenDimensionsTicks, blocksPerSecond, Integer.MAX_VALUE, scale);
+    }
 
     private static final int TICKS_PER_SECOND = 20;
 
@@ -34,6 +40,11 @@ public record Dive(int betweenDimensionsTicks, int blocksPerSecond, ToDoubleFunc
         long distance = (long) Math.ceil(blocks(from, to) * TICKS_PER_SECOND / blocksPerSecond);
         long ticks = from.dimension().equals(to.dimension()) ? distance : betweenDimensionsTicks + distance;
         return Math.max(MINIMUM_TICKS, ticks);
+    }
+
+    /** @return the ticks a dive that would take {@code ticks} unridden takes with a rider aboard */
+    public long ridden(long ticks) {
+        return Math.min(ticks, Math.max(MINIMUM_TICKS, riddenTicks));
     }
 
     /** @return how far apart {@code from} and {@code to} are across the ground, in Overworld blocks */

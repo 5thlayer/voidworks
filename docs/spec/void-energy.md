@@ -350,11 +350,21 @@ Dragonling or a Void Dragon, and only old age kills a Void Dragon
   they ride: strafing left and right steps through the owner's other Wells, whole and awake, in the
   order they were placed, the one picked shown above the hotbar by its name, or its dimension and
   position; jumping dives, and sneaking gets off before the dive, onto the rim of the Well it is at.
-  Through the dive the rider sees only the void, no one sees them, and they cannot act, get off or
-  be hurt; the dragon sets them down on the rim of the Well they picked, in whatever dimension. It
-  is not free flight. A rider costs nothing and the load travels as usual: the rider's Well is a stop
-  added to the trip, which drops what that Well is short of, in grades worth something there, and
-  the rest goes on to the claimed destination.
+  Through the dive no one sees them, and they cannot act, get off or be hurt; the dragon sets them
+  down on the rim of the Well they picked, in whatever dimension. It is not free flight. The rider's
+  Well is a stop added to the trip, which drops what that Well is short of, in grades worth
+  something there, and the rest goes on to the claimed destination at the usual speed.
+- **Ridden dive.** A dive with a rider aboard, to the rider's Well, takes at most a set short time
+  (provisional 3 seconds), however far and across whatever dimensions; one already shorter keeps
+  its own time. The rider takes up room: its load shrinks by the share of time saved, so a ridden
+  dive carries no more motes a second than the same dive unridden. A dragon holding more than that
+  as the rider jumps first unloads the excess into the Well it is at, as an ordinary unload; if the
+  Well's network has no room for all of it, the dragon does not dive, and the rider is told so
+  above the hotbar, staying mounted. Through a ridden dive the rider sees the void, its motes
+  swirling in, and in the middle of the screen the picked Well's label, as the picker showed it,
+  over a bar that fills as the dive goes, in the destination dimension's colour (Overworld blue,
+  Nether red, End pale yellow-green, a datapack map naming others, and the void's purple for any it
+  does not). The Nether portal's hum rises toward emerging.
 - **Calling.** The owner standing in a Well's shaft calls a dragon: the next of theirs to finish its
   stop, or one with nothing to do at once, comes to that Well, carrying what it carries and dropping
   none of it there, the action bar telling them one is coming. It waits a stop's time at least, and

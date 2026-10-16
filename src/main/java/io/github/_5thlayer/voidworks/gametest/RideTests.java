@@ -9,10 +9,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.LifeStage;
@@ -82,6 +84,10 @@ final class RideTests {
     /** The heights of the tests' Nether Wells, so two tests side by side never put theirs on one network. */
     private static final int ADDED_STOP_Y = 48;
     private static final int CALLS_Y = 80;
+    private static final int RIDDEN_DIVE_Y = 96;
+    private static final int RIDDEN_REFUSED_Y = 112;
+    /** How many motes a ridden dive's Nether Well is short of its target: more than a ridden dive to it carries. */
+    private static final int FAR_SHORT = 4_000;
     private static final String HIGH_NAME = "Eyrie";
 
     private static final Input RIGHT = new Input(false, false, false, true, false, false, false);
@@ -103,6 +109,10 @@ final class RideTests {
                 TICKS, RideTests::addedStop);
         tests.testAlone("its_owner_standing_in_a_wells_shaft_calls_a_void_dragon_there_which_waits_while_they_stay", TICKS, RideTests::calls);
         tests.testAlone("a_rider_leaving_the_game_is_set_down_first_on_the_rim_of_the_well_the_dragon_is_at_or_diving_to", TICKS, RideTests::leaves);
+        tests.testAlone("ridden_dive_to_the_nether_is_short_and_carries_its_load_cut_putting_the_rest_back_where_it_is", TICKS,
+                RideTests::riddenDive);
+        tests.testAlone("ridden_dive_is_refused_while_the_well_it_is_at_has_no_room_for_what_it_cannot_carry", TICKS,
+                RideTests::riddenDiveRefused);
         tests.testAlone("a_void_dragon_resting_at_a_well_takes_off_to_hover_as_its_owner_mounts_it_and_lands_again_once_they_get_off", TICKS,
                 RideTests::takesOffForItsRider);
         tests.testAlone("life_stage_an_old_void_dragon_that_outlives_its_stage_dies_at_the_well_it_unloads_at_and_lowers_its_owners_next_egg_price",
@@ -479,6 +489,113 @@ final class RideTests {
                     clearAway(helper, owner, Set.of(under));
                 })
                 .thenSucceed();
+    }
+
+    /**
+     * The dragon loads at the test's Well for a Well in the Nether far short of its target; its rider
+     * picks that Well and jumps: the dive takes the ridden time, its rider is shown the Well and the
+     * Nether's colour, and the dragon carries only the share of its load the time saved leaves, having
+     * put the rest back into the test's Well.
+     */
+    private static void riddenDive(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, RIDDEN_DIVE_Y);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        var held = new AtomicLong();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, 2 * FAR_SHORT);
+                    farShort(helper, owner, nether, under);
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    var loading = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(loading.carried() == FAR_SHORT, "the dragon is not loading what the Nether Well is short of: " + loading);
+                    held.set(total(helper, WELL));
+                    mountAndPick(helper, owner, presence.get());
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    var diving = PresenceTests.record(helper, dragonId.get());
+                    var trip = diving.trip().orElseThrow();
+                    int ridden = VoidworksConfig.dragonRiddenDiveTicks();
+                    helper.assertTrue(trip.leg() == Trip.Leg.TO_PICKED && trip.until() - trip.countedTo() == ridden,
+                            "the ridden dive takes " + (trip.until() - trip.countedTo()) + " ticks, not " + ridden);
+                    long most = (long) VoidworksConfig.dragonLoad() * ridden / VoidworksConfig.dragonDiveTicks();
+                    helper.assertTrue(diving.carried() > 0 && diving.carried() <= most,
+                            "the ridden dragon carries " + diving.carried() + ", more than the " + most + " its time saved leaves");
+                    helper.assertTrue(total(helper, WELL) == held.get() + FAR_SHORT - diving.carried(),
+                            "the test's Well holds " + total(helper, WELL) + ", not what the dragon put back");
+                    var shown = presence.get().diveShown();
+                    helper.assertTrue(presence.get().carrying() && shown.label().equals(DragonRiding.label(server, under)),
+                            "the rider is shown " + shown.label() + ", not the Nether Well");
+                    helper.assertTrue(shown.until() - shown.from() == ridden, "the rider is shown a dive of " + (shown.until() - shown.from()) + " ticks");
+                    helper.assertTrue(shown.colour() == DiveColour.of(server, under.dimension()) && shown.colour() != DiveColour.VOID,
+                            "the rider is shown the colour " + Integer.toHexString(shown.colour()) + ", not the Nether's");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(PresenceTests.record(helper, dragonId.get()).rest().equals(under), "the dragon has not reached the Nether Well"))
+                .thenExecute(() -> clearAway(helper, owner, Set.of(under)))
+                .thenSucceed();
+    }
+
+    /**
+     * As {@link #riddenDive}, but the test's Well is full by the time its rider jumps: the dragon does
+     * not dive, keeps its load and its rider, and tells them why above the hotbar.
+     */
+    private static void riddenDiveRefused(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, RIDDEN_REFUSED_Y);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, 2 * FAR_SHORT);
+                    farShort(helper, owner, nether, under);
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, Math.toIntExact(VoidworksConfig.wellCapacity() - total(helper, WELL)));
+                    mountAndPick(helper, owner, presence.get());
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    var refused = Component.translatable("voidworks.dragon.ride.no_room", DragonRiding.label(server, under));
+                    helper.assertTrue(owner.overlays.getLast().equals(refused), "the rider was told " + owner.overlays.getLast() + ", not that there is no room");
+                    var still = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(still.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.LOADING)) && still.carried() == FAR_SHORT,
+                            "the refused dragon is " + still);
+                    helper.assertTrue(owner.getVehicle() == presence.get() && !presence.get().carrying(), "the refused rider is not still mounted at the Well");
+                    clearAway(helper, owner, Set.of(under));
+                })
+                .thenSucceed();
+    }
+
+    /** Makes a Well of {@code owner}'s at {@code under} in the Nether, {@link #FAR_SHORT} short of a quarter's target. */
+    private static void farShort(GameTestHelper helper, Rider owner, ServerLevel nether, Place under) {
+        long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
+        RoutingTests.assertUnloaded(helper, nether, under.pos());
+        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of(PresenceTests.GRADE, target - FAR_SHORT));
+        SavedVoidWells.of(helper.getLevel().getServer()).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.QUARTER));
+    }
+
+    /** Its owner mounts the dragon's {@code presence} at work and strafes to pick their only other Well. */
+    private static void mountAndPick(GameTestHelper helper, Rider owner, VoidDragon presence) {
+        presence.interact(owner, InteractionHand.MAIN_HAND, presence.position());
+        helper.assertTrue(owner.getVehicle() == presence, "its owner did not mount the loading dragon");
+        owner.setLastClientInput(RIGHT);
     }
 
     /**

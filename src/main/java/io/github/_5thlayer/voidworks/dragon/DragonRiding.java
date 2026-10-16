@@ -169,11 +169,14 @@ public final class DragonRiding {
             return;
         }
         var id = presence.dragonId();
-        if (id.isEmpty() || DragonRouting.ride(server, id.get(), presence.picked).isEmpty()) {
-            rider.sendOverlayMessage(Component.translatable("voidworks.dragon.ride.cannot", label(server, presence.picked)));
+        var ride = id.map(dragon -> DragonRouting.ride(server, dragon, presence.picked)).orElse(Routing.Ride.CANNOT);
+        if (ride != Routing.Ride.DIVING) {
+            var refused = ride == Routing.Ride.NO_ROOM ? "voidworks.dragon.ride.no_room" : "voidworks.dragon.ride.cannot";
+            rider.sendOverlayMessage(Component.translatable(refused, label(server, presence.picked)));
             return;
         }
-        presence.carry();
+        var trip = record(server, presence).flatMap(VoidDragonRecord::trip).orElseThrow();
+        presence.carry(new DiveShown(label(server, presence.picked), trip.countedTo(), trip.until(), DiveColour.of(server, presence.picked.dimension())));
     }
 
     /** Through the dive no one sees its rider, who sees only the void, which their own client draws. */

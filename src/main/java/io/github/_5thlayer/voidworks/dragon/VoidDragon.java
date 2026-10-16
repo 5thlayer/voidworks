@@ -159,6 +159,11 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Optional<BlockPos>> DATA_SEAT = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
     /** Its dragon's life stage, by which a grown presence is sized. */
     private static final EntityDataAccessor<Byte> DATA_STAGE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
+    /** What its rider is shown of the dive it carries them through ({@link DiveShown}): synced, for their own client to draw. */
+    private static final EntityDataAccessor<Component> DATA_DIVE_LABEL = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.COMPONENT);
+    private static final EntityDataAccessor<Long> DATA_DIVE_FROM = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Long> DATA_DIVE_UNTIL = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Integer> DATA_DIVE_COLOUR = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
     /** Whether it plays its dragon's death of old age. */
     private static final EntityDataAccessor<Boolean> DATA_DYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
 
@@ -251,6 +256,10 @@ public final class VoidDragon extends PathfinderMob {
         entityData.define(DATA_SEAT, Optional.empty());
         entityData.define(DATA_STAGE, (byte) LifeStage.YOUNG.ordinal());
         entityData.define(DATA_DYING, false);
+        entityData.define(DATA_DIVE_LABEL, Component.empty());
+        entityData.define(DATA_DIVE_FROM, 0L);
+        entityData.define(DATA_DIVE_UNTIL, 0L);
+        entityData.define(DATA_DIVE_COLOUR, DiveColour.VOID);
     }
 
     @Override
@@ -596,8 +605,12 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** It dives now, carrying its rider, whom it holds through the dive. */
-    void carry() {
+    /** It dives now, carrying its rider, whom it holds through the dive, showing them {@code shown}. */
+    void carry(DiveShown shown) {
+        entityData.set(DATA_DIVE_LABEL, shown.label());
+        entityData.set(DATA_DIVE_FROM, shown.from());
+        entityData.set(DATA_DIVE_UNTIL, shown.until());
+        entityData.set(DATA_DIVE_COLOUR, shown.colour());
         entityData.set(DATA_CARRYING, true);
         pass(Showing.DIVING);
     }
@@ -621,6 +634,12 @@ public final class VoidDragon extends PathfinderMob {
     /** @return whether it carries its rider through its dragon's dive */
     public boolean carrying() {
         return entityData.get(DATA_CARRYING);
+    }
+
+    /** @return what its rider is shown of the dive it carries them through, while it does */
+    public DiveShown diveShown() {
+        return new DiveShown(entityData.get(DATA_DIVE_LABEL), entityData.get(DATA_DIVE_FROM), entityData.get(DATA_DIVE_UNTIL),
+                entityData.get(DATA_DIVE_COLOUR));
     }
 
     /**
