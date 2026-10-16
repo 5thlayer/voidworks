@@ -17,6 +17,7 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.LifeStage;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
@@ -28,17 +29,22 @@ import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
+import io.github._5thlayer.voidworks.well.WellHatches;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 /**
@@ -59,15 +65,20 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  *   <li>{@code /voidworks well <pos> <target>} readies the Void Well core at {@code pos} for whoever
  *       runs it: theirs, with that fill target, its Dormant cost paid, and in its network at once
  *       when the well around it is whole.</li>
- *   <li>{@code /voidworks dragon <pos>} adds a grown Void Dragon owned by whoever runs it, resting
- *       at the Well core at {@code pos}. It is not hatched, so it doubles no egg price.</li>
+ *   <li>{@code /voidworks dragon <pos> [mote|matter]} adds a grown Void Dragon of that Line, the Mote
+ *       line by default, owned by whoever runs it, resting at the Well core at {@code pos}. It is not
+ *       hatched, so it doubles no egg price.</li>
  *   <li>{@code /voidworks dragon remove <from> <to>} removes every dragon, whoever's, resting in the
  *       box, in the runner's dimension, or on a trip to or from a place in it, with its presence.</li>
+ *   <li>{@code /voidworks hatch <pos> (provider|requester) <item> <stacks>} readies the Well hatch at
+ *       {@code pos} for whoever runs it: joined to the Well it stands against, theirs, and a provider
+ *       holding {@code stacks} full stacks of {@code item} or a requester asking for that many.</li>
  *   <li>{@code /voidworks dragon age <stage>} sets the grown dragon the runner looks at to the start
  *       of that life stage, owing no egg, to see each stage without carrying a life's motes.</li>
  * </ul>
  *
- * <p>The last three are what a Gallery pack scene builds a working dragon with (ADR 0008). A
+ * <p>{@code well}, {@code dragon}, {@code dragon remove} and {@code hatch} are what a Gallery pack
+ * scene builds a working dragon and matter link with (ADR 0008). A
  * refusal is an error, as a vanilla command's is, so a function's trace names it.
  */
 public final class VoidworksCommands {
@@ -81,6 +92,11 @@ public final class VoidworksCommands {
             new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.well.not_a_well", pos));
     private static final DynamicCommandExceptionType DRAGON_NOT_A_WELL =
             new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.dragon.not_a_well", pos));
+
+    private static final DynamicCommandExceptionType NOT_A_HATCH =
+            new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.hatch.not_a_hatch", pos));
+    private static final DynamicCommandExceptionType NOT_YOUR_WELL =
+            new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.hatch.not_your_well", pos));
 
     private static final DynamicCommandExceptionType NOT_A_STAGE =
             new DynamicCommandExceptionType(name -> Component.translatable("commands.voidworks.dragon.age.not_a_stage", name));
@@ -103,6 +119,17 @@ public final class VoidworksCommands {
         for (var target : FillTarget.values()) {
             wellAt.then(Commands.literal(target.getSerializedName()).executes(context -> well(context, target)));
         }
+        var dragonAt = Commands.argument("pos", BlockPosArgument.blockPos()).executes(context -> dragon(context, Line.MOTE));
+        for (var line : Line.values()) {
+            dragonAt.then(Commands.literal(line.getSerializedName()).executes(context -> dragon(context, line)));
+        }
+        var hatchAt = Commands.argument("pos", BlockPosArgument.blockPos());
+        for (var mode : WellHatches.Mode.values()) {
+            hatchAt.then(Commands.literal(mode.getSerializedName())
+                    .then(Commands.argument("item", ItemArgument.item(event.getBuildContext()))
+                            .then(Commands.argument("stacks", IntegerArgumentType.integer(1))
+                                    .executes(context -> hatch(context, mode)))));
+        }
         event.getDispatcher().register(Commands.literal("voidworks")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("showcase")
@@ -120,8 +147,8 @@ public final class VoidworksCommands {
                                 .then(Commands.argument("from", BlockPosArgument.blockPos())
                                         .then(Commands.argument("to", BlockPosArgument.blockPos())
                                                 .executes(VoidworksCommands::removeDragons))))
-                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
-                                .executes(VoidworksCommands::dragon)))
+                        .then(dragonAt))
+                .then(Commands.literal("hatch").then(hatchAt))
                 .then(Commands.literal("butterflies")
                         .then(Commands.argument("grade", IntegerArgumentType.integer(VoidEnergy.MIN_GRADE, VoidEnergy.MAX_GRADE))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, MAX_COUNT))
@@ -169,15 +196,63 @@ public final class VoidworksCommands {
         return 1;
     }
 
-    /** Gives whoever runs it a grown Void Dragon, resting at the Well core at {@code pos}. @return 1 */
-    private static int dragon(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    /** Gives whoever runs it a grown Void Dragon of {@code line}, resting at the Well core at {@code pos}. @return 1 */
+    private static int dragon(CommandContext<CommandSourceStack> context, Line line) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         var level = context.getSource().getLevel();
         var well = wellAt(context, DRAGON_NOT_A_WELL);
-        SavedVoidDragons.of(level.getServer()).add(player.getUUID(), Place.of(level, well.getBlockPos()));
+        SavedVoidDragons.of(level.getServer()).add(player.getUUID(), line, Place.of(level, well.getBlockPos()));
         DragonPresences.show(level.getServer());
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon", well.label(), player.getName()), false);
         return 1;
+    }
+
+    /**
+     * Readies the Well hatch at {@code pos} for whoever runs it, a {@code mode}: a provider filled with
+     * so many full stacks of the item, as far as it has room, or a requester asking for so many, up to
+     * as many as it has slots.
+     *
+     * @return how many stacks it holds or asks for
+     */
+    private static int hatch(CommandContext<CommandSourceStack> context, WellHatches.Mode mode) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        var level = context.getSource().getLevel();
+        var pos = BlockPosArgument.getLoadedBlockPos(context, level, "pos");
+        if (!(level.getBlockEntity(pos) instanceof WellHatchBlockEntity entity)) {
+            throw NOT_A_HATCH.create(pos.toShortString());
+        }
+        var hatch = entity.ready(level, player, mode).orElseThrow(() -> NOT_YOUR_WELL.create(pos.toShortString()));
+        var resource = ItemResource.of(ItemArgument.getItem(context, "item").item());
+        int stacks = IntegerArgumentType.getInteger(context, "stacks");
+        var name = resource.getHoverName();
+        int readied;
+        Component told;
+        if (mode == WellHatches.Mode.PROVIDER) {
+            try (var transaction = Transaction.openRoot()) {
+                readied = hatch.contents().insert(resource, stacks * resource.getMaxStackSize(), transaction) / resource.getMaxStackSize();
+                transaction.commit();
+            }
+            told = Component.translatable("commands.voidworks.hatch", pos.toShortString(), readied, name, player.getName());
+        } else {
+            readied = ask(hatch, resource.value(), stacks);
+            told = Component.translatable("commands.voidworks.hatch.requester", pos.toShortString(), readied, name, player.getName());
+        }
+        context.getSource().sendSuccess(() -> told, false);
+        return readied;
+    }
+
+    /**
+     * Has the requester {@code hatch} ask for {@code stacks} of {@code item}, a stack at a time, as its
+     * owner's uses of the item do, so it asks for no more than it has slots.
+     *
+     * @return how many stacks it asks for
+     */
+    private static int ask(WellHatches.Hatch hatch, Item item, int stacks) {
+        int asked = 0;
+        for (int stack = 0; stack < stacks; stack++) {
+            asked = hatch.ask(item).stacks();
+        }
+        return asked;
     }
 
     /** Sets the grown dragon the runner looks at to the start of a life stage. @return 1 */

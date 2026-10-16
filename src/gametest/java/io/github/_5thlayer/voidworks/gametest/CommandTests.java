@@ -12,6 +12,7 @@ import java.util.UUID;
 import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
@@ -22,9 +23,12 @@ import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.pressure.VoidPressure;
 import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.SavedWellHatches;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import io.github._5thlayer.voidworks.well.VoidWells;
+import io.github._5thlayer.voidworks.well.WellHatchBlock;
+import io.github._5thlayer.voidworks.well.WellHatches;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -34,6 +38,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -42,8 +48,10 @@ import net.neoforged.neoforge.common.util.FakePlayer;
  * The {@code /voidworks} commands, run on a real server by a server player: {@code pressure} reports
  * what {@link VoidPressure} says where the player stands, and nothing to a player who is not an
  * operator; {@code mote} fills the network at a Voidstone; {@code well} readies a Well for whoever
- * runs it, {@code dragon} gives them a grown Void Dragon at one and {@code dragon remove} takes
- * every dragon out of a box, the commands a Gallery pack scene builds a dragon with. A message is checked by its translation key and arguments, since the server has no language loaded.
+ * runs it, {@code dragon} gives them a grown Void Dragon at one, of the Mote line or the one named,
+ * {@code dragon remove} takes every dragon out of a box, and {@code hatch} readies a Well hatch on
+ * their Well as a filled provider or an asking requester, the commands a Gallery pack scene builds a
+ * dragon and a matter link with. A message is checked by its translation key and arguments, since the server has no language loaded.
  */
 final class CommandTests {
 
@@ -61,7 +69,14 @@ final class CommandTests {
         tests.test("well_command_refuses_a_position_with_no_well_core", 1, CommandTests::wellRefusesNoCore);
         tests.test("dragon_command_adds_a_grown_dragon_owned_by_whoever_runs_it_resting_at_the_well_and_hatches_nothing", 1,
                 CommandTests::dragonAdds);
+        tests.test("dragon_command_with_a_line_adds_a_grown_dragon_of_that_line", 1, CommandTests::dragonAddsOfALine);
         tests.test("dragon_command_refuses_a_position_with_no_well_core", 1, CommandTests::dragonRefusesNoCore);
+        tests.test("hatch_command_readies_a_provider_for_whoever_runs_it_on_their_well_holding_so_many_stacks", 1,
+                CommandTests::hatchReadiesAProvider);
+        tests.test("hatch_command_readies_a_requester_for_whoever_runs_it_on_their_well_asking_for_so_many_stacks", 1,
+                CommandTests::hatchReadiesARequester);
+        tests.test("hatch_command_refuses_a_position_with_no_hatch", 1, CommandTests::hatchRefusesNoHatch);
+        tests.test("hatch_command_refuses_a_hatch_on_another_players_well", 1, CommandTests::hatchRefusesAnothersWell);
         tests.test("dragon_remove_command_removes_every_dragon_resting_in_the_box_or_on_a_trip_to_or_from_it_and_no_other", 1,
                 CommandTests::dragonRemoveRemovesInTheBox);
         tests.test("well_dragon_and_dragon_remove_commands_refuse_a_player_who_is_not_an_operator", 1,
@@ -70,6 +85,9 @@ final class CommandTests {
 
     /** The Well's core, in the middle of its north wall's middle course, its floor on the platform. */
     private static final BlockPos WELL = new BlockPos(4, 3, 2);
+
+    /** A Well hatch's place against the outer face of {@link #WELL}'s east wall, facing east, away from it. */
+    private static final BlockPos HATCH = WellHatchTests.HATCH;
 
     /** The well around {@link #WELL}, its core placed by command, Dormant and nobody's. */
     private static VoidWellBlockEntity buildWell(GameTestHelper helper) {
@@ -121,8 +139,110 @@ final class CommandTests {
         var place = Place.of(helper.getLevel(), helper.absolutePos(WELL));
         helper.assertTrue(dragons.size() == 1 && dragons.getFirst().rest().equals(place) && dragons.getFirst().trip().isEmpty()
                 && dragons.getFirst().health() == VoidDragonRecord.FULL_HEALTH, "the runner's dragons are " + dragons + ", not one whole one resting at the Well");
+        helper.assertTrue(dragons.getFirst().line() == Line.MOTE, "the command's dragon is of the " + dragons.getFirst().line() + " line, not the Mote line");
         helper.assertTrue(SavedHatchery.of(server).dragons(player.getUUID()) == 0, "the command's dragon counts as hatched");
         helper.succeed();
+    }
+
+    private static void dragonAddsOfALine(GameTestHelper helper) {
+        buildWell(helper);
+        var player = playerOnThePlatform(helper);
+        var server = helper.getLevel().getServer();
+        var message = onlyMessage(helper, run(player, true, "voidworks dragon " + coordinates(helper, WELL) + " matter"));
+        var dragons = SavedVoidDragons.of(server).all().stream().filter(dragon -> dragon.owner().equals(player.getUUID())).toList();
+        SavedVoidDragons.of(server).removeAt(place -> dragons.stream().anyMatch(dragon -> dragon.rest().equals(place)));
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.dragon".equals(message.getKey())) {
+            helper.fail("the command said " + describe(message) + ", not that it added a dragon");
+            return;
+        }
+        helper.assertTrue(dragons.size() == 1 && dragons.getFirst().line() == Line.MATTER,
+                "the runner's dragons are " + dragons + ", not one of the Matter line");
+        helper.succeed();
+    }
+
+    /** A provider hatch, readied by the Well's owner, is theirs, joined to their Well, and holds four full stacks. */
+    private static void hatchReadiesAProvider(GameTestHelper helper) {
+        var hatches = SavedWellHatches.of(helper.getLevel().getServer());
+        var player = playerOnThePlatform(helper);
+        var place = readiedHatch(helper, player, WellHatches.Mode.REQUESTER);
+        var message = onlyMessage(helper, run(player, true, "voidworks hatch " + coordinates(helper, HATCH) + " provider minecraft:gold_block 4"));
+        var hatch = hatches.remove(place);
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.hatch".equals(message.getKey())) {
+            helper.fail("the command said " + describe(message) + ", not that it readied the hatch");
+            return;
+        }
+        assertJoined(helper, hatch, player, WellHatches.Mode.PROVIDER);
+        var held = hatch.get().contents().copyToList().stream().filter(stack -> !stack.isEmpty()).toList();
+        helper.assertTrue(held.size() == 4 && held.stream().allMatch(stack -> stack.is(Items.GOLD_BLOCK) && stack.getCount() == stack.getMaxStackSize()),
+                "the provider holds " + held + ", not four stacks of gold blocks");
+        helper.assertTrue(hatch.get().request().isEmpty(), "the provider asks for " + hatch.get().request());
+        helper.succeed();
+    }
+
+    /** A requester hatch, readied by the Well's owner, is theirs, joined to their Well, asks for three stacks and holds nothing. */
+    private static void hatchReadiesARequester(GameTestHelper helper) {
+        var hatches = SavedWellHatches.of(helper.getLevel().getServer());
+        var player = playerOnThePlatform(helper);
+        var place = readiedHatch(helper, player, WellHatches.Mode.PROVIDER);
+        var message = onlyMessage(helper, run(player, true, "voidworks hatch " + coordinates(helper, HATCH) + " requester minecraft:gold_block 3"));
+        var hatch = hatches.remove(place);
+        if (message == null) {
+            return;
+        }
+        if (!"commands.voidworks.hatch.requester".equals(message.getKey())) {
+            helper.fail("the command said " + describe(message) + ", not that it readied the hatch");
+            return;
+        }
+        assertJoined(helper, hatch, player, WellHatches.Mode.REQUESTER);
+        helper.assertTrue(hatch.get().request().equals(Optional.of(new WellHatches.Request(Items.GOLD_BLOCK, 3))),
+                "the requester asks for " + hatch.get().request() + ", not three stacks of gold blocks");
+        helper.assertTrue(hatch.get().contents().copyToList().stream().allMatch(ItemStack::isEmpty), "the requester holds " + hatch.get().contents().copyToList());
+        helper.succeed();
+    }
+
+    private static void hatchRefusesNoHatch(GameTestHelper helper) {
+        assertRefused(helper, run(playerOnThePlatform(helper), true, "voidworks hatch " + coordinates(helper, HATCH) + " provider minecraft:gold_block 1"),
+                "commands.voidworks.hatch.not_a_hatch");
+    }
+
+    /** A hatch on a Well another player readied is not the runner's to ready, and stays as it was. */
+    private static void hatchRefusesAnothersWell(GameTestHelper helper) {
+        var hatches = SavedWellHatches.of(helper.getLevel().getServer());
+        var place = readiedHatch(helper, playerOnThePlatform(helper), WellHatches.Mode.PROVIDER);
+        var messages = run(playerOnThePlatform(helper), true, "voidworks hatch " + coordinates(helper, HATCH) + " requester minecraft:gold_block 1");
+        var hatch = hatches.remove(place);
+        helper.assertTrue(hatch.isEmpty() || hatch.get().mode() == WellHatches.Mode.PROVIDER, "another player's hatch was readied: " + hatch);
+        assertRefused(helper, messages, "commands.voidworks.hatch.not_your_well");
+    }
+
+    /**
+     * {@link #WELL}, readied for {@code owner}, with a hatch of {@code mode} at {@link #HATCH} placed by
+     * no player, so it joined no Well yet.
+     *
+     * @return where the hatch stands
+     */
+    private static Place readiedHatch(GameTestHelper helper, ServerPlayer owner, WellHatches.Mode mode) {
+        buildWell(helper);
+        run(owner, true, "voidworks well " + coordinates(helper, WELL) + " none");
+        helper.setBlock(HATCH, VoidworksBlocks.WELL_HATCH.get().defaultBlockState().setValue(WellHatchBlock.FACING, Direction.EAST)
+                .setValue(WellHatchBlock.MODE, mode));
+        return Place.of(helper.getLevel(), helper.absolutePos(HATCH));
+    }
+
+    /** Asserts {@code hatch} is {@code owner}'s, joined to {@link #WELL}, a {@code mode}, as its block shows. */
+    private static void assertJoined(GameTestHelper helper, Optional<WellHatches.Hatch> hatch, ServerPlayer owner, WellHatches.Mode mode) {
+        helper.assertTrue(hatch.isPresent(), "there is no hatch at " + HATCH);
+        helper.assertTrue(hatch.get().owner().map(who -> who.id().equals(owner.getUUID())).orElse(false), "the hatch is " + hatch.get().owner() + "'s");
+        helper.assertTrue(hatch.get().well().equals(Optional.of(Place.of(helper.getLevel(), helper.absolutePos(WELL)))),
+                "the hatch joined " + hatch.get().well() + ", not the Well");
+        helper.assertTrue(hatch.get().mode() == mode && helper.getBlockState(HATCH).getValue(WellHatchBlock.MODE) == mode,
+                "the hatch is a " + hatch.get().mode() + ", its block a " + helper.getBlockState(HATCH).getValue(WellHatchBlock.MODE) + ", not a " + mode);
     }
 
     private static void dragonRefusesNoCore(GameTestHelper helper) {

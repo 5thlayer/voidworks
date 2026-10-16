@@ -15,3 +15,4 @@ execute positioned ~48 ~ ~-32 run function voidworks:gallery/dormant_machines
 execute positioned ~ ~ ~-48 run function voidworks:gallery/mutation_chamber
 execute positioned ~24 ~ ~-48 run function voidworks:gallery/unmaking_chamber
 execute positioned ~48 ~ ~-48 run function voidworks:gallery/void_crucible
+execute positioned ~ ~ ~-64 run function voidworks:gallery/matter_link

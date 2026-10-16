@@ -18,6 +18,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -33,7 +34,8 @@ import org.jspecify.annotations.Nullable;
  * A Well hatch's block entity, which holds nothing of its own: what the hatch holds is its entry in the
  * server's {@link WellHatches}, saved with the world, so a dragon loads and unloads it with no chunk
  * loaded. Its item faces are that entry's slots. A hatch placed with no player, as by a command, joined
- * no Well and is anyone's; it is put there, holding nothing, the first time it is asked for.
+ * no Well and is anyone's; it is put there, holding nothing, the first time it is asked for, until an
+ * operator's command readies it ({@link #ready}).
  *
  * <p>Its watchers draw one item on its front ({@link #shown}): a requester's request, or the first
  * stack a provider holds, which the server works out each tick and sends them as it changes.
@@ -63,6 +65,28 @@ public final class WellHatchBlockEntity extends BlockEntity {
         var hatches = SavedWellHatches.of(server.getServer());
         return Optional.of(hatches.at(place).orElseGet(() -> hatches.put(place, Optional.empty(), Optional.empty(), getBlockState().getValue(WellHatchBlock.MODE),
                 VoidworksConfig.wellHatchSlots())));
+    }
+
+    /**
+     * Readies it for {@code owner}, as an operator's command does: joined to the Well it stands
+     * against, theirs, a {@code mode}, holding nothing and asking for nothing. A Well no one owns
+     * becomes theirs, as placing a hatch against it does. What it held is dropped, not lost.
+     *
+     * @return the hatch it is now; empty, changing nothing, when it stands against no Well's wall or
+     *         against another player's Well
+     */
+    public Optional<WellHatches.Hatch> ready(ServerLevel level, Player owner, WellHatches.Mode mode) {
+        var facing = getBlockState().getValue(WellHatchBlock.FACING);
+        var well = WellHatchBlock.wellAgainst(level, worldPosition.relative(facing.getOpposite()), facing).filter(core -> core.ownsOrClaims(owner));
+        if (well.isEmpty()) {
+            return Optional.empty();
+        }
+        level.setBlock(worldPosition, getBlockState().setValue(WellHatchBlock.MODE, mode), Block.UPDATE_ALL);
+        var place = Place.of(level, worldPosition);
+        var hatches = SavedWellHatches.of(level.getServer());
+        hatches.remove(place).ifPresent(stale -> ItemFace.drop(level, worldPosition, stale.contents()));
+        return Optional.of(hatches.put(place, Optional.of(Place.of(level, well.get().getBlockPos())), well.get().owner(), mode,
+                VoidworksConfig.wellHatchSlots()));
     }
 
     /** @return what it holds, the same on every face: hoppers, belts and pipes fill and empty it; for a watcher, a face holding nothing */

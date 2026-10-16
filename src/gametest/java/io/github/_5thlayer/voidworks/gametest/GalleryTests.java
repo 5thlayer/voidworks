@@ -65,6 +65,8 @@ final class GalleryTests {
     /** The Void Dragon scene's two Well cores, from where it is run: the reservoir and the Well short of its target. */
     private static final BlockPos RESERVOIR = new BlockPos(8, 2, -4);
     private static final BlockPos SHORT = new BlockPos(20, 2, -4);
+    /** The Matter Link scene's provider hatch, from where it is run, on its west Well's south wall. */
+    private static final BlockPos PROVIDER = new BlockPos(9, 2, -3);
     /** Where a scene's sign stands, from where the scene is run. */
     private static final BlockPos SIGN = new BlockPos(14, 0, 0);
     /** The Density scene's four Displacers, from where it is run, coal's to diamond's, each on its pad of Voidstone. */
@@ -98,7 +100,8 @@ final class GalleryTests {
                 new Scene("dormant_machines", new BlockPos(14, 0, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
                 new Scene("mutation_chamber", new BlockPos(14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
                 new Scene("unmaking_chamber", new BlockPos(14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
-                new Scene("void_crucible", new BlockPos(14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get()));
+                new Scene("void_crucible", new BlockPos(14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get()),
+                new Scene("matter_link", PROVIDER, VoidworksBlocks.WELL_HATCH.get()));
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
