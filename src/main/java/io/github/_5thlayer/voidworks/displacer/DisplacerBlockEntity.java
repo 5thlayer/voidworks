@@ -356,17 +356,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      */
     public boolean giveOutput(Player player) {
         boolean gave = false;
-        for (int slot = 0; slot < output.size(); slot++) {
-            var resource = output.getResource(slot);
-            int count = output.getAmountAsInt(slot);
-            if (!resource.isEmpty() && count > 0) {
-                inventory.set(slot + 1, ItemResource.EMPTY, 0);
-                player.getInventory().placeItemBackInInventory(resource.toStack(count));
-                gave = true;
-            }
-        }
-        if (gave) {
-            setChanged();
+        for (int slot = INPUT + 1; slot <= INPUT + OUTPUT_SLOTS; slot++) {
+            gave |= give(slot, player);
         }
         return gave;
     }
@@ -378,13 +369,18 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      * @return whether there was anything to give
      */
     public boolean giveBackFed(Player player) {
-        var fed = inventory.getResource(INPUT);
-        int count = inventory.getAmountAsInt(INPUT);
-        if (fed.isEmpty() || count == 0) {
+        return give(INPUT, player);
+    }
+
+    /** @return whether {@code slot} held anything, now in {@code player}'s inventory */
+    private boolean give(int slot, Player player) {
+        var resource = inventory.getResource(slot);
+        int count = inventory.getAmountAsInt(slot);
+        if (resource.isEmpty() || count == 0) {
             return false;
         }
-        inventory.set(INPUT, ItemResource.EMPTY, 0);
-        player.getInventory().placeItemBackInInventory(fed.toStack(count));
+        inventory.set(slot, ItemResource.EMPTY, 0);
+        player.getInventory().placeItemBackInInventory(resource.toStack(count));
         return true;
     }
 

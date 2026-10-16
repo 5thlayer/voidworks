@@ -87,6 +87,9 @@ final class GalleryTests {
     /** Two reloads, the build, and the dragon's first stop, with room to spare. */
     private static final int TICKS = 1_200;
 
+    /** A reload, the scene's 64 harvests a second apart, and room to spare. */
+    private static final int DISPLACER_TICKS = 2_400;
+
     private GalleryTests() {
     }
 
@@ -99,7 +102,7 @@ final class GalleryTests {
                 GalleryTests::densityYields);
         tests.testOnItsOwn("the_gallery_dormant_machines_scenes_chamber_soaks_its_cost_and_wakes", TICKS,
                 GalleryTests::dormantWakes);
-        tests.testOnItsOwn("the_gallery_overworld_displacer_scenes_chest_gets_every_harvest_and_nothing_is_left_loose", 2_400,
+        tests.testOnItsOwn("the_gallery_overworld_displacer_scenes_chest_gets_every_harvest_and_nothing_is_left_loose", DISPLACER_TICKS,
                 GalleryTests::overworldDisplacerDelivers);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
