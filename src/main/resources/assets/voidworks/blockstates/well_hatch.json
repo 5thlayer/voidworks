@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "voidworks:block/well_hatch"
+    },
+    "facing=east": {
+      "model": "voidworks:block/well_hatch",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "voidworks:block/well_hatch",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "voidworks:block/well_hatch",
+      "y": 270
+    }
+  }
+}

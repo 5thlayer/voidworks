@@ -116,6 +116,40 @@ class WellStructureTest {
         assertFalse(WellStructure.whole(CORE, Direction.SOUTH, pos -> world.getOrDefault(pos, Part.OPEN)));
     }
 
+    @ParameterizedTest
+    @EnumSource(value = Direction.class, names = {"NORTH", "SOUTH", "EAST", "WEST"})
+    void aHatchGoesOnlyAgainstTheOuterFaceOfAWallCasing(Direction facing) {
+        var layout = WellStructure.layout(CORE, facing);
+        var centre = WellStructure.shaft(CORE, facing);
+        int hatches = 0;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = -3; dy <= 3; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    var against = centre.offset(dx, dy, dz);
+                    for (var face : Direction.values()) {
+                        var hatch = against.relative(face).subtract(centre);
+                        boolean wallCasing = layout.get(against) == Part.CASING && Math.abs(dy) <= 1;
+                        boolean outside = face.getAxis().isHorizontal() && Math.max(Math.abs(hatch.getX()), Math.abs(hatch.getZ())) == 3;
+                        boolean placed = WellStructure.hatchFace(CORE, facing, against, face);
+                        assertEquals(wallCasing && outside, placed, against.toShortString() + " " + face);
+                        hatches += placed ? 1 : 0;
+                    }
+                }
+            }
+        }
+        assertEquals(3 * 4 * 5 - 1, hatches, "every wall casing's outer faces, the core's left out");
+    }
+
+    @Test
+    void aHatchGoesAgainstNeitherTheCoreNorTheRimNorTheFloor() {
+        assertFalse(WellStructure.hatchFace(CORE, Direction.NORTH, CORE, Direction.NORTH));
+        assertFalse(WellStructure.hatchFace(CORE, Direction.NORTH, CORE.above(2), Direction.UP));
+        assertFalse(WellStructure.hatchFace(CORE, Direction.NORTH, CORE.above(2), Direction.NORTH));
+        assertFalse(WellStructure.hatchFace(CORE, Direction.NORTH, CORE.south(2).below(2), Direction.DOWN));
+        assertFalse(WellStructure.hatchFace(CORE, Direction.NORTH, CORE.east().below(), Direction.SOUTH), "into the shaft");
+        assertTrue(WellStructure.hatchFace(CORE, Direction.NORTH, CORE.east().below(), Direction.NORTH));
+    }
+
     /** Builds the well around {@code core} as its layout says, the core itself and the open shaft left out. */
     private static Map<BlockPos, Part> build(BlockPos core, Direction facing) {
         var world = new HashMap<BlockPos, Part>();

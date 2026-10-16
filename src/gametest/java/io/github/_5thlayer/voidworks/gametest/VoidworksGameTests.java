@@ -100,6 +100,7 @@ public final class VoidworksGameTests {
         UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
+        WellHatchTests.register(tests);
         WellTests.register(tests);
         ZoneUpgradeTests.register(tests);
     }

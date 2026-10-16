@@ -28,6 +28,7 @@ final class WorksTabContents {
         event.accept(VoidworksBlocks.VOID_WELL_ITEM.get());
         event.accept(VoidworksBlocks.WELL_CASING_ITEM.get());
         event.accept(VoidworksBlocks.WELL_RIM_ITEM.get());
+        event.accept(VoidworksBlocks.WELL_HATCH_ITEM.get());
         event.accept(VoidworksItems.VOID_SIPHON.get());
         event.accept(VoidworksItems.RESONANT_VOID_SIPHON.get());
         event.accept(VoidworksItems.DRACONIC_VOID_SIPHON.get());

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": "voidworks:void_well_casing",
+    "S": "#minecraft:shulker_boxes"
+  },
+  "pattern": [
+    " C ",
+    "CSC",
+    " C "
+  ],
+  "result": {
+    "id": "voidworks:well_hatch"
+  }
+}

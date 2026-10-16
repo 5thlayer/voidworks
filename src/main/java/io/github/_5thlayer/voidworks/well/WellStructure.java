@@ -97,6 +97,23 @@ public final class WellStructure {
     }
 
     /**
+     * @param core    where the core stands
+     * @param facing  the way the core faces, out of its wall; horizontal
+     * @param against the block a Well hatch is placed against
+     * @param face    the face of {@code against} it is placed on
+     * @return whether that is the outer face of one of the well's wall casing, on any course: never the
+     *         core, the rim, the floor, or a wall's face into the shaft
+     */
+    public static boolean hatchFace(BlockPos core, Direction facing, BlockPos against, Direction face) {
+        var centre = shaft(core, facing);
+        var offset = against.relative(face).subtract(centre);
+        return face.getAxis().isHorizontal()
+                && Math.max(Math.abs(offset.getX()), Math.abs(offset.getZ())) == 3
+                && Math.abs(offset.getY()) <= 1
+                && layout(core, facing).get(against) == Part.CASING;
+    }
+
+    /**
      * @param core where the core stands
      * @param facing the way the core faces, out of its wall; horizontal
      * @return the room its shaft's fluid fills when its network is full: the shaft inside the walls,

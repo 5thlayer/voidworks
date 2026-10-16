@@ -38,6 +38,11 @@ public final class ItemFace implements ResourceHandler<ItemResource> {
 
     /** Drops everything the block holds at the centre of {@code pos}, as it is removed. */
     public void drop(Level level, BlockPos pos) {
+        drop(level, pos, inventory);
+    }
+
+    /** Drops everything {@code inventory} holds at the centre of {@code pos}, as the block that holds it is removed. */
+    public static void drop(Level level, BlockPos pos, ResourceHandler<ItemResource> inventory) {
         for (int slot = 0; slot < inventory.size(); slot++) {
             var stack = inventory.getResource(slot).toStack(inventory.getAmountAsInt(slot));
             if (!stack.isEmpty()) {

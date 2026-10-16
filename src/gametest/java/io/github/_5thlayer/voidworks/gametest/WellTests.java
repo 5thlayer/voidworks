@@ -60,7 +60,7 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 final class WellTests {
 
     /** The core, in the middle of its north wall's middle course, its floor on the platform. */
-    private static final BlockPos WELL = new BlockPos(4, 3, 2);
+    static final BlockPos WELL = new BlockPos(4, 3, 2);
     /** A second core, alone, apart from the first's well. */
     private static final BlockPos OTHER = new BlockPos(1, 1, 7);
     /** Beside the east wall's middle course, outside the well. */
@@ -465,7 +465,7 @@ final class WellTests {
                 .thenSucceed();
     }
 
-    private static void buildWell(GameTestHelper helper) {
+    static void buildWell(GameTestHelper helper) {
         buildWell(helper, WELL, Direction.NORTH);
     }
 
@@ -484,7 +484,7 @@ final class WellTests {
     }
 
     /** {@code player}, looking south into the well, places its core on the wall's bottom course. */
-    private static VoidWellBlockEntity placeCore(GameTestHelper helper, ServerPlayer player) {
+    static VoidWellBlockEntity placeCore(GameTestHelper helper, ServerPlayer player) {
         var below = helper.absolutePos(WELL.below());
         player.setYRot(0.0F);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksBlocks.VOID_WELL_ITEM.get()));
@@ -505,7 +505,7 @@ final class WellTests {
     }
 
     /** A player of its own on the platform north of the well, holding nothing, who keeps what it is shown above the hotbar. */
-    private static final class Listener extends FakePlayer {
+    static final class Listener extends FakePlayer {
 
         final List<Component> overlays = new ArrayList<>();
 

@@ -5,6 +5,7 @@
     "voidworks:void_crucible",
     "voidworks:void_well",
     "voidworks:void_well_casing",
-    "voidworks:void_well_rim"
+    "voidworks:void_well_rim",
+    "voidworks:well_hatch"
   ]
 }

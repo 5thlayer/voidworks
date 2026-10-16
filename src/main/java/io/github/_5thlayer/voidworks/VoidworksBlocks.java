@@ -22,6 +22,8 @@ import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.network.VoidstoneMotes;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.WellHatchBlock;
+import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -44,7 +46,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Voidstone, the Void Displacers, the Mutation Chamber, the Unmaking Chamber, the Void Crucible, the
- * Void Well, the Drained and Matter Dragon Eggs, the soaking egg and their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
+ * Void Well and its hatch, the Drained and Matter Dragon Eggs, the soaking egg and their capabilities. Voidstone and the Displacers are unbreakable and cannot be pushed: Voidstone for
  * good, a Displacer until it becomes Voidstone. Voidstone has no item; each Displacer's is its only
  * one. The Mutation blocks break with a pickaxe, as their crying obsidian does.
  */
@@ -158,6 +160,16 @@ public final class VoidworksBlocks {
 
     public static final DeferredItem<BlockItem> WELL_RIM_ITEM = ITEMS.registerSimpleBlockItem(WELL_RIM);
 
+    /** A Well hatch, placed against a Void Well's wall casing: as hard as the casing, and it cannot be pushed, so what it holds stays where it is. */
+    public static final DeferredBlock<WellHatchBlock> WELL_HATCH = BLOCKS.registerBlock("well_hatch", WellHatchBlock::new,
+            properties -> properties.mapColor(MapColor.COLOR_PURPLE).strength(22.5F, 600.0F).requiresCorrectToolForDrops().pushReaction(PushReaction.BLOCK)
+                    .sound(SoundType.STONE));
+
+    public static final DeferredItem<BlockItem> WELL_HATCH_ITEM = ITEMS.registerSimpleBlockItem(WELL_HATCH);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WellHatchBlockEntity>> WELL_HATCH_ENTITY =
+            BLOCK_ENTITIES.register("well_hatch", () -> new BlockEntityType<>(WellHatchBlockEntity::new, WELL_HATCH.get()));
+
     /** Laid by a grown Void Dragon: as the vanilla egg, it falls, and teleports when hit, until a player places it to soak. */
     public static final DeferredBlock<DragonEggBlock> DRAINED_DRAGON_EGG = BLOCKS.registerBlock("drained_dragon_egg", DragonEggBlock::new,
             properties -> properties.mapColor(MapColor.TERRACOTTA_WHITE).strength(3.0F, 9.0F).lightLevel(state -> 1).noOcclusion()
@@ -203,6 +215,7 @@ public final class VoidworksBlocks {
         event.registerBlockEntity(Capabilities.Item.BLOCK, MUTATION_CHAMBER_ENTITY.get(), (chamber, side) -> chamber.itemFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, UNMAKING_CHAMBER_ENTITY.get(), (chamber, side) -> chamber.itemFace());
         event.registerBlockEntity(Capabilities.Item.BLOCK, VOID_CRUCIBLE_ENTITY.get(), (crucible, side) -> crucible.itemFace());
+        event.registerBlockEntity(Capabilities.Item.BLOCK, WELL_HATCH_ENTITY.get(), (hatch, side) -> hatch.itemFace());
         event.registerBlock(VoidworksCapabilities.MOTES,
                 (level, pos, state, blockEntity, side) -> level instanceof ServerLevel server ? VoidstoneMotes.at(server, pos) : null,
                 VOIDSTONE.get());

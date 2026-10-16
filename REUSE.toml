@@ -30,7 +30,7 @@ SPDX-FileCopyrightText = "2026 5thlayer"
 SPDX-License-Identifier = "MIT"
 
 # Malcolm Riley's unused textures: the Void Siphon's, the Void Displacers', Voidstone's, the
-# Mutation and Unmaking Chambers', the Void Crucible's, the Void Well's and the Drained Dragon Egg's sprites, with the unmodified copies they are built from (NOTICE).
+# Mutation and Unmaking Chambers', the Void Crucible's, the Void Well's and its hatch's, and the Drained Dragon Egg's sprites, with the unmodified copies they are built from (NOTICE).
 [[annotations]]
 path = [
     "data/art/*.png",
@@ -40,6 +40,7 @@ path = [
     "src/main/resources/assets/voidworks/textures/item/draconic_void_siphon.png",
     "src/main/resources/assets/voidworks/textures/block/void_well_*.png",
     "src/main/resources/assets/voidworks/textures/block/void_well_*.png.mcmeta",
+    "src/main/resources/assets/voidworks/textures/block/well_hatch_*.png",
     "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png",
     "src/main/resources/assets/voidworks/textures/block/overworld_void_displacer_*.png.mcmeta",
     "src/main/resources/assets/voidworks/textures/block/end_void_displacer_*.png",

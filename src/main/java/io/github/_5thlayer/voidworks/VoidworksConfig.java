@@ -25,6 +25,7 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue ZONE;
     private static final ModConfigSpec.IntValue VOIDSTONE_CAPACITY;
     private static final ModConfigSpec.IntValue WELL_CAPACITY;
+    private static final ModConfigSpec.IntValue WELL_HATCH_SLOTS;
     private static final ModConfigSpec.IntValue CONDUCTION_INTERVAL;
     private static final ModConfigSpec.IntValue CONDUCTION_RATE;
     private static final ModConfigSpec.IntValue HARVEST_INTERVAL;
@@ -70,6 +71,9 @@ public final class VoidworksConfig {
         WELL_CAPACITY = builder
                 .comment("How many motes a Void Well holds, of every grade together: many times a Void Siphon's top tier.")
                 .defineInRange("wellCapacity", 65_536, 1, 1 << 30);
+        WELL_HATCH_SLOTS = builder
+                .comment("How many slots a Well hatch holds, as many as a shulker box. A hatch keeps the slots it was placed with.")
+                .defineInRange("wellHatchSlots", 27, 1, 256);
         CONDUCTION_INTERVAL = builder
                 .comment("Ticks between steps of conduction, in which motes move one Voidstone through their network.")
                 .defineInRange("conductionInterval", 10, 1, 24000);
@@ -198,6 +202,11 @@ public final class VoidworksConfig {
     /** @return how many motes a Void Well holds */
     public static int wellCapacity() {
         return WELL_CAPACITY.getAsInt();
+    }
+
+    /** @return how many slots a new Well hatch holds */
+    public static int wellHatchSlots() {
+        return WELL_HATCH_SLOTS.getAsInt();
     }
 
     /** @return ticks between steps of conduction */
