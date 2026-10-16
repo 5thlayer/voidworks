@@ -18,7 +18,8 @@ import net.minecraft.world.level.storage.ValueOutput;
  * the Voidstone it has left, so its body grows outward that way as a pyramid widening from that face,
  * never walling in its other faces nor roofing over the ground around it, and nothing comes back to
  * its output. Over the open void its harvests grade one step higher, as the Void Pressure there is,
- * and each Voidstone it leaves closes the column above it. It is placed Dormant, and harvests only once it has soaked its cost.
+ * and each Voidstone it leaves closes the column above it. It is placed Dormant, and harvests only
+ * once it has soaked its cost.
  */
 public final class EndDisplacerBlockEntity extends DisplacerBlockEntity implements Dormancy.Holder {
 

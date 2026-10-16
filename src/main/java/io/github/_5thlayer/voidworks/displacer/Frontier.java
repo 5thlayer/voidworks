@@ -37,20 +37,20 @@ public final class Frontier {
         var axis = facing.getAxis();
         return pos -> {
             var offset = pos.subtract(displacer);
-            int ahead = offset.get(axis) * facing.getAxisDirection().getStep();
-            return ahead >= 1 && aside(offset, axis) < ahead;
+            int reach = offset.get(axis) * facing.getAxisDirection().getStep();
+            return reach >= 1 && aside(offset, axis) < reach;
         };
     }
 
     /** How far {@code offset} lies aside of {@code axis}: the larger of its two other coordinates, either way. */
     private static int aside(Vec3i offset, Direction.Axis axis) {
-        int aside = 0;
+        int sideways = 0;
         for (var other : Direction.Axis.values()) {
             if (other != axis) {
-                aside = Math.max(aside, Math.abs(offset.get(other)));
+                sideways = Math.max(sideways, Math.abs(offset.get(other)));
             }
         }
-        return aside;
+        return sideways;
     }
 
     /**

@@ -83,9 +83,9 @@ _Avoid_: bedrock, residue
 A machine that harvests motes until its Zone is spent, attuned to the dimension it is built for
 and working only there. It holds no motes and needs no network to start: it harvests outward from
 itself, only positions touching it or the Voidstone it has already left, nearest first, so what it
-has harvested is the network its motes go into. The End's grows only into a pyramid widening out
-ahead of its front face. It cannot be broken or moved while its Zone is
-unspent and it can still reach something to convert; then it becomes Voidstone itself.
+has harvested is the network its motes go into. The End Displacer grows only into a pyramid
+widening out ahead of its front face. It cannot be broken or moved while its Zone is unspent and it
+can still reach something to convert; then it becomes Voidstone itself.
 _Avoid_: harvester, Void Well
 
 **Zone**:
