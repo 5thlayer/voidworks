@@ -70,7 +70,7 @@ final class EndDisplacerTests {
         tests.test("a_dormant_end_displacer_that_can_reach_no_air_pops_off_before_soaking_its_cost", 1,
                 helper -> inTheEnd(helper, 3, EndDisplacerTests::popsOffBeforeSoaking));
         tests.test("an_end_displacer_grows_only_ahead_of_its_front_face_as_a_pyramid_leaving_its_other_faces_open", 1,
-                helper -> inTheEnd(helper, 4, EndDisplacerTests::growsOnlyAhead));
+                helper -> inTheEnd(helper, 4, EndDisplacerTests::growsAsAPyramidAhead));
         tests.test("an_end_displacer_placed_faces_where_its_player_looks", 1, EndDisplacerTests::facesWhereThePlayerLooks);
         tests.test("an_end_displacer_where_the_harvest_kind_is_not_end_harvests_nothing_and_pops_off", 40, EndDisplacerTests::refusesOutsideTheEnd);
         tests.test("an_emptying_siphon_used_on_a_dormant_end_displacer_pays_it_and_an_empty_hand_takes_back_its_fed_blocks", 1,
@@ -161,7 +161,7 @@ final class EndDisplacerTests {
      * Facing east in open air, with eight harvests to make: every one lies in the pyramid widening
      * east of it, so the ring around the position ahead stays open, as do its other five faces.
      */
-    private static void growsOnlyAhead(DimensionSite site) {
+    private static void growsAsAPyramidAhead(DimensionSite site) {
         var displacer = place(site, 8, Direction.EAST);
         site.feed(displacer, 8);
         site.payInFull(displacer);
@@ -176,7 +176,7 @@ final class EndDisplacerTests {
         }
         for (var side : new BlockPos[] {DISPLACER.above(), DISPLACER.below(), DISPLACER.north(), DISPLACER.south(), DISPLACER.west(),
                 DISPLACER.east().above(), DISPLACER.east().below(), DISPLACER.east().north(), DISPLACER.east().south()}) {
-            site.assertTrue(site.state(side).isAir(), "it filled " + side + " beside it" + " with " + site.state(side));
+            site.assertTrue(site.state(side).isAir(), "it filled " + side + " beside it with " + site.state(side));
         }
     }
 

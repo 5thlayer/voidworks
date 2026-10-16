@@ -62,9 +62,9 @@ class FrontierTest {
         assertEquals(Optional.of(deeper), Frontier.next(DISPLACER, grown, deeper::equals));
     }
 
-    /** Facing east: what lies past its east face, and nothing level with it or behind. */
+    /** Facing east: what lies past its east face, however far aside once far enough ahead, and nothing level with it or behind. */
     @Test
-    void aheadIsOnlyTheSpaceBeyondItsFrontFace() {
+    void aheadIsOnlyBeyondItsFrontFace() {
         var ahead = Frontier.ahead(DISPLACER, Direction.EAST);
         assertTrue(ahead.test(DISPLACER.east()));
         assertTrue(ahead.test(DISPLACER.east(8).above(5).north(7)));
@@ -85,11 +85,10 @@ class FrontierTest {
             var two = DISPLACER.relative(facing, 2);
             var across = Direction.Plane.HORIZONTAL.test(facing) ? facing.getClockWise() : Direction.NORTH;
             var along = facing.getAxis() == Direction.Axis.Y ? Direction.EAST : Direction.UP;
-            assertTrue(ahead.test(one), facing + ": the position a step ahead");
-            assertFalse(ahead.test(one.relative(across).relative(along)), facing + ": a step ahead and one aside on both axes");
-            assertFalse(ahead.test(one.relative(across)), facing + ": a step ahead and one aside");
             for (int a = -1; a <= 1; a++) {
                 for (int b = -1; b <= 1; b++) {
+                    var beside = one.relative(across, a).relative(along, b);
+                    assertEquals(a == 0 && b == 0, ahead.test(beside), facing + ": a step ahead, " + a + " and " + b + " aside");
                     var pos = two.relative(across, a).relative(along, b);
                     assertTrue(ahead.test(pos), facing + ": two steps ahead, within one aside, " + pos);
                 }
@@ -105,7 +104,7 @@ class FrontierTest {
         var ahead = Frontier.ahead(DISPLACER, Direction.UP);
         var grown = new HashSet<BlockPos>();
         for (int i = 0; i < 64; i++) {
-            var next = Frontier.next(DISPLACER, grown, pos -> pos.getY() >= DISPLACER.getY() && ahead.test(pos));
+            var next = Frontier.next(DISPLACER, grown, ahead);
             assertTrue(next.isPresent());
             if (i == 0) {
                 assertEquals(DISPLACER.above(), next.get());
