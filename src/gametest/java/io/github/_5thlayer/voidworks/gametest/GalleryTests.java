@@ -14,15 +14,11 @@ import io.github._5thlayer.libworks.testkit.GalleryCheck.Layout;
 import io.github._5thlayer.libworks.testkit.GalleryCheck.Scene;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
-import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksItems;
-import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
-import io.github._5thlayer.voidworks.network.MoteNetwork;
-import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.commands.CommandSourceStack;
@@ -31,10 +27,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestSequence;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
@@ -43,18 +37,14 @@ import net.minecraft.world.phys.AABB;
 /**
  * The Gallery pack (libworks ADR 0010), through libworks' {@link GalleryCheck}: offered and off, its
  * build running every command without failing, and each scene's key block where it stands. Beyond
- * the build, the Void
- * Dragon scene's dragon sets off from its reservoir for the other Well, and building the scene again
- * leaves one dragon; the Density, Dormant machines and Overworld Displacer scenes do their work; and
- * a scene's sign, clicked, builds it again. Each test turns the pack on, which reloads the server's
+ * the build, the Void Dragon scene's dragon sets off from its reservoir for the other Well, and
+ * building the scene again leaves one dragon; and a scene's sign, clicked, builds it again. What a
+ * scene's machines do is the mechanics' own game tests' to check, never the Gallery's. Each test turns the pack on, which reloads the server's
  * data, and off again, passing or failing, so each runs in a batch of its own.
  */
 final class GalleryTests {
 
     private static final Identifier VOID_DRAGON = GalleryPack.scene(Voidworks.MOD_ID, "void_dragon");
-    private static final Identifier DENSITY = GalleryPack.scene(Voidworks.MOD_ID, "density");
-    private static final Identifier DORMANT_MACHINES = GalleryPack.scene(Voidworks.MOD_ID, "dormant_machines");
-    private static final Identifier OVERWORLD_DISPLACER = GalleryPack.scene(Voidworks.MOD_ID, "overworld_displacer");
     private static final Identifier VOID_CRUCIBLE = GalleryPack.scene(Voidworks.MOD_ID, "void_crucible");
 
     /** Three scenes a row, each row 16 blocks north of the last, as {@code gallery/build} lays them. */
@@ -69,17 +59,12 @@ final class GalleryTests {
     private static final BlockPos PROVIDER = new BlockPos(9, 2, -3);
     /** Where a scene's sign stands, from where the scene is run. */
     private static final BlockPos SIGN = new BlockPos(14, 0, 0);
-    /** The Density scene's four Displacers, from where it is run, coal's to diamond's, each on its pad of Voidstone. */
-    private static final int[] DENSITY_XS = {5, 10, 15, 20};
 
     /** A test of one scene, run on its own from where the gallery is run, loads only the first plot. */
     private static final int ONE_SCENE = 1;
 
     /** Two reloads, the build, and the dragon's first stop, with room to spare. */
     private static final int TICKS = 1_200;
-
-    /** A reload, the scene's 64 harvests a second apart, and room to spare. */
-    private static final int DISPLACER_TICKS = 2_400;
 
     private GalleryTests() {
     }
@@ -109,12 +94,6 @@ final class GalleryTests {
                 GalleryTests::builds);
         tests.testOnItsOwn("the_void_dragon_scenes_dragon_sets_off_from_its_reservoir_for_the_other_well_and_building_it_again_leaves_one", TICKS,
                 GalleryTests::dragonCarries);
-        tests.testOnItsOwn("the_gallery_density_scenes_displacers_each_yield_their_densitys_motes", TICKS,
-                GalleryTests::densityYields);
-        tests.testOnItsOwn("the_gallery_dormant_machines_scenes_chamber_soaks_its_cost_and_wakes", TICKS,
-                GalleryTests::dormantWakes);
-        tests.testOnItsOwn("the_gallery_overworld_displacer_scenes_chest_gets_every_harvest_and_nothing_is_left_loose", DISPLACER_TICKS,
-                GalleryTests::overworldDisplacerDelivers);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
     }
@@ -170,54 +149,6 @@ final class GalleryTests {
                                 "building the scene again left " + dragon + ", not a dragon resting at the reservoir");
                     });
         });
-    }
-
-    /**
-     * The Density scene: each Displacer, fed one block, harvests the stone beside it, so its network
-     * holds the motes one harvest of that Density yields.
-     */
-    private static void densityYields(GameTestHelper helper) {
-        oneScene(helper, (source, steps) -> steps
-                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DENSITY))
-                .thenWaitUntil(() -> {
-                    for (int density = 1; density <= DENSITY_XS.length; density++) {
-                        var face = helper.absolutePos(ORIGIN).offset(DENSITY_XS[density - 1], 1, -5);
-                        var framed = helper.getLevel().getEntitiesOfClass(ItemFrame.class, new AABB(face));
-                        helper.assertTrue(framed.size() == 1 && !framed.getFirst().getItem().isEmpty(),
-                                "Density " + density + "'s Displacer shows " + framed + " on its face, not one framed block");
-                        var stone = helper.absolutePos(ORIGIN).offset(DENSITY_XS[density - 1], 0, -6);
-                        long motes = VoidstoneNetworks.of(helper.getLevel()).at(stone).map(MoteNetwork::total).orElse(0L);
-                        long yield = VoidworksConfig.motes(density);
-                        helper.assertTrue(motes == yield, "Density " + density + "'s network holds " + motes + " motes, not " + yield);
-                    }
-                }));
-    }
-
-    /** The Dormant machines scene: its Chamber soaks its cost from the motes along the line, and wakes. */
-    private static void dormantWakes(GameTestHelper helper) {
-        var chamber = helper.absolutePos(ORIGIN).offset(14, 0, -6);
-        oneScene(helper, (source, steps) -> steps
-                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, DORMANT_MACHINES))
-                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockEntity(chamber) instanceof Dormancy.Holder machine
-                        && machine.dormancy().awake(), "the scene's Chamber is not awake yet")));
-    }
-
-    /** The Overworld Displacer scene: its chest gets the stone of every harvest, the last one too, and nothing lies loose. */
-    private static void overworldDisplacerDelivers(GameTestHelper helper) {
-        var displacer = helper.absolutePos(ORIGIN).offset(14, 2, -4);
-        var chest = helper.absolutePos(ORIGIN).offset(14, 0, -4);
-        var plot = new AABB(helper.absolutePos(ORIGIN).offset(10, -1, -10).getCenter(), helper.absolutePos(ORIGIN).offset(18, 6, -2).getCenter());
-        oneScene(helper, (source, steps) -> steps
-                .thenExecute(() -> GalleryCheck.assertRuns(helper, source, OVERWORLD_DISPLACER))
-                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBlockState(displacer).is(VoidworksBlocks.VOIDSTONE.get()),
-                        "the scene's Displacer is not Voidstone yet"))
-                .thenIdle(40)
-                .thenExecute(() -> {
-                    int stone = helper.getLevel().getBlockEntity(chest) instanceof ChestBlockEntity box ? box.countItem(Items.STONE) : -1;
-                    var loose = helper.getLevel().getEntitiesOfClass(ItemEntity.class, plot).stream().map(ItemEntity::getItem).toList();
-                    helper.assertTrue(stone == VoidworksConfig.zone() && loose.isEmpty(),
-                            "the chest holds " + stone + " stone, not " + VoidworksConfig.zone() + ", and the plot holds loose " + loose);
-                }));
     }
 
     /** A scene's sign, clicked, builds the scene again where it stands: here the Crucible, taken away. */
