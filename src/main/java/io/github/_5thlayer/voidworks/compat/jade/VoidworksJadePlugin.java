@@ -27,8 +27,11 @@ import io.github._5thlayer.voidworks.mutation.UnmakingReport;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
+import io.github._5thlayer.voidworks.well.HatchReport;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
+import io.github._5thlayer.voidworks.well.WellHatchBlock;
+import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
 import io.github._5thlayer.voidworks.well.WellReport;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -49,7 +52,8 @@ import snownee.jade.api.WailaPlugin;
  * {@link Dormancy#status}, with what the mote stores touching a Dormant one are worth; a Void
  * Displacer's {@link DisplacerReport}; a Mutation Chamber's {@link ChamberReport}; an Unmaking
  * Chamber's {@link UnmakingReport}; a Void Crucible's {@link CrucibleReport}; and a Void Well's
- * {@link WellReport}, its name, target and owner, beside its network and payment. All but the
+ * {@link WellReport}, its name, target and owner, beside its network and payment; and a Well hatch's
+ * {@link HatchReport}, its mode and request, beside what Jade shows it holds from its item face. All but the
  * first are libworks-runtime's machine view; Voidstone, with no block entity, has its own provider.
  * A Void Dragon's presence shows its record's {@link DragonReport}, and a Dragonling its
  * {@link DragonlingReport}, each a {@link CreatureReport} in place of Jade's hearts;
@@ -79,6 +83,9 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     private static final MachineReport<VoidWellBlockEntity, WellReport> WELL =
             new MachineReport<>(id("well"), VoidWellBlockEntity.class, VoidworksJadePlugin::well, WellReport.STREAM_CODEC);
+
+    private static final MachineReport<WellHatchBlockEntity, HatchReport> HATCH =
+            new MachineReport<>(id("hatch"), WellHatchBlockEntity.class, VoidworksJadePlugin::hatch, HatchReport.STREAM_CODEC);
 
     private static final CreatureReport<VoidDragon, DragonReport> DRAGON =
             new CreatureReport<>(id("dragon"), VoidDragon.class, VoidworksJadePlugin::dragon, DragonReport.STREAM_CODEC);
@@ -121,6 +128,10 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return well.getLevel() instanceof ServerLevel level ? WellReport.of(well, level) : null;
     }
 
+    private static @Nullable HatchReport hatch(WellHatchBlockEntity hatch) {
+        return hatch.hatch().map(HatchReport::of).orElse(null);
+    }
+
     private static @Nullable DragonReport dragon(VoidDragon presence) {
         return presence.grown() && presence.level() instanceof ServerLevel level ? DragonReport.of(presence, level.getServer()).orElse(null) : null;
     }
@@ -139,6 +150,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         registration.registerBlockDataProvider(UNMAKING, UnmakingChamberBlockEntity.class);
         registration.registerBlockDataProvider(CRUCIBLE, VoidCrucibleBlockEntity.class);
         registration.registerBlockDataProvider(WELL, VoidWellBlockEntity.class);
+        registration.registerBlockDataProvider(HATCH, WellHatchBlockEntity.class);
         registration.registerEntityDataProvider(DRAGON, VoidDragon.class);
         registration.registerEntityDataProvider(DRAGONLING, VoidDragon.class);
     }
@@ -158,6 +170,8 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
                 VoidCrucibleBlock.class);
         registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
                 VoidWellBlock.class);
+        registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> report.lines().forEach(tooltip::add)),
+                WellHatchBlock.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, DragonReport::lines,
                 report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
         registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);

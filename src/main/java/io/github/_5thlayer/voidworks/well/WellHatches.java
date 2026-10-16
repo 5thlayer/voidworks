@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.well;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -12,14 +13,18 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.dragon.Place;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.players.NameAndId;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 /**
- * Every Well hatch on the server: where it stands, the Well it joined, whose it is, and what it
- * holds, so a Matter-line dragon loads and unloads it with no chunk loaded (ADR 0005), as
- * {@link VoidWells} keeps the Wells. A hatch puts itself here when it is placed, and takes itself out,
+ * Every Well hatch on the server: where it stands, the Well it joined, whose it is, whether it is a
+ * provider or a requester and what it asks for, and what it holds, so a Matter-line dragon loads and
+ * unloads it with no chunk loaded (ADR 0005), as {@link VoidWells} keeps the Wells. A hatch puts itself here when it is placed, and takes itself out,
  * dropping what it holds, when it is broken. Its block's item faces are its contents here, not a copy.
  * {@link SavedWellHatches} saves it with the world.
  */
@@ -46,7 +51,7 @@ public final class WellHatches {
      * @return the hatch put there
      */
     public Hatch put(Place place, Optional<Place> well, Optional<NameAndId> owner, int slots) {
-        var hatch = new Hatch(place, well, owner, NonNullList.withSize(slots, ItemStack.EMPTY), this);
+        var hatch = new Hatch(place, well, owner, Mode.PROVIDER, Optional.empty(), NonNullList.withSize(slots, ItemStack.EMPTY), this);
         hatches.put(place, hatch);
         onChange.run();
         return hatch;
@@ -70,22 +75,61 @@ public final class WellHatches {
         return hatches;
     }
 
+    /** What a hatch does with what it holds: a provider offers it to its owner's requesters, a requester asks for one item. */
+    public enum Mode implements StringRepresentable {
+        PROVIDER, REQUESTER;
+
+        static final Codec<Mode> CODEC = StringRepresentable.fromEnum(Mode::values);
+
+        @Override
+        public String getSerializedName() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+    }
+
     /**
-     * One Well hatch: where it stands, the Well it joined and whose it is, which never change, and what it
-     * holds. Its Well broken, it is a plain container until a new core there makes the Well whole again.
+     * What a requester asks for: one item's kind, its components ignored, so many stacks of it.
+     *
+     * @param item   the kind of item it asks for
+     * @param stacks how many stacks of it, each full by the item's stack size
+     */
+    public record Request(Item item, int stacks) {
+
+        static final Codec<Request> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(Request::item),
+                Codec.INT.fieldOf("stacks").forGetter(Request::stacks)
+        ).apply(instance, Request::new));
+
+        /** @return the name of the item it asks for, with none of a stack's own components */
+        public Component itemName() {
+            return new ItemStack(item).getItemName();
+        }
+    }
+
+    /**
+     * One Well hatch: where it stands, the Well it joined and whose it is, which never change; whether
+     * it is a provider or a requester, and a requester's request; and what it holds. Its Well broken, it
+     * is a plain container until a new core there makes the Well whole again.
      */
     public static final class Hatch {
 
         private final Place place;
         private final Optional<Place> well;
         private final Optional<NameAndId> owner;
+        private Mode mode;
+        private Optional<Request> request;
         private final Contents contents;
+        private final WellHatches hatches;
 
-        private Hatch(Place place, Optional<Place> well, Optional<NameAndId> owner, NonNullList<ItemStack> stacks, WellHatches hatches) {
+        private Hatch(Place place, Optional<Place> well, Optional<NameAndId> owner, Mode mode, Optional<Request> request, NonNullList<ItemStack> stacks,
+                WellHatches hatches) {
             this.place = place;
             this.well = well;
             this.owner = owner;
+            this.mode = mode;
+            this.request = request;
             this.contents = new Contents(stacks, hatches);
+            this.hatches = hatches;
         }
 
         /** @return where it stands */
@@ -107,6 +151,54 @@ public final class WellHatches {
         public ItemStacksResourceHandler contents() {
             return contents;
         }
+
+        /** @return whether it is a provider or a requester; it is placed a provider */
+        public Mode mode() {
+            return mode;
+        }
+
+        /** @return what it asks for; empty for a provider, which never asks, and a requester asking for nothing */
+        public Optional<Request> request() {
+            return request;
+        }
+
+        /**
+         * Switches it between provider and requester, keeping what it holds: a requester made a provider
+         * loses its request and offers what it holds, and a provider made a requester keeps it for its item
+         * faces to drain, asking for nothing yet.
+         *
+         * @return what it is now
+         */
+        public Mode switchMode() {
+            mode = mode == Mode.PROVIDER ? Mode.REQUESTER : Mode.PROVIDER;
+            request = Optional.empty();
+            hatches.onChange.run();
+            return mode;
+        }
+
+        /**
+         * A requester asks for a stack more of {@code item}'s kind, up to as many stacks as it has slots;
+         * another item replaces its request, asking for one stack of it.
+         *
+         * @return what it asks for now
+         * @throws IllegalStateException if it is a provider, which never asks
+         */
+        public Request ask(Item item) {
+            if (mode != Mode.REQUESTER) {
+                throw new IllegalStateException("a provider asks for nothing");
+            }
+            int stacks = request.filter(asked -> asked.item() == item).map(asked -> Math.min(asked.stacks() + 1, contents.size())).orElse(1);
+            var asked = new Request(item, stacks);
+            request = Optional.of(asked);
+            hatches.onChange.run();
+            return asked;
+        }
+
+        /** Asks for nothing. */
+        public void clearRequest() {
+            request = Optional.empty();
+            hatches.onChange.run();
+        }
     }
 
     /** A hatch's slots, which mark the hatches changed whenever what they hold does. */
@@ -125,18 +217,23 @@ public final class WellHatches {
         }
     }
 
-    /** A hatch as it is saved: its slots in order, the empty ones too, so it keeps as many as it was placed with. */
-    private record Entry(Place place, Optional<Place> well, Optional<NameAndId> owner, List<ItemStack> stacks) {
+    /**
+     * A hatch as it is saved: its slots in order, the empty ones too, so it keeps as many as it was placed
+     * with. One saved before requesters is a provider.
+     */
+    private record Entry(Place place, Optional<Place> well, Optional<NameAndId> owner, Mode mode, Optional<Request> request, List<ItemStack> stacks) {
 
         static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Place.CODEC.fieldOf("place").forGetter(Entry::place),
                 Place.CODEC.optionalFieldOf("well").forGetter(Entry::well),
                 NameAndId.CODEC.optionalFieldOf("owner").forGetter(Entry::owner),
+                Mode.CODEC.optionalFieldOf("mode", Mode.PROVIDER).forGetter(Entry::mode),
+                Request.CODEC.optionalFieldOf("request").forGetter(Entry::request),
                 ItemStack.OPTIONAL_CODEC.listOf().fieldOf("stacks").forGetter(Entry::stacks)
         ).apply(instance, Entry::new));
 
         static Entry of(Hatch hatch) {
-            return new Entry(hatch.place, hatch.well, hatch.owner, hatch.contents.copyToList());
+            return new Entry(hatch.place, hatch.well, hatch.owner, hatch.mode, hatch.request, hatch.contents.copyToList());
         }
 
         Hatch hatch(WellHatches hatches) {
@@ -144,7 +241,7 @@ public final class WellHatches {
             for (int slot = 0; slot < stacks.size(); slot++) {
                 slots.set(slot, stacks.get(slot));
             }
-            return new Hatch(place, well, owner, slots, hatches);
+            return new Hatch(place, well, owner, mode, request, slots, hatches);
         }
     }
 }

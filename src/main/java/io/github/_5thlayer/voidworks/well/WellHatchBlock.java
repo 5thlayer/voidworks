@@ -41,10 +41,13 @@ import org.jspecify.annotations.Nullable;
  * places one, and only they use it by hand; anywhere else, and against another's Well, it is refused.
  *
  * <p>What it holds is in the server's {@link WellHatches} ({@link WellHatchBlockEntity}), filled and
- * emptied through every face. It is a provider: filled only through its faces, never by hand, as
- * befits mass transport, while its owner's empty hand takes the first stack out. Its Well no longer
- * whole, it is idle and keeps what it holds; its core broken, it is a plain container until a new core
- * there makes the Well whole again. Broken, it drops what it holds.
+ * emptied through every face, never filled by hand, as befits mass transport. It is placed a provider,
+ * and its owner switches it between provider and requester by sneak-using it with an empty hand. A
+ * provider gives its owner's empty hand its first stack; a requester gives no hand anything, but
+ * takes its request from its owner's: an item sets it to that item's kind and adds a stack, and an empty
+ * hand clears it, each told above the hotbar. Its Well no longer whole, it is idle and keeps what it
+ * holds; its core broken, it is a plain container until a new core there makes the Well whole again.
+ * Broken, it drops what it holds.
  */
 public final class WellHatchBlock extends BaseEntityBlock {
 
@@ -148,9 +151,10 @@ public final class WellHatchBlock extends BaseEntityBlock {
     }
 
     /**
-     * Used with an item it takes nothing, as it fills only through its faces, and tells its owner so;
-     * anyone else is told whose it is. The item's own use never runs, so a block is not placed against
-     * it but by sneaking, as against a chest.
+     * Used with an item it takes nothing, as it fills only through its faces: its owner sets a
+     * requester's request to that item's kind, a stack more, or is told a provider fills through its
+     * faces; anyone else is told whose it is. The item's own use never runs, so a block is not placed
+     * against it but by sneaking, as against a chest.
      */
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
@@ -158,32 +162,54 @@ public final class WellHatchBlock extends BaseEntityBlock {
         if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof WellHatchBlockEntity entity)) {
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
-        entity.hatch().filter(hatch -> usableBy(hatch, player))
-                .ifPresent(hatch -> player.sendOverlayMessage(Component.translatable("voidworks.hatch.faces_only")));
+        entity.hatch().filter(hatch -> usableBy(hatch, player)).ifPresent(hatch -> {
+            if (hatch.mode() == WellHatches.Mode.REQUESTER) {
+                var asked = hatch.ask(stack.getItem());
+                player.sendOverlayMessage(Component.translatable("voidworks.hatch.requesting", asked.stacks(), asked.itemName()));
+            } else {
+                player.sendOverlayMessage(Component.translatable("voidworks.hatch.faces_only"));
+            }
+        });
         return InteractionResult.SUCCESS;
     }
 
-    /** Its owner using it with an empty hand takes the first stack it holds; anyone else is told whose it is. */
+    /**
+     * Its owner sneak-using it with an empty hand switches it between provider and requester; using it
+     * with one takes a provider's first stack, or clears a requester's request. Anyone else is told whose
+     * it is.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!player.getMainHandItem().isEmpty() || !(level.getBlockEntity(pos) instanceof WellHatchBlockEntity entity)) {
             return InteractionResult.PASS;
         }
         entity.hatch().filter(hatch -> usableBy(hatch, player)).ifPresent(hatch -> {
-            var contents = hatch.contents();
-            for (int slot = 0; slot < contents.size(); slot++) {
-                var resource = contents.getResource(slot);
-                if (!resource.isEmpty()) {
-                    try (var transaction = Transaction.openRoot()) {
-                        int taken = contents.extract(slot, resource, contents.getAmountAsInt(slot), transaction);
-                        transaction.commit();
-                        player.setItemInHand(InteractionHand.MAIN_HAND, resource.toStack(taken));
-                    }
-                    return;
-                }
+            if (player.isSecondaryUseActive()) {
+                player.sendOverlayMessage(Component.translatable(hatch.switchMode() == WellHatches.Mode.REQUESTER
+                        ? "voidworks.hatch.now_requester" : "voidworks.hatch.now_provider"));
+            } else if (hatch.mode() == WellHatches.Mode.REQUESTER) {
+                hatch.clearRequest();
+                player.sendOverlayMessage(Component.translatable("voidworks.hatch.requesting_nothing"));
+            } else {
+                giveFirstStack(hatch, player);
             }
         });
         return InteractionResult.SUCCESS;
+    }
+
+    private static void giveFirstStack(WellHatches.Hatch hatch, Player player) {
+        var contents = hatch.contents();
+        for (int slot = 0; slot < contents.size(); slot++) {
+            var resource = contents.getResource(slot);
+            if (!resource.isEmpty()) {
+                try (var transaction = Transaction.openRoot()) {
+                    int taken = contents.extract(slot, resource, contents.getAmountAsInt(slot), transaction);
+                    transaction.commit();
+                    player.setItemInHand(InteractionHand.MAIN_HAND, resource.toStack(taken));
+                }
+                return;
+            }
+        }
     }
 
     /** @return whether {@code player} may use {@code hatch} by hand: it is theirs, or no one's; anyone else is told whose it is */

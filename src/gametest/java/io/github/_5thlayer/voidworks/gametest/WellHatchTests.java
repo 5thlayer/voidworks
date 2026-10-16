@@ -47,8 +47,8 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 final class WellHatchTests {
 
     /** Beside the well's east wall, on its middle course, against the casing west of it. */
-    private static final BlockPos HATCH = new BlockPos(7, 3, 4);
-    private static final BlockPos HATCH_AGAINST = HATCH.west();
+    static final BlockPos HATCH = new BlockPos(7, 3, 4);
+    static final BlockPos HATCH_AGAINST = HATCH.west();
 
     private static final int TICKS = 200;
 
@@ -287,7 +287,7 @@ final class WellHatchTests {
     }
 
     /** {@code player} places a hatch against {@code face} of the block at {@code against}; @return whether it stands there now */
-    private static boolean placeHatch(GameTestHelper helper, ServerPlayer player, BlockPos against, Direction face) {
+    static boolean placeHatch(GameTestHelper helper, ServerPlayer player, BlockPos against, Direction face) {
         var absolute = helper.absolutePos(against);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(VoidworksBlocks.WELL_HATCH_ITEM.get()));
         player.getMainHandItem().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
@@ -296,17 +296,17 @@ final class WellHatchTests {
         return helper.getBlockState(against.relative(face)).is(VoidworksBlocks.WELL_HATCH.get());
     }
 
-    private static WellHatches.Hatch hatch(GameTestHelper helper, BlockPos pos) {
+    static WellHatches.Hatch hatch(GameTestHelper helper, BlockPos pos) {
         return helper.getBlockEntity(pos, WellHatchBlockEntity.class).hatch().orElseThrow();
     }
 
-    private static ResourceHandler<ItemResource> itemFace(GameTestHelper helper) {
+    static ResourceHandler<ItemResource> itemFace(GameTestHelper helper) {
         var face = helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(HATCH), Direction.UP);
         helper.assertTrue(face != null, "the hatch has no item face");
         return face;
     }
 
-    private static void insert(ResourceHandler<ItemResource> handler, Item item, int count) {
+    static void insert(ResourceHandler<ItemResource> handler, Item item, int count) {
         try (var transaction = Transaction.openRoot()) {
             int inserted = handler.insert(ItemResource.of(item), count, transaction);
             transaction.commit();
@@ -316,7 +316,7 @@ final class WellHatchTests {
         }
     }
 
-    private static int held(ResourceHandler<ItemResource> handler, Item item) {
+    static int held(ResourceHandler<ItemResource> handler, Item item) {
         int count = 0;
         for (int slot = 0; slot < handler.size(); slot++) {
             if (handler.getResource(slot).is(item)) {
