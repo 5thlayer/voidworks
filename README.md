@@ -32,7 +32,7 @@ To play Voidworks beside every other FactoryWorks mod, install the [FactoryWorks
 
 ## Gallery
 
-Voidworks carries an optional datapack, **Voidworks Gallery**, that builds its features as working scenes beside you. It is off in every world until you turn it on, in the world's Data Packs screen or with `/datapack enable "mod/voidworks:gallery_pack"`, then run `/function voidworks:gallery/build`, or `/function voidworks:gallery/<scene>` for one scene. It needs cheats in single player (on at creation, or Open to LAN with cheats) and operator permission on a server, and it builds only blocks and what its scenes need an owner for: run it as a player, who owns them. Clicking a scene's sign builds it again from the start, to watch it play out.
+Voidworks carries an optional datapack, **Voidworks Gallery**, that builds its features as working scenes beside you. It is off in every world until you turn it on, in the world's Data Packs screen or with `/datapack enable "mod/voidworks:gallery_pack"`, then run `/function voidworks:gallery/build`, or `/function voidworks:gallery/<scene>` for one scene. It needs cheats in single player (on at creation, or Open to LAN with cheats) and operator permission on a server, and it builds only blocks and what its scenes need an owner for: run it as a player, who owns them. It lays out a scene for each feature above, in rows of three, and clicking a scene's sign builds it again from the start, to watch it play out. The End and Nether Displacers work only in their own dimension, so run it there to see them at work.
 
 ## For pack authors
 

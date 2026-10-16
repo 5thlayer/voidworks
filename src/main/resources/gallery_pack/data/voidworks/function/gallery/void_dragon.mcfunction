@@ -30,4 +30,4 @@ setblock ~20 ~2 ~-4 voidworks:void_well[facing=south]
 voidworks well ~20 ~2 ~-4 full
 
 voidworks dragon ~8 ~2 ~-4
-setblock ~14 ~ ~ minecraft:oak_sign[rotation=0]{front_text:{messages:[{translate:"voidworks.gallery.void_dragon",bold:true},{translate:"voidworks.gallery.void_dragon.1"},{translate:"voidworks.gallery.void_dragon.2"},{translate:"voidworks.gallery.void_dragon.3"}]}}
+function voidworks:gallery/sign {scene:"void_dragon"}
