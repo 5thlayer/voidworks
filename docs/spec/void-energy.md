@@ -134,17 +134,21 @@ relocation stays the main loop.
 **Zone upgrades.** A Displacer starts with the server's Zone (provisional: 64) and buys more one
 level at a time, with motes from its network. Sneak-using it with an empty hand quotes the next
 level in the action bar ("Zone 64 → 80 for 1,600 void energy, sneak-use again to confirm"), and the
-same player sneak-using it again within 5 seconds buys it; anything else lets the quote lapse. The
-purchase follows the spend rule at the Displacer's block, all or nothing, its price checked again
-at the confirm, and a network that cannot afford it is told the price and what it can release
-there, and arms nothing. A Displacer can be upgraded while it is awake and not yet Voidstone:
-stalled, starved of fed blocks, or with its Zone spent and its output still emptying, when it
-harvests on. A Dormant one cannot, nor one that can reach nothing. Each level adds a step of
-positions and costs a first price times a growth per level bought, both datapack data per
-Displacer (provisional, all three: 16 positions, 1,600 void energy, doubling), with no last level.
-The levels belong to the Displacer, so a new one starts at the first: the first two levels repay
-themselves at a middling Density, the third breaks even, and from the fourth a new Displacer is
-cheaper. Jade shows a Displacer's level and the next level's price.
+same player sneak-using it again within 5 seconds commits to it; anything else lets the quote lapse.
+A network whose motes are worth less than the price at the Displacer's block is told the price and
+what it is worth there, and arms nothing. Committed, the Displacer soaks the price as a Dormant
+machine does, from the stores touching it by the spend rule at its block, while it goes on
+harvesting, and its Zone rises once it is paid; a payment in part is kept across a save. Sneak-using
+it while it soaks shows what is paid and offers to cancel, confirmed the same way; a cancelled
+upgrade loses what it paid, as any spend does. A Displacer can be upgraded while it is awake and
+not yet Voidstone: stalled, starved of fed blocks, or with its Zone spent and its output still
+emptying, when it waits for the upgrade's soak, unbreakable, and harvests on. A Dormant one cannot,
+nor one that can reach nothing. Each level adds a step of positions and costs a first price times a
+growth per level bought, both datapack data per Displacer (provisional, all three: 16 positions,
+1,600 void energy, doubling), with no last level. The levels belong to the Displacer, so a new one
+starts at the first: the first two levels repay themselves at a middling Density, the third breaks
+even, and from the fourth a new Displacer is cheaper. Jade shows a Displacer's level, the next
+level's price, and an upgrade's soak.
 
 Only blocks a Density tag names can be harvested. Every other block is Density 0, nothing harvests
 it, and it leaves no Voidstone: the renewable and abundant blocks above all (cobblestone, stone,
