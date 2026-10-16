@@ -22,8 +22,10 @@ the Modules do uses void, so it is not something the base mod holds for them, an
 leave the End-centred endgame out. It requires nothing a player installs but Minecraft and NeoForge
 (libworks-runtime, which shows it in Jade, is nested in its jar): its inputs are
 vanilla, Mutation reads the recipe manager, and its outputs go through NeoForge's item and fluid
-faces. If the Displacer or the Void Well become multiblocks, it may require Groundworks, as Beltworks
-and Wireworks do. It charges other mods' FE items through NeoForge's item energy capability alone,
+faces. The Void Well is placed in one step from its core when Groundworks is present, and is built
+by hand otherwise: its shape is a Groundworks Assembly declared as data, which Groundworks alone
+reads. If the Displacer becomes a multiblock, it may require Groundworks, as Beltworks and
+Wireworks do. It charges other mods' FE items through NeoForge's item energy capability alone,
 so Gearworks, whose Gear it was tuned against, is only a mod its dev client runs, never a
 dependency, and its game tests charge an FE item of their own.
 
