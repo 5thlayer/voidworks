@@ -14,7 +14,8 @@ other Module.
 _Avoid_: Library, Binding
 
 **Voidworks**:
-This Module: harvesting, Voidstone networks, the Void Dragon and Mutation. It requires nothing a player installs but Minecraft and NeoForge.
+This Module: harvesting, Voidstone networks, the Void Dragon, Mutation, and carrying matter
+between dimensions through the void. It requires nothing a player installs but Minecraft and NeoForge.
 
 **Consumer**:
 A mod or a pack that builds against or loads this Module.
@@ -136,8 +137,8 @@ Well's core. A dragon serves only its owner's Wells.
 _Avoid_: tamer, master
 
 **Void Dragon**:
-A dragon raised on void that carries motes between Void Wells, diving through the void between
-them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens on dives
+A dragon raised on void that carries motes or matter, as its Line says, between Void Wells, diving
+through the void between them, across dimensions. It grows from a Dragonling. Nothing hurts it: it only weakens on dives
 outside the End, heals at its Wells, and never dies.
 _Avoid_: Ender Dragon (the boss), tamed dragon
 
@@ -162,10 +163,17 @@ it hatched, follows a player holding a Void Siphon, and grows faster for the mot
 
 **Drained Dragon Egg**:
 The egg a grown Void Dragon lays as it works: a dragon egg drained of void. It and the vanilla egg,
-the founder of every line, both soak motes once a player places them touching Voidstone, as a
+the founder of the Mote line, both soak motes once a player places them touching Voidstone, as a
 Dormant machine soaks its cost, and hatch once they have soaked enough; broken first, an egg loses
 what it soaked.
 _Avoid_: lesser egg
+
+**Line**:
+A Void Dragon's inherited kind, fixed in its egg, which says what it carries: the Mote line carries
+motes, the Matter line items, and never both. A dragon lays eggs of its own Line. The vanilla egg
+founds the Mote line; the Matter line is founded by upgrading a Mote-line egg by Mutation, never the
+other way.
+_Avoid_: breed, strain, class
 
 ### Mutation
 
