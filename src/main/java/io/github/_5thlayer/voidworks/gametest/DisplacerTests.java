@@ -164,6 +164,8 @@ final class DisplacerTests {
                 .thenExecute(() -> {
                     helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), above);
                     helper.assertTrue(output(displacer, Items.STONE) == 1, "the spent Displacer's output holds " + output(displacer, Items.STONE) + " stone, not the 1 it waits on");
+                    var stall = DisplacerReport.of(displacer, helper.getLevel()).stall();
+                    helper.assertTrue(stall.equals(Optional.of(DisplacerBlockEntity.Stall.OUTPUT_UNEMPTIED)), "it reports " + stall + ", not waiting on its output");
                     emptyOutput(displacer);
                 })
                 .thenWaitUntil(() -> {

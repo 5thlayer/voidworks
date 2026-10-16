@@ -191,8 +191,8 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (target.isPresent() && grown.size() < zone && harvest(level, target.get())) {
             target = next(level);
         }
+        // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it.
         if ((target.isEmpty() || grown.size() >= zone) && outputEmpty()) {
-            // A spent Displacer still holding output waits, as a full one stalls, for whatever pulls it.
             becomeVoidstone(level);
         }
     }
@@ -257,12 +257,16 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     /**
      * @return why it cannot harvest the next position it would, though fed: a Void Pressure there
      *         too high to grade, a network with no room for the harvest's motes, or a full output or tank;
-     *         empty when it can, or has nothing fed, nothing left in reach or its Zone spent. A
+     *         or, spent, the output it waits on before it becomes Voidstone; empty when it can, or has
+     *         nothing fed and nothing left to wait on. A
      *         Dormant one's payment is its {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
+        if (spent(level)) {
+            return outputEmpty() ? Optional.empty() : Optional.of(Stall.OUTPUT_UNEMPTIED);
+        }
         int density = Density.of(inventory.getResource(INPUT));
-        if (density == 0 || grown.size() >= zoneOrConfig()) {
+        if (density == 0) {
             return Optional.empty();
         }
         return next(level).flatMap(target -> stallBeforeOutput(level, target, density).or(() -> {
@@ -284,7 +288,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         return Optional.empty();
     }
 
-    /** What stops a fed Displacer harvesting its next position. */
+    /** What stops a fed Displacer harvesting its next position, or a spent one becoming Voidstone. */
     public enum Stall {
         /** The Void Pressure there is the highest, so a harvest would have no grade. */
         PRESSURE_TOO_HIGH,
@@ -293,7 +297,9 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         /** Its output cannot take what the harvest displaces. */
         OUTPUT_FULL,
         /** Its tank cannot take what the harvest displaces. */
-        TANK_FULL
+        TANK_FULL,
+        /** Spent, it waits for its output to be emptied before it becomes Voidstone; a spent one, not a fed one. */
+        OUTPUT_UNEMPTIED
     }
 
     /**
@@ -315,6 +321,11 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         }
         int count = result.getCount();
         return ResourceHandlerUtil.insertStacking(output, ItemResource.of(result), count, transaction) == count;
+    }
+
+    /** @return whether its Zone is spent or nothing is left in its reach, as far as its loaded frontier tells */
+    private boolean spent(ServerLevel level) {
+        return grown.size() >= zoneOrConfig() || !grown.isEmpty() && frontierLoaded(level) && next(level).isEmpty();
     }
 
     private boolean outputEmpty() {
