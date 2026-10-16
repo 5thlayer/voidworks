@@ -157,7 +157,9 @@ it, and it leaves no Voidstone: the renewable and abundant blocks above all (cob
 deepslate, dirt, sand, gravel, netherrack, blackstone, basalt, end stone, obsidian, snow, ice), and
 everything made from them, so a generator never feeds a harvest. Density rises steeply (shape: about
 4^(density − 1), so 1, 4, 16, 64). Density tags and Families are separate data and need not agree:
-amethyst, quartz and glowstone climb the gem and dust Families but stay Density 0, being renewable.
+amethyst, quartz and glowstone climb the gem and dust Families but stay Density 0, being renewable. A
+block item's tooltip shows its Density and the motes one yields in a Displacer; one of Density 0
+shows nothing.
 
 | Density | Motes | Blocks, raw and refined alike |
 |---|---|---|

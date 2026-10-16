@@ -92,6 +92,8 @@
   "item.voidworks.draconic_void_siphon": "Draconic Void Siphon",
   "item.voidworks.resonant_void_siphon": "Resonant Void Siphon",
   "item.voidworks.void_siphon": "Void Siphon",
+  "voidworks.density.tooltip": "Density %s",
+  "voidworks.density.tooltip.motes": "Density %s: %s motes",
   "voidworks.displacer.upgrade.cancel": "Upgrading: %s of %s void energy paid. Sneak-use again to cancel",
   "voidworks.displacer.upgrade.cancelled": "Zone upgrade cancelled",
   "voidworks.displacer.upgrade.committed": "Upgrading: Zone %s → %s once %s void energy is soaked",
