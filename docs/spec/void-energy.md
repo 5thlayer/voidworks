@@ -456,6 +456,7 @@ What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, 
   shell. Boss drops (nether star, dragon egg, dragon's breath) are left out.
 - **Passive drops**: feather → leather → rabbit hide → ink sac → glow ink sac → rabbit's foot →
   armadillo scute → turtle scute.
+- **No tools or armour.** An upgrade gives a fresh result and carries no item data, so gear has no Family; void energy reaches gear as FE through the Void Siphon instead ([ADR 0007](../adr/0007-a-void-siphon-charges-fe-items-and-voidworks-makes-no-gear.md)).
 
 The shipped Families keep three rules, which a pack may break on purpose:
 
@@ -520,8 +521,6 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 ## Open
 
 - **Voidstone raising Void Pressure around it** — a later layer, compounding a site's harvests.
-- **Tool and armour Families** — wooden → stone → copper → iron → golden → diamond, and what an
-  upgrade carries over: enchantments, damage, names, trims.
 - **Numbers** — prices are datapack data and the rest server config
   ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve, Zone sizes and upgrade costs,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
