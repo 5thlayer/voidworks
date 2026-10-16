@@ -42,51 +42,52 @@ class WellAssemblyTest {
 
     /** What each position the Assembly places from a Key at {@code core} holds, the Key's own left out. */
     private static Map<BlockPos, Part> placed(BlockPos core, Direction facing) throws Exception {
-        JsonObject declaration;
-        try (var in = WellAssemblyTest.class.getResourceAsStream(DECLARATION)) {
-            assertNotNull(in, DECLARATION);
-            declaration = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
-        }
+        var declaration = declaration();
         char key = declaration.get("key").getAsString().charAt(0);
         var legend = declaration.getAsJsonObject("legend");
         assertEquals("voidworks:void_well", legend.get(String.valueOf(key)).getAsString());
-        var layers = declaration.getAsJsonArray("layers");
-
-        int keyLayer = -1;
-        int keyRow = -1;
-        int keyColumn = -1;
-        int keys = 0;
-        for (int y = 0; y < layers.size(); y++) {
-            var rows = layers.get(y).getAsJsonArray();
-            for (int row = 0; row < rows.size(); row++) {
-                int column = rows.get(row).getAsString().indexOf(key);
-                if (column >= 0) {
-                    keys += rows.get(row).getAsString().chars().filter(c -> c == key).count();
-                    keyLayer = y;
-                    keyRow = row;
-                    keyColumn = column;
-                }
-            }
-        }
-
-        assertEquals(1, keys, "the shape holds its Key once");
+        var drawn = drawn(declaration);
+        var keys = drawn.entrySet().stream().filter(entry -> entry.getValue() == key).map(Map.Entry::getKey).toList();
+        assertEquals(1, keys.size(), "the shape holds its Key once");
+        var at = keys.getFirst();
 
         var placed = new HashMap<BlockPos, Part>();
-        for (int y = 0; y < layers.size(); y++) {
-            var rows = layers.get(y).getAsJsonArray();
+        drawn.forEach((spot, letter) -> {
+            if (letter != key) {
+                var offset = inWorld(at.row() - spot.row(), spot.layer() - at.layer(), at.column() - spot.column(), facing);
+                placed.put(core.offset(offset), part(legend.get(String.valueOf(letter)).getAsString()));
+            }
+        });
+        return placed;
+    }
+
+    /** Where a letter is drawn: its layer from the bottom, its row from the top of the page, its column from the left. */
+    private record Spot(int layer, int row, int column) {
+    }
+
+    private static JsonObject declaration() throws Exception {
+        try (var in = WellAssemblyTest.class.getResourceAsStream(DECLARATION)) {
+            assertNotNull(in, DECLARATION);
+            return JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
+        }
+    }
+
+    /** Every letter the layers draw, spaces left out, by where it is drawn. */
+    private static Map<Spot, Character> drawn(JsonObject declaration) {
+        var layers = declaration.getAsJsonArray("layers");
+        var drawn = new HashMap<Spot, Character>();
+        for (int layer = 0; layer < layers.size(); layer++) {
+            var rows = layers.get(layer).getAsJsonArray();
             for (int row = 0; row < rows.size(); row++) {
                 String letters = rows.get(row).getAsString();
                 for (int column = 0; column < letters.length(); column++) {
-                    char letter = letters.charAt(column);
-                    if (letter == ' ' || letter == key) {
-                        continue;
+                    if (letters.charAt(column) != ' ') {
+                        drawn.put(new Spot(layer, row, column), letters.charAt(column));
                     }
-                    var pos = core.offset(inWorld(keyRow - row, y - keyLayer, keyColumn - column, facing));
-                    placed.put(pos, part(legend.get(String.valueOf(letter)).getAsString()));
                 }
             }
         }
-        return placed;
+        return drawn;
     }
 
     private static Part part(String block) {
