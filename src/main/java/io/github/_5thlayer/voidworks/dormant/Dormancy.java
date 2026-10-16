@@ -148,10 +148,10 @@ public final class Dormancy {
     }
 
     private void soakFromNeighbours(ServerLevel level) {
-        credit(TouchingMotes.soak(level, machine.getBlockPos(), parts(), cost() - paid));
+        addPaid(TouchingMotes.soak(level, machine.getBlockPos(), parts(), cost() - paid));
     }
 
-    private void credit(long released) {
+    private void addPaid(long released) {
         if (released > 0) {
             paid += released;
             machine.setChanged();
@@ -172,7 +172,7 @@ public final class Dormancy {
             return 0;
         }
         long released = TouchingMotes.payInto(level, motes, from, machine.getBlockPos(), owed);
-        credit(released);
+        addPaid(released);
         return released;
     }
 

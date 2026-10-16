@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import net.minecraft.network.chat.Component;
@@ -29,7 +31,7 @@ final class ZoneUpgrades {
 
     private static final String KEY = "zone_upgrades";
     private static final String LEVELS_KEY = "levels";
-    private static final String STEP_KEY = "step";
+    private static final String SOAKING_KEY = "soaking";
     private static final String PRICE_KEY = "price";
     private static final String PAID_KEY = "paid";
 
@@ -47,10 +49,20 @@ final class ZoneUpgrades {
     /**
      * The level it has committed to and is soaking.
      *
-     * @param step the positions it adds to the Zone once paid
-     * @param paid the void energy soaked so far, which may pass the price by part of a mote
+     * @param upgrade its terms when it was committed, which raise the Zone once it is paid
+     * @param paid    the void energy soaked so far, which may pass the price by part of a mote
      */
-    private record Soaking(int step, long price, long paid) {
+    private record Soaking(ZoneUpgrade upgrade, long price, long paid) {
+
+        private static final Codec<Soaking> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ZoneUpgrade.CODEC.fieldOf("upgrade").forGetter(Soaking::upgrade),
+                Codec.LONG.fieldOf(PRICE_KEY).forGetter(Soaking::price),
+                Codec.LONG.fieldOf(PAID_KEY).forGetter(Soaking::paid)
+        ).apply(instance, Soaking::new));
+
+        DisplacerBlockEntity.Payment payment() {
+            return new DisplacerBlockEntity.Payment(Math.min(paid, price), price);
+        }
     }
 
     /** @return how many levels it has bought */
@@ -60,9 +72,7 @@ final class ZoneUpgrades {
 
     /** @return what the level it is soaking has paid of its price, or empty while none is */
     Optional<DisplacerBlockEntity.Payment> payment() {
-        return soaking == null
-                ? Optional.empty()
-                : Optional.of(new DisplacerBlockEntity.Payment(Math.min(soaking.paid(), soaking.price()), soaking.price()));
+        return soaking == null ? Optional.empty() : Optional.of(soaking.payment());
     }
 
     /**
@@ -84,7 +94,7 @@ final class ZoneUpgrades {
                 return Component.translatable("voidworks.displacer.upgrade.cancelled");
             }
             confirmation.arm(player.getUUID(), Confirmation.Offer.CANCEL, now);
-            var payment = payment().orElseThrow();
+            var payment = soaking.payment();
             return Component.translatable("voidworks.displacer.upgrade.cancel", payment.paid(), payment.price());
         }
         var upgrade = ZoneUpgrade.of(displacer.getBlockState());
@@ -104,7 +114,7 @@ final class ZoneUpgrades {
             return Component.translatable("voidworks.displacer.upgrade.unaffordable", zone, to, price, worth);
         }
         if (confirmed) {
-            soaking = new Soaking(upgrade.get().step(), price, 0);
+            soaking = new Soaking(upgrade.get(), price, 0);
             sinceSoak = 0;
             displacer.setChanged();
             return Component.translatable("voidworks.displacer.upgrade.committed", zone, to, price);
@@ -127,10 +137,15 @@ final class ZoneUpgrades {
      * Soaks what it can of the soaking level's price from the stores touching the Displacer, once
      * every soak interval. Called each server tick while the Displacer is awake.
      *
-     * @return the step the Zone grows by, once the level is paid and bought; empty until then, or while none soaks
+     * @param zone the Displacer's Zone now
+     * @return its Zone raised by the level, once the level is paid and bought; empty until then, or while none soaks
      */
-    OptionalInt soak(ServerLevel level) {
-        if (soaking == null || ++sinceSoak < VoidworksConfig.soakInterval() && soaking.paid() < soaking.price()) {
+    OptionalInt soak(ServerLevel level, int zone) {
+        if (soaking == null) {
+            return OptionalInt.empty();
+        }
+        sinceSoak++;
+        if (sinceSoak < VoidworksConfig.soakInterval() && soaking.paid() < soaking.price()) {
             return OptionalInt.empty();
         }
         sinceSoak = 0;
@@ -138,33 +153,28 @@ final class ZoneUpgrades {
         if (owed > 0) {
             long soaked = TouchingMotes.soak(level, displacer.getBlockPos(), Set.of(), owed);
             if (soaked > 0) {
-                soaking = new Soaking(soaking.step(), soaking.price(), soaking.paid() + soaked);
+                soaking = new Soaking(soaking.upgrade(), soaking.price(), soaking.paid() + soaked);
                 displacer.setChanged();
             }
         }
         if (soaking.paid() < soaking.price()) {
             return OptionalInt.empty();
         }
-        int bought = soaking.step();
+        int raised = soaking.upgrade().raise(zone);
         levels++;
         cancel();
-        return OptionalInt.of(bought);
+        return OptionalInt.of(raised);
     }
 
     void save(ValueOutput output) {
         var child = output.child(KEY);
         child.putInt(LEVELS_KEY, levels);
-        if (soaking != null) {
-            child.putInt(STEP_KEY, soaking.step());
-            child.putLong(PRICE_KEY, soaking.price());
-            child.putLong(PAID_KEY, soaking.paid());
-        }
+        child.storeNullable(SOAKING_KEY, Soaking.CODEC, soaking);
     }
 
     void load(ValueInput input) {
         var child = input.childOrEmpty(KEY);
         levels = child.getIntOr(LEVELS_KEY, 0);
-        int step = child.getIntOr(STEP_KEY, 0);
-        soaking = step == 0 ? null : new Soaking(step, child.getLongOr(PRICE_KEY, 0), child.getLongOr(PAID_KEY, 0));
+        soaking = child.read(SOAKING_KEY, Soaking.CODEC).orElse(null);
     }
 }

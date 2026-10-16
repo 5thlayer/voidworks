@@ -191,7 +191,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         if (!ready(level)) {
             return;
         }
-        upgrades.soak(level).ifPresent(step -> upgraded(level, step));
+        upgrades.soak(level, zoneOrConfig()).ifPresent(raised -> upgraded(level, raised));
         if (++sinceHarvest < VoidworksConfig.harvestInterval()) {
             return;
         }
@@ -276,7 +276,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      *         {@link io.github._5thlayer.voidworks.dormant.Dormancy}'s.
      */
     public Optional<Stall> stall(ServerLevel level) {
-        if (zoneSpent() && upgrades.payment().isPresent() && frontierLoaded(level) && next(level).isPresent()) {
+        if (zoneSpent() && upgrades.payment().isPresent() && reachable(level)) {
             return Optional.of(Stall.UPGRADE_UNPAID);
         }
         if (spent(level)) {
@@ -345,6 +345,11 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
     /** @return whether it becomes Voidstone once its output is empty: its Zone spent or nothing left in reach, its frontier loaded */
     private boolean spent(ServerLevel level) {
         return !grown.isEmpty() && frontierLoaded(level) && (zoneSpent() || next(level).isEmpty());
+    }
+
+    /** @return whether it can still reach something to harvest, as far as it knows: its frontier loaded */
+    private boolean reachable(ServerLevel level) {
+        return frontierLoaded(level) && next(level).isPresent();
     }
 
     private boolean zoneSpent() {
@@ -438,7 +443,7 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
      * @return what the player is told, above the hotbar
      */
     public Component sneakUse(ServerLevel level, Player player) {
-        return upgrades.sneakUse(level, player, zoneOrConfig(), frontierLoaded(level) && next(level).isPresent());
+        return upgrades.sneakUse(level, player, zoneOrConfig(), reachable(level));
     }
 
     /** Drops any quote waiting on a confirmation, as any use but a sneak-use does. */
@@ -446,9 +451,10 @@ public abstract class DisplacerBlockEntity extends BlockEntity {
         upgrades.lapse();
     }
 
-    /** Its Zone upgrade paid, its Zone grows by {@code step}, and the players near it hear and are told so. */
-    private void upgraded(ServerLevel level, int step) {
-        setZone(ZoneUpgrade.raise(zoneOrConfig(), step));
+    /** Its Zone upgrade paid, its Zone grows to {@code raised}, and the players near it hear and are told so. */
+    private void upgraded(ServerLevel level, int raised) {
+        int step = raised - zoneOrConfig();
+        setZone(raised);
         var message = Component.translatable("voidworks.displacer.upgrade.done", step, zone);
         for (var player : level.players()) {
             if (player.blockPosition().closerThan(worldPosition, UPGRADE_TOLD_WITHIN)) {

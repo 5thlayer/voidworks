@@ -60,7 +60,7 @@ final class ZoneUpgradeTests {
         tests.test("a_zone_upgrade_paid_in_part_keeps_its_payment_across_a_reload_and_cancelled_loses_it", 2 * TICKS, ZoneUpgradeTests::paidInPart);
         tests.test("a_zone_upgrade_is_not_offered_by_a_dormant_end_displacer", 1, ZoneUpgradeTests::notWhileDormant);
         tests.test("a_zone_upgrade_confirmed_once_its_network_can_no_longer_afford_it_takes_nothing", 1, ZoneUpgradeTests::unaffordableAtTheConfirm);
-        tests.test("a_zone_upgrade_is_refused_to_a_displacer_that_can_reach_nothing", 1, ZoneUpgradeTests::refusedWithNothingInReach);
+        tests.test("a_zone_upgrade_is_refused_to_a_displacer_that_can_reach_nothing_more", TICKS, ZoneUpgradeTests::refusedWithNothingInReach);
         tests.test("a_zone_upgrade_soaking_lets_it_harvest_and_is_spent_when_nothing_is_left_in_reach", 2 * TICKS, ZoneUpgradeTests::lostWhenNothingInReach);
         tests.test("a_zone_upgrade_is_bought_by_an_awake_end_displacer", 1, ZoneUpgradeTests::boughtInTheEnd);
     }
@@ -203,6 +203,7 @@ final class ZoneUpgradeTests {
                     helper.assertTrue(reloaded.upgradeLevels() == 1, "reloaded, it has bought " + reloaded.upgradeLevels() + " levels, not 1");
                     helper.assertTrue(reloaded.upgradePayment().equals(Optional.of(new DisplacerBlockEntity.Payment(0, second))),
                             "reloaded, it soaks " + reloaded.upgradePayment() + ", not the second level's " + second);
+                    // Reloaded the tick it committed, before its first soak: nothing paid yet.
                     var lines = DisplacerReport.of(reloaded, helper.getLevel()).lines();
                     var upgrades = Component.translatable("voidworks.jade.displacer.upgrades", 1, second);
                     var upgrading = Component.translatable("voidworks.jade.displacer.upgrading", 0L, second);
@@ -280,30 +281,44 @@ final class ZoneUpgradeTests {
         helper.succeed();
     }
 
-    /** In the air with nothing to harvest, sneak-used before its first tick pops it off: it is told nothing is in reach. */
+    /**
+     * Up in the air over one stone block, harvested, its stone still in its output: it waits to
+     * become Voidstone, and is told nothing is left in reach.
+     */
     private static void refusedWithNothingInReach(GameTestHelper helper) {
-        var high = DISPLACER.above(3);
-        helper.setBlock(high, VoidworksBlocks.OVERWORLD_DISPLACER.get());
+        var high = overOneStone(helper);
         var displacer = helper.getBlockEntity(high, OverworldDisplacerBlockEntity.class);
-        var told = displacer.sneakUse(helper.getLevel(), sneaking(helper));
-        var refused = Component.translatable("voidworks.displacer.upgrade.unreachable");
-        helper.assertTrue(told.equals(refused), "it told the player " + told + ", not " + refused);
-        helper.succeed();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(displacer.grown().size() == 1, "it has not harvested the stone below it"))
+                .thenExecute(() -> {
+                    helper.assertBlockPresent(VoidworksBlocks.OVERWORLD_DISPLACER.get(), high);
+                    var told = displacer.sneakUse(helper.getLevel(), sneaking(helper));
+                    var refused = Component.translatable("voidworks.displacer.upgrade.unreachable");
+                    helper.assertTrue(told.equals(refused), "it told the player " + told + ", not " + refused);
+                })
+                .thenSucceed();
     }
 
-    /**
-     * Up in the air over one stone block, its network's motes two and three Voidstone off so they
-     * soak in slowly: it harvests the stone while the upgrade soaks, then, with nothing left in
-     * reach and its output emptied, becomes Voidstone all the same.
-     */
-    private static void lostWhenNothingInReach(GameTestHelper helper) {
+    /** A Displacer of Zone {@link #ZONE} fed one copper block, up in the air over one stone block, so it has one harvest in reach. */
+    private static BlockPos overOneStone(GameTestHelper helper) {
         var high = DISPLACER.above(2);
-        var stone = high.below();
-        helper.setBlock(stone, Blocks.STONE);
+        helper.setBlock(high.below(), Blocks.STONE);
         helper.setBlock(high, VoidworksBlocks.OVERWORLD_DISPLACER.get());
         var displacer = helper.getBlockEntity(high, OverworldDisplacerBlockEntity.class);
         displacer.setZone(ZONE);
         displacer.inventory().set(DisplacerBlockEntity.INPUT, ItemResource.of(Items.COPPER_BLOCK), 1);
+        return high;
+    }
+
+    /**
+     * Up in the air over one stone block, its network's motes two and three Voidstone off, taken
+     * away once it has committed so the upgrade can never be paid: it harvests the stone while the
+     * upgrade soaks, then, with nothing left in reach and its output emptied, becomes Voidstone all
+     * the same, the level unbought.
+     */
+    private static void lostWhenNothingInReach(GameTestHelper helper) {
+        var high = overOneStone(helper);
+        var displacer = helper.getBlockEntity(high, OverworldDisplacerBlockEntity.class);
         for (int i = 1; i <= 3; i++) {
             helper.setBlock(high.east(i), VoidworksBlocks.VOIDSTONE.get());
         }
@@ -315,6 +330,8 @@ final class ZoneUpgradeTests {
         helper.useBlock(high, player);
         helper.useBlock(high, player);
         helper.assertTrue(displacer.upgradePayment().isPresent(), "the second sneak-use did not commit to the upgrade");
+        helper.setBlock(high.east(3), Blocks.AIR);
+        helper.setBlock(high.east(2), Blocks.AIR);
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(displacer.grown().size() == 1, "it has not harvested the stone below it"))
                 .thenExecute(() -> {
@@ -326,6 +343,7 @@ final class ZoneUpgradeTests {
                     }
                 })
                 .thenWaitUntil(() -> helper.assertBlockPresent(VoidworksBlocks.VOIDSTONE.get(), high))
+                .thenExecute(() -> helper.assertTrue(displacer.upgradeLevels() == 0, "it bought the level before it became Voidstone"))
                 .thenSucceed();
     }
 
