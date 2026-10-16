@@ -97,6 +97,27 @@ class HatcheryTest {
     }
 
     @Test
+    void aDragonThatDiesNoLongerCountsTowardItsOwnersNextEgg() {
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
+        hatchery.hatch(egg(0));
+        hatchery.startSoaking(egg(1), ALICE, PRICE);
+        hatchery.hatch(egg(1));
+        hatchery.die(ALICE);
+        assertEquals(1, hatchery.dragons(ALICE));
+        assertEquals(2 * FIRST, hatchery.startSoaking(egg(2), ALICE, PRICE));
+        assertTrue(hatchery.anyHatched(), "a dragon that died was still hatched");
+        var read = Hatchery.CODEC.parse(JsonOps.INSTANCE, Hatchery.CODEC.encodeStart(JsonOps.INSTANCE, hatchery).getOrThrow()).getOrThrow();
+        assertEquals(2, read.dragons(ALICE));
+    }
+
+    @Test
+    void aDeathNeverCountsBelowNone() {
+        hatchery.die(ALICE);
+        assertEquals(0, hatchery.dragons(ALICE));
+        assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE, PRICE));
+    }
+
+    @Test
     void untilAnyoneHatchesADragonNoneHasBeenHatched() {
         assertFalse(hatchery.anyHatched());
         hatchery.startSoaking(egg(0), ALICE, PRICE);

@@ -50,11 +50,14 @@ class HarmTest {
 
     @Test
     void aHurtDragonFliesMoreSlowlyDownToAQuarterOfItsSpeed() {
-        assertEquals(100, ofHealth(VoidDragonRecord.FULL_HEALTH).speed());
-        assertEquals(50, ofHealth(50).speed());
-        assertEquals(25, ofHealth(25).speed());
-        assertEquals(25, ofHealth(1).speed());
+        assertEquals(100, YOUNG.speed(ofHealth(VoidDragonRecord.FULL_HEALTH)));
+        assertEquals(50, YOUNG.speed(ofHealth(50)));
+        assertEquals(25, YOUNG.speed(ofHealth(25)));
+        assertEquals(25, YOUNG.speed(ofHealth(1)));
     }
+
+    /** A young dragon's speed is its health's share alone. */
+    private static final LifeStages YOUNG = new LifeStages(1_000, LifeStages.DEFAULT_SPEEDS, LifeStages.DEFAULT_LOADS);
 
     private static VoidDragonRecord ofHealth(int health) {
         return VoidDragonRecord.grown(UUID.randomUUID(), new Place(OVERWORLD, BlockPos.ZERO)).weakened(VoidDragonRecord.FULL_HEALTH - health);

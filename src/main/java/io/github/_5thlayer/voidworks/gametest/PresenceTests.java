@@ -268,7 +268,7 @@ final class PresenceTests {
                     var dragons = SavedVoidDragons.of(server);
                     var grown = dragons.add(owner.getUUID(), under);
                     dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(),
-                            VoidworksConfig.dragonEggMotes() - 1));
+                            VoidworksConfig.dragonEggMotes() - 1, VoidworksConfig.lifeStageMotes()));
                     dragonId.set(grown.id());
                 })
                 .thenWaitUntil(() -> {

@@ -61,11 +61,18 @@ public final class DragonRouting {
         });
     }
 
-    /** One step of every dragon's routing, at the Overworld's game time now; an owner calling at a Well a dragon dives to is told it is coming. */
+    /**
+     * One step of every dragon's routing, at the Overworld's game time now; an owner calling at a Well a
+     * dragon dives to is told it is coming. A dragon that dies of old age no longer counts toward its
+     * owner's next egg, and its presence plays its death; nothing else tells its owner.
+     */
     public static void step(MinecraftServer server) {
         var dragons = SavedVoidDragons.of(server);
         var owners = new ServerOwners(server);
-        routing(server, owners).step(dragons, server.overworld().getGameTime());
+        for (var died : routing(server, owners).step(dragons, server.overworld().getGameTime())) {
+            SavedHatchery.of(server).die(died.owner());
+            DragonPresences.die(server, died);
+        }
         for (var dragon : dragons.all()) {
             var coming = dragon.trip().filter(trip -> trip.leg() == Trip.Leg.TO_CALL).flatMap(Trip::added);
             if (coming.isPresent() && owners.calling(dragon.owner()).equals(coming)) {
@@ -107,7 +114,7 @@ public final class DragonRouting {
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
         return new Routing(new ServerWells(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(), VoidworksConfig.dragonStopTicks(),
-                VoidworksConfig.dragonEggMotes());
+                VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
     }
 
     /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */

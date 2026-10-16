@@ -12,6 +12,7 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
+import io.github._5thlayer.voidworks.dragon.LifeStage;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
@@ -68,12 +69,12 @@ final class DragonReportTests {
                 .thenExecute(() -> {
                     var report = report(helper, presence.get());
                     helper.assertTrue(report.equals(new DragonReport(DragonReport.Doing.RESTING, Optional.empty(), new TreeMap<>(),
-                            VoidDragonRecord.FULL_HEALTH, Optional.of("dragon-owner"))), "the resting dragon shows " + report);
+                            VoidDragonRecord.FULL_HEALTH, LifeStage.YOUNG, Optional.of("dragon-owner"))), "the resting dragon shows " + report);
                     helper.assertTrue(DragonReport.of(presence.get(), server).isPresent(), "a presence shows nothing");
                     var load = new TreeMap<Integer, Long>();
                     load.put(GRADE, 30L);
                     var d = dragon.get();
-                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), 80, d.rest(), load, d.trip(), d.sinceEgg()));
+                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), 80, d.rest(), load, d.trip(), d.sinceEgg(), d.cargo()));
                     var changed = report(helper, presence.get());
                     helper.assertTrue(changed.carried() == 30 && changed.load().equals(load) && changed.health() == 80,
                             "loaded and weakened, the dragon shows " + changed);
@@ -81,7 +82,7 @@ final class DragonReportTests {
                     SavedVoidWells.of(server).put(new VoidWells.Entry(there, owner, FillTarget.QUARTER, Optional.of(Component.literal("Smeltery"))));
                     var trip = new Trip(Optional.empty(), there, 30, false, Trip.Leg.LOADING, Long.MAX_VALUE, 0, 0);
                     var now = SavedVoidDragons.of(server).get(d.id()).orElseThrow();
-                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), now.health(), d.rest(), now.load(), Optional.of(trip), 0));
+                    SavedVoidDragons.of(server).update(new VoidDragonRecord(d.id(), d.owner(), now.health(), d.rest(), now.load(), Optional.of(trip), 0, 0));
                     var bound = report(helper, presence.get());
                     helper.assertTrue(bound.doing() == DragonReport.Doing.LOADING && bound.bound().equals(Optional.of(Component.literal("Smeltery"))),
                             "loading, bound for the named Well, the dragon shows " + bound);

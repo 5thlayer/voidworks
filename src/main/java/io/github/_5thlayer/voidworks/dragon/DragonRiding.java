@@ -188,6 +188,12 @@ public final class DragonRiding {
      * at {@code place}, in its dimension, and is gone.
      */
     static void setDown(MinecraftServer server, VoidDragon presence, Place place) {
+        setRidersDown(server, presence, place);
+        presence.discard();
+    }
+
+    /** The {@code presence} sets its riders down on the rim of the Well at {@code place}, in its dimension, and stays. */
+    static void setRidersDown(MinecraftServer server, VoidDragon presence, Place place) {
         presence.release();
         var level = place.level(server);
         for (var rider : List.copyOf(presence.getPassengers())) {
@@ -199,7 +205,6 @@ public final class DragonRiding {
                 rider.resetFallDistance();
             }
         }
-        presence.discard();
     }
 
     /**

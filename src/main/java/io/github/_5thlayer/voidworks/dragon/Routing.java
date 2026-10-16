@@ -39,7 +39,9 @@ import java.util.function.Predicate;
  * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
  * dives from a Well it heals from that Well's motes, its network's, as far as they go.
  *
- * <p>Each time it has carried a set number of motes since its last egg, counted as it unloads them, it
+ * <p>It ages by the motes it unloads ({@link LifeStages}), which multiplies its speed and load, and
+ * dies at a stop once it has outlived its old stage. Each time it has carried a set number of motes
+ * as an adult since its last egg, counted as it unloads them, it
  * owes a Drained Dragon Egg, which it lays at the next Well it stops at, to load or unload, whose chunk
  * is loaded, with every other egg it owes; what it carried beyond them counts toward the next.
  *
@@ -63,13 +65,15 @@ public final class Routing {
     private final long load;
     private final int stopTicks;
     private final long eggMotes;
+    private final LifeStages stages;
 
     /**
      * @param load the most motes a dragon carries
      * @param stopTicks how long a dragon stops at a Well to load or unload
-     * @param eggMotes how many motes a dragon carries for each egg it lays
+     * @param eggMotes how many motes a dragon carries as an adult for each egg it lays
+     * @param stages how it ages, which multiplies its speed and load
      */
-    public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes) {
+    public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes, LifeStages stages) {
         this.wells = wells;
         this.owners = owners;
         this.dive = dive;
@@ -77,14 +81,28 @@ public final class Routing {
         this.load = load;
         this.stopTicks = stopTicks;
         this.eggMotes = eggMotes;
+        this.stages = stages;
     }
 
-    /** Moves every dragon on to game time {@code now}: each leg that has ended leads to its next, and each dragon with nothing to do looks for a trip. */
-    public void step(VoidDragons dragons, long now) {
+    /**
+     * Moves every dragon on to game time {@code now}: each leg that has ended leads to its next, and each
+     * dragon with nothing to do looks for a trip. A dragon that has outlived its old stage, having just
+     * unloaded at a stop and laid what eggs it owes, dies there: its record is gone.
+     *
+     * @return the dragons that died, as they were when they did
+     */
+    public List<VoidDragonRecord> step(VoidDragons dragons, long now) {
+        var died = new ArrayList<VoidDragonRecord>();
         for (var dragon : List.copyOf(dragons.all())) {
             for (int legs = 0; legs < MOST_LEGS; legs++) {
                 var next = next(dragons, dragon, now);
                 if (next.equals(dragon)) {
+                    break;
+                }
+                // Its cargo grows only as it unloads, so it outlives its old stage only at a stop.
+                if (stages.outlived(next.cargo())) {
+                    dragons.remove(next.id());
+                    died.add(next);
                     break;
                 }
                 // Each change is in the records at once, so the next dragon's plan counts its claim.
@@ -92,6 +110,7 @@ public final class Routing {
                 dragon = next;
             }
         }
+        return died;
     }
 
     private VoidDragonRecord next(VoidDragons dragons, VoidDragonRecord dragon, long now) {
@@ -175,7 +194,7 @@ public final class Routing {
         var stopped = dragon.resting(place);
         var after = stop(dragon.owner(), place).map(stop -> putInto(stopped, place, stop, need(dragons, stop, dragon.id()), false)).orElse(stopped);
         long dropped = stopped.carried() - after.carried();
-        var laid = dropped > 0 ? laying(after.unloaded(dropped), place) : after;
+        var laid = dropped > 0 ? laying(unloaded(after, dropped), place) : after;
         return laid.on(Optional.of(trip.claiming(Math.min(trip.claimed(), laid.carried())).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
     }
 
@@ -191,7 +210,7 @@ public final class Routing {
                     .filter(stop -> deliverable(dragons, stop, destination, dragon.id()) > 0)
                     .max(Comparator.comparingDouble(Stop::fill));
             if (source.isPresent()) {
-                long claimed = Math.min(load, Math.min(need(dragons, destination, dragon.id()), deliverable(dragons, source.get(), destination, dragon.id())));
+                long claimed = Math.min(loadOf(dragon), Math.min(need(dragons, destination, dragon.id()), deliverable(dragons, source.get(), destination, dragon.id())));
                 var from = source.get().nearest(dragon.rest(), dive);
                 return setOff(dragon, Trip.planned(Optional.of(from), destination.nearest(from, dive), claimed, false,
                         Trip.Leg.TO_SOURCE), now);
@@ -209,7 +228,7 @@ public final class Routing {
         if (from.isEmpty() || to.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        long most = Math.min(load, Math.min(need(dragons, to.get(), dragon.id()), deliverable(dragons, from.get(), to.get(), dragon.id())));
+        long most = Math.min(loadOf(dragon), Math.min(need(dragons, to.get(), dragon.id()), deliverable(dragons, from.get(), to.get(), dragon.id())));
         var loaded = new TreeMap<Integer, Long>();
         long left = most;
         for (var grade : from.get().motes().sequencedKeySet().reversed()) {
@@ -244,7 +263,7 @@ public final class Routing {
         if (put == 0) {
             return stopped.on(Optional.empty());
         }
-        return laying(after.unloaded(put), trip.destination()).on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
+        return laying(unloaded(after, put), trip.destination()).on(Optional.of(trip.claiming(0).then(Trip.Leg.UNLOADING, now + stopTicks)));
     }
 
     /**
@@ -268,6 +287,16 @@ public final class Routing {
             }
         }
         return dragon.carrying(left);
+    }
+
+    /** @return {@code dragon} having unloaded {@code motes}, which it has carried over its life, and as an adult toward its eggs */
+    private VoidDragonRecord unloaded(VoidDragonRecord dragon, long motes) {
+        return dragon.unloaded(motes, stages.towardEggs(dragon.cargo(), motes));
+    }
+
+    /** @return the most {@code dragon} loads now: the base load times its stage's factor */
+    private long loadOf(VoidDragonRecord dragon) {
+        return stages.load(load, dragon.cargo());
     }
 
     /**
@@ -317,7 +346,7 @@ public final class Routing {
     private VoidDragonRecord setOff(VoidDragonRecord dragon, Trip trip, long now) {
         var to = trip.divingTo().orElseThrow();
         var healed = to.equals(dragon.rest()) ? dragon : healed(dragon);
-        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, healed.speed())));
+        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, stages.speed(healed))));
     }
 
     /**
@@ -326,9 +355,9 @@ public final class Routing {
      *         it lost on the way
      */
     private VoidDragonRecord dived(VoidDragonRecord dragon, Trip trip, Place to, long now) {
-        long divedTo = trip.divedTo(now, dragon.speed());
+        long divedTo = trip.divedTo(now, stages.speed(dragon));
         var weakened = dragon.weakened(harm.weakening(dragon.rest().dimension(), to.dimension(), trip.countedTo(), divedTo));
-        return weakened.on(Optional.of(trip.covered(divedTo, dragon.speed(), weakened.speed())));
+        return weakened.on(Optional.of(trip.covered(divedTo, stages.speed(dragon), stages.speed(weakened))));
     }
 
     /**

@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks;
 
 import java.util.List;
 
+import io.github._5thlayer.voidworks.dragon.LifeStages;
 import io.github._5thlayer.voidworks.mutation.UnmakingYield;
 import io.github._5thlayer.voidworks.siphon.SiphonTier;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -47,6 +48,9 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGON_WEAKEN_TICKS;
     private static final ModConfigSpec.IntValue DRAGON_HEAL_MOTES;
     private static final ModConfigSpec.LongValue DRAGON_EGG_MOTES;
+    private static final ModConfigSpec.LongValue LIFE_STAGE_MOTES;
+    private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_SPEEDS;
+    private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_LOADS;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -152,6 +156,20 @@ public final class VoidworksConfig {
                 .comment("Motes a grown Void Dragon carries, counted as it unloads them at Void Wells, for each Drained Dragon Egg",
                         "it lays at a Well it stops at.")
                 .defineInRange("dragonEggMotes", 65_536L, 1L, Long.MAX_VALUE);
+        LIFE_STAGE_MOTES = builder
+                .comment("Motes a grown Void Dragon unloads at Void Wells over each of its four life stages, young, adult, senior",
+                        "and old; once its old stage runs out, it dies at that stop. Only an adult lays Drained Dragon Eggs.")
+                .defineInRange("lifeStageMotes", 524_288L, 1L, Long.MAX_VALUE);
+        LIFE_STAGE_SPEEDS = builder
+                .comment("What each life stage, young, adult, senior and old, multiplies a Void Dragon's speed by, stacked on its",
+                        "health's share. Four positive factors; any other list is taken as the defaults.")
+                .defineList("lifeStageSpeeds", LifeStages.DEFAULT_SPEEDS, () -> 1.0,
+                        value -> value instanceof Double factor && factor > 0);
+        LIFE_STAGE_LOADS = builder
+                .comment("What each life stage, young, adult, senior and old, multiplies a Void Dragon's load by. Four positive",
+                        "factors; any other list is taken as the defaults.")
+                .defineList("lifeStageLoads", LifeStages.DEFAULT_LOADS, () -> 1.0,
+                        value -> value instanceof Double factor && factor > 0);
         SPEC = builder.build();
     }
 
@@ -291,5 +309,15 @@ public final class VoidworksConfig {
     /** @return motes a Void Dragon carries for each Drained Dragon Egg it lays */
     public static long dragonEggMotes() {
         return DRAGON_EGG_MOTES.getAsLong();
+    }
+
+    /** @return motes a Void Dragon unloads over each of its life stages */
+    public static long lifeStageMotes() {
+        return LIFE_STAGE_MOTES.getAsLong();
+    }
+
+    /** @return how Void Dragons age, at the configured stage length and factors */
+    public static LifeStages lifeStages() {
+        return new LifeStages(lifeStageMotes(), List.copyOf(LIFE_STAGE_SPEEDS.get()), List.copyOf(LIFE_STAGE_LOADS.get()));
     }
 }
