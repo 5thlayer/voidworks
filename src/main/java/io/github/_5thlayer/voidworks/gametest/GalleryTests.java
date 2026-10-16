@@ -13,6 +13,9 @@ import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.VoidworksItems;
+import io.github._5thlayer.voidworks.siphon.SiphonMode;
+import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -30,8 +33,10 @@ import net.minecraft.gametest.framework.GameTestRunner;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -124,6 +129,11 @@ final class GalleryTests {
                             Map.entry(scene(9, 14, 1, -6), VoidworksBlocks.MUTATION_CHAMBER.get()),
                             Map.entry(scene(10, 14, 1, -6), VoidworksBlocks.UNMAKING_CHAMBER.get()),
                             Map.entry(scene(11, 14, 1, -6), VoidworksBlocks.VOID_CRUCIBLE.get())));
+                    var emptying = helper.getLevel().getBlockEntity(helper.absolutePos(ORIGIN.offset(scene(7, 14, 0, -2))));
+                    var siphon = emptying instanceof ChestBlockEntity chest ? chest.getItem(13) : ItemStack.EMPTY;
+                    helper.assertTrue(siphon.is(VoidworksItems.VOID_SIPHON.get()) && VoidSiphonItem.mode(siphon) == SiphonMode.EMPTY
+                                    && siphon.has(VoidworksItems.SIPHON_MOTES.get()),
+                            "the Emptying scene's chest holds " + siphon + ", not a charged Siphon set to empty");
                     for (int index : new int[] {2, 3}) {
                         var over = helper.absolutePos(ORIGIN.offset(scene(index, 14, 1, -2)));
                         var shown = helper.getLevel().getEntitiesOfClass(Display.ItemDisplay.class, new AABB(over));
