@@ -523,7 +523,7 @@ public final class VoidDragon extends PathfinderMob {
      */
     private void passOn(ServerLevel level) {
         if (showing == Showing.DIVING && carrying() && !inTheVoid() && getFirstPassenger() instanceof Entity rider && eyesOf(rider) < spot.emerges().getY()) {
-            entityData.set(DATA_IN_THE_VOID, true);
+            takeIntoTheVoid();
         }
         var way = Vec3.atBottomCenterOf(showing == Showing.DIVING ? spot.under() : spot.risen()).subtract(position());
         double speed = showing == Showing.DIVING ? DIVE_SPEED : EMERGE_SPEED;
@@ -534,7 +534,7 @@ public final class VoidDragon extends PathfinderMob {
         setDeltaMovement(Vec3.ZERO);
         if (showing == Showing.DIVING) {
             if (carrying() && isVehicle()) {
-                entityData.set(DATA_IN_THE_VOID, true);
+                takeIntoTheVoid();
                 setInvisible(true);
                 return;
             }
@@ -651,7 +651,12 @@ public final class VoidDragon extends PathfinderMob {
         return entityData.get(DATA_IN_THE_VOID);
     }
 
-    /** @return the height of {@code rider}'s eyes, seated as it is now, where they are set this tick, after it moves */
+    /** Its rider, down in the shaft, sees only the void from now. */
+    private void takeIntoTheVoid() {
+        entityData.set(DATA_IN_THE_VOID, true);
+    }
+
+    /** @return how high {@code rider}'s eyes are on its back, where it has moved to this tick, as vanilla seats a passenger */
     private double eyesOf(Entity rider) {
         return getPassengerRidingPosition(rider).y - rider.getVehicleAttachmentPoint(this).y + rider.getEyeHeight();
     }
