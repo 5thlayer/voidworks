@@ -31,6 +31,9 @@ public interface Wells {
      */
     long put(Place place, int grade, long count);
 
+    /** @return whether the Well at {@code place} and the air over its shaft are loaded and ticking, so an old dragon may die there and be seen to */
+    boolean loaded(Place place);
+
     /**
      * Lays a Drained Dragon Egg in the shaft of the Well at {@code place}, as an item, while its chunk is
      * loaded; a dragon owes an egg it could not lay to its next stop.

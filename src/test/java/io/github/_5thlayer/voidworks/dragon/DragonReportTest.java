@@ -32,6 +32,7 @@ class DragonReportTest {
     private static final Place HERE = new Place(OVERWORLD, new BlockPos(0, 64, 0));
     private static final Place THERE = new Place(OVERWORLD, new BlockPos(640, 64, 0));
     private static final Place CALLED = new Place(OVERWORLD, new BlockPos(0, 64, 640));
+    private static final LifeStages STAGES = new LifeStages(1_000, LifeStages.DEFAULTS);
     private static final Component THERE_NAME = Component.literal("Smeltery");
 
     @Test
@@ -41,11 +42,12 @@ class DragonReportTest {
         assertEquals(DragonReport.Doing.RESTING, report.doing());
         assertEquals(Optional.empty(), report.bound());
         var lines = report.lines();
-        assertEquals(4, lines.size());
+        assertEquals(5, lines.size());
         assertLine(lines.get(0), "voidworks.jade.dragon.resting");
         assertLine(lines.get(1), "voidworks.jade.dragon.carrying_nothing");
         assertLine(lines.get(2), "voidworks.jade.dragon.health", 100, 100);
-        assertLine(lines.get(3), "voidworks.jade.dragon.owner", "Alex");
+        assertLine(lines.get(3), "voidworks.jade.dragon.young");
+        assertLine(lines.get(4), "voidworks.jade.dragon.owner", "Alex");
     }
 
     @Test
@@ -54,7 +56,7 @@ class DragonReportTest {
 
         assertEquals(25, report.carried());
         var lines = report.lines();
-        assertEquals(7, lines.size());
+        assertEquals(8, lines.size());
         assertLine(lines.get(0), "voidworks.jade.dragon.loading");
         assertLine(lines.get(1), "voidworks.jade.dragon.bound", THERE_NAME);
         assertLine(lines.get(2), "voidworks.jade.dragon.grade", 3, 20L);
@@ -63,7 +65,18 @@ class DragonReportTest {
         assertEquals(TextColor.fromRgb(GradeColor.of(7)), lines.get(3).getStyle().getColor());
         assertLine(lines.get(4), "voidworks.jade.dragon.carrying", 25L);
         assertLine(lines.get(5), "voidworks.jade.dragon.health", 63, 100);
-        assertLine(lines.get(6), "voidworks.jade.dragon.owner", "Alex");
+        assertLine(lines.get(6), "voidworks.jade.dragon.young");
+        assertLine(lines.get(7), "voidworks.jade.dragon.owner", "Alex");
+    }
+
+    @Test
+    void itShowsItsLifeStage() {
+        var dragon = dragon(Optional.empty(), new TreeMap<>(), VoidDragonRecord.FULL_HEALTH);
+        var old = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 0, 3_500);
+        var report = report(old, Optional.empty());
+
+        assertEquals(LifeStage.OLD, report.stage());
+        assertLine(report.lines().get(3), "voidworks.jade.dragon.old");
     }
 
     @Test
@@ -108,11 +121,11 @@ class DragonReportTest {
     }
 
     private static DragonReport report(VoidDragonRecord dragon, Optional<String> owner) {
-        return DragonReport.of(dragon, place -> place.equals(THERE) ? THERE_NAME : Component.literal("elsewhere"), owner);
+        return DragonReport.of(dragon, place -> place.equals(THERE) ? THERE_NAME : Component.literal("elsewhere"), owner, STAGES);
     }
 
     private static VoidDragonRecord dragon(Optional<Trip> trip, SortedMap<Integer, Long> load, int health) {
-        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), health, HERE, load, trip, 0);
+        return new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), health, HERE, load, trip, 0, 0);
     }
 
     private static Optional<Trip> trip(Trip.Leg leg) {

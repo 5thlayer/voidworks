@@ -110,6 +110,12 @@ public final class VoidDragon extends PathfinderMob {
     /** How much bigger a presence is than a Dragonling: half the Ender Dragon's size to a fifth. */
     public static final float GROWN_SCALE = 2.5F;
 
+    /** Ticks its presence takes to die of old age, rising over its Well in the Ender Dragon's death, shortened. */
+    public static final int DEATH_TICKS = 100;
+
+    /** How far it rises each tick as it dies, as the Ender Dragon does. */
+    private static final double DEATH_RISE = 0.1;
+
     /**
      * Where a presence's rider sits, in blocks from where it stands: on top of its body, where its wings
      * meet. The Ender Dragon's model, which its flapping lifts 2 blocks, has its body's top about 3.2
@@ -151,9 +157,16 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Float> DATA_PERCH_YAW = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.FLOAT);
     /** Where a presence lands and sits, while it does: synced, for how far its model's neck has to settle. */
     private static final EntityDataAccessor<Optional<BlockPos>> DATA_SEAT = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    /** Its dragon's life stage, by which a grown presence is sized. */
+    private static final EntityDataAccessor<Byte> DATA_STAGE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
+    /** Whether it plays its dragon's death of old age. */
+    private static final EntityDataAccessor<Boolean> DATA_DYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
 
     private static final String OWNER_KEY = "owner";
     private static final String TICKS_TO_GROW_KEY = "ticks_to_grow";
+
+    /** Ticks it has been dying, on either side, counted from when it began. */
+    private int deathTicks;
 
     /** Where its body has been, for its model's neck and tail. */
     public final DragonFlightHistory flightHistory = new DragonFlightHistory();
@@ -236,6 +249,8 @@ public final class VoidDragon extends PathfinderMob {
         entityData.define(DATA_PERCH, (byte) Perch.FLYING.ordinal());
         entityData.define(DATA_PERCH_YAW, 0.0F);
         entityData.define(DATA_SEAT, Optional.empty());
+        entityData.define(DATA_STAGE, (byte) LifeStage.YOUNG.ordinal());
+        entityData.define(DATA_DYING, false);
     }
 
     @Override
@@ -261,7 +276,8 @@ public final class VoidDragon extends PathfinderMob {
      *
      * @param showing what the record shows, never {@link Showing#DIVING}
      */
-    void showPresenceOf(VoidDragonRecord record, Showing showing, DragonPresences.Spot spot) {
+    void showPresenceOf(VoidDragonRecord record, Showing showing, DragonPresences.Spot spot, LifeStage stage) {
+        showStage(stage);
         dragon = record.id();
         owner = record.owner();
         shownAt = record.rest();
@@ -520,6 +536,66 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
+    /** @return how much a grown presence of a dragon at {@code stage} is scaled from {@link #GROWN_SCALE} */
+    public static float size(LifeStage stage) {
+        return switch (stage) {
+            case YOUNG -> 0.8F;
+            case ADULT -> 1.0F;
+            case SENIOR -> 1.1F;
+            case OLD -> 1.2F;
+        };
+    }
+
+    /** @return its dragon's life stage, by which it is sized */
+    public LifeStage stage() {
+        return LifeStage.values()[entityData.get(DATA_STAGE)];
+    }
+
+    /** It shows its dragon at {@code stage}. */
+    void showStage(LifeStage stage) {
+        if (stage() != stage) {
+            entityData.set(DATA_STAGE, (byte) stage.ordinal());
+        }
+    }
+
+    /** @return whether it plays its dragon's death of old age */
+    public boolean dying() {
+        return entityData.get(DATA_DYING);
+    }
+
+    /** @return how many ticks it has been dying, {@code partialTicks} on; 0 while it is not */
+    public float deathTime(float partialTicks) {
+        return dying() ? deathTicks + partialTicks : 0.0F;
+    }
+
+    /**
+     * Its dragon has died of old age: it holds still over its Well, rises in the Ender Dragon's death,
+     * beams and sound, and is gone, leaving nothing.
+     */
+    void dieOfOldAge() {
+        entityData.set(DATA_DYING, true);
+        ejectPassengers();
+        leaveTheSeat();
+        noPhysics = true;
+        getNavigation().stop();
+        setDeltaMovement(Vec3.ZERO);
+        goalSelector.disableControlFlag(Goal.Flag.MOVE);
+        goalSelector.disableControlFlag(Goal.Flag.LOOK);
+        if (level() instanceof ServerLevel level) {
+            level.playSound(null, blockPosition(), SoundEvents.ENDER_DRAGON_DEATH, SoundSource.NEUTRAL, 5.0F, 1.0F);
+        }
+    }
+
+    /** A tick of its death: it rises, and at the end is gone. */
+    private void dieOn() {
+        deathTicks++;
+        setDeltaMovement(Vec3.ZERO);
+        setPos(getX(), getY() + DEATH_RISE, getZ());
+        if (deathTicks >= DEATH_TICKS && level() instanceof ServerLevel) {
+            discard();
+        }
+    }
+
     /** It dives now, carrying its rider, whom it holds through the dive. */
     void carry() {
         entityData.set(DATA_CARRYING, true);
@@ -603,6 +679,10 @@ public final class VoidDragon extends PathfinderMob {
         oFlapTime = flapTime;
         flapTime = flap(flapTime, perch() == Perch.SITTING);
         recordFlight();
+        if (dying()) {
+            dieOn();
+            return;
+        }
         if (level() instanceof ServerLevel level) {
             if (carrying()) {
                 getPassengers().forEach(DragonRiding::hide);
@@ -659,6 +739,9 @@ public final class VoidDragon extends PathfinderMob {
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
+        if (dying()) {
+            return InteractionResult.PASS;
+        }
         if (grown() && !player.isSecondaryUseActive()) {
             // Answered on the client, which does not know its owner, as feeding is.
             if (!(level() instanceof ServerLevel level)) {
@@ -806,13 +889,13 @@ public final class VoidDragon extends PathfinderMob {
     @Override
     protected EntityDimensions getDefaultDimensions(Pose pose) {
         var dimensions = super.getDefaultDimensions(pose);
-        return grown() ? dimensions.scale(GROWN_SCALE) : dimensions;
+        return grown() ? dimensions.scale(GROWN_SCALE * size(stage())) : dimensions;
     }
 
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
         super.onSyncedDataUpdated(accessor);
-        if (DATA_GROWN.equals(accessor)) {
+        if (DATA_GROWN.equals(accessor) || DATA_STAGE.equals(accessor)) {
             refreshDimensions();
         }
     }

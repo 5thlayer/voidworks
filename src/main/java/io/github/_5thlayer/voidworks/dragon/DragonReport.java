@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 
+import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -26,7 +27,7 @@ import net.minecraft.server.players.NameAndId;
  * What a Void Dragon's presence shows a player looking at it, in Jade, read from its record, which
  * is server state (ADR 0005), as a Well's {@code WellReport} is from its core: what it is doing, the
  * Well it is bound for, the motes it carries by grade and in total, its health of
- * {@link VoidDragonRecord#FULL_HEALTH}, and its owner. Anyone looking sees it all. Read on the
+ * {@link VoidDragonRecord#FULL_HEALTH}, its life stage, and its owner. Anyone looking sees it all. Read on the
  * server each time Jade asks, so it follows the record, and sent to the client, which words it with
  * {@link #lines}.
  *
@@ -35,11 +36,13 @@ import net.minecraft.server.players.NameAndId;
  *        while it rests, unloads at that Well, waits for its owner or sets its rider down
  * @param load the motes it carries, grade to count
  * @param health its health, of {@link VoidDragonRecord#FULL_HEALTH}
+ * @param stage its life stage
  * @param owner the name of the player who owns it, empty when the server has none for them
  */
-public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Integer, Long> load, int health, Optional<String> owner) {
+public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Integer, Long> load, int health, LifeStage stage, Optional<String> owner) {
 
     private static final StreamCodec<ByteBuf, Doing> DOING_CODEC = ByteBufCodecs.idMapper(ordinal -> Doing.values()[ordinal], Doing::ordinal);
+    private static final StreamCodec<ByteBuf, LifeStage> STAGE_CODEC = ByteBufCodecs.idMapper(ordinal -> LifeStage.values()[ordinal], LifeStage::ordinal);
 
     public static final StreamCodec<RegistryFriendlyByteBuf, DragonReport> STREAM_CODEC = StreamCodec.composite(
             DOING_CODEC, DragonReport::doing,
@@ -47,6 +50,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
             ByteBufCodecs.<ByteBuf, Integer, Long, SortedMap<Integer, Long>>map(size -> new TreeMap<>(), ByteBufCodecs.VAR_INT, ByteBufCodecs.VAR_LONG)
                     .cast(), DragonReport::load,
             ByteBufCodecs.VAR_INT, DragonReport::health,
+            STAGE_CODEC, DragonReport::stage,
             ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8), DragonReport::owner,
             DragonReport::new);
 
@@ -57,20 +61,26 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
     /**
      * @param labels what the Well at a place goes by: its name, or unnamed, its dimension and position
      * @param owner the name of {@code dragon}'s owner, if the server has one
+     * @param stages how dragons age
      * @return what {@code dragon} shows
      */
-    public static DragonReport of(VoidDragonRecord dragon, Function<Place, Component> labels, Optional<String> owner) {
+    public static DragonReport of(VoidDragonRecord dragon, Function<Place, Component> labels, Optional<String> owner, LifeStages stages) {
         var doing = Doing.of(dragon.trip());
         // Stopped at a Well other than where it loads, it is there for that Well, or for its owner.
         var bound = dragon.trip().filter(trip -> doing != Doing.UNLOADING && doing != Doing.WAITING && doing != Doing.SETTING_DOWN)
                 .map(Trip::destination).map(labels);
-        return new DragonReport(doing, bound, dragon.load(), dragon.health(), owner);
+        return new DragonReport(doing, bound, dragon.load(), dragon.health(), stages.of(dragon.cargo()), owner);
     }
 
     /** @return what the dragon whose presence {@code presence} is shows, empty for a Dragonling or a presence whose dragon is gone */
     public static Optional<DragonReport> of(VoidDragon presence, MinecraftServer server) {
         return presence.dragonId().flatMap(SavedVoidDragons.of(server)::get)
-                .map(dragon -> of(dragon, place -> DragonRiding.label(server, place), nameOf(server, dragon.owner())));
+                .map(dragon -> of(dragon, place -> DragonRiding.label(server, place), nameOf(server, dragon.owner()), VoidworksConfig.lifeStages()));
+    }
+
+    /** @return the translation key of {@code stage}'s name, as Jade shows it */
+    private static String stageKey(LifeStage stage) {
+        return "voidworks.jade.dragon." + stage.id();
     }
 
     /** @return the name of the player {@code id}, online or once seen on {@code server}, if it has one */
@@ -87,7 +97,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
     /**
      * @return what it is doing; the Well it is bound for, if any; a line per grade it carries, tinted
      *         like that grade's butterflies, then their total, or that it carries nothing; its health;
-     *         and whose it is
+     *         its life stage; and whose it is
      */
     public List<Component> lines() {
         var lines = new ArrayList<Component>();
@@ -98,6 +108,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
                 ? Component.translatable("voidworks.jade.dragon.carrying_nothing")
                 : Component.translatable("voidworks.jade.dragon.carrying", carried()));
         lines.add(Component.translatable("voidworks.jade.dragon.health", health, VoidDragonRecord.FULL_HEALTH));
+        lines.add(Component.translatable(stageKey(stage)));
         lines.add(ownerLine(owner));
         return lines;
     }

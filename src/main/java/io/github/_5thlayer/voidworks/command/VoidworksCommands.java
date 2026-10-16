@@ -3,17 +3,24 @@
 
 package io.github._5thlayer.voidworks.command;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import io.github._5thlayer.voidworks.VoidworksBlocks;
+import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
+import io.github._5thlayer.voidworks.dragon.LifeStage;
 import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
+import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.energy.MoteResource;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.network.MoteNetwork;
@@ -23,9 +30,11 @@ import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
@@ -54,6 +63,8 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
  *       at the Well core at {@code pos}. It is not hatched, so it doubles no egg price.</li>
  *   <li>{@code /voidworks dragon remove <from> <to>} removes every dragon, whoever's, resting in the
  *       box, in the runner's dimension, or on a trip to or from a place in it, with its presence.</li>
+ *   <li>{@code /voidworks dragon age <stage>} sets the grown dragon the runner looks at to the start
+ *       of that life stage, owing no egg, to see each stage without carrying a life's motes.</li>
  * </ul>
  *
  * <p>The last three are what a Gallery pack scene builds a working dragon with (ADR 0008). A
@@ -70,6 +81,14 @@ public final class VoidworksCommands {
             new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.well.not_a_well", pos));
     private static final DynamicCommandExceptionType DRAGON_NOT_A_WELL =
             new DynamicCommandExceptionType(pos -> Component.translatable("commands.voidworks.dragon.not_a_well", pos));
+
+    private static final DynamicCommandExceptionType NOT_A_STAGE =
+            new DynamicCommandExceptionType(name -> Component.translatable("commands.voidworks.dragon.age.not_a_stage", name));
+    private static final SimpleCommandExceptionType NOT_LOOKING_AT_A_DRAGON =
+            new SimpleCommandExceptionType(Component.translatable("commands.voidworks.dragon.age.not_looking"));
+
+    /** How far {@code /voidworks dragon age} looks for a dragon, in blocks. */
+    private static final double LOOK_REACH = 64;
 
     private VoidworksCommands() {
     }
@@ -92,6 +111,11 @@ public final class VoidworksCommands {
                         .executes(VoidworksCommands::pressure))
                 .then(Commands.literal("well").then(wellAt))
                 .then(Commands.literal("dragon")
+                        .then(Commands.literal("age")
+                                .then(Commands.argument("stage", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                Arrays.stream(LifeStage.values()).map(LifeStage::id), builder))
+                                        .executes(VoidworksCommands::age)))
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("from", BlockPosArgument.blockPos())
                                         .then(Commands.argument("to", BlockPosArgument.blockPos())
@@ -156,6 +180,30 @@ public final class VoidworksCommands {
         return 1;
     }
 
+    /** Sets the grown dragon the runner looks at to the start of a life stage. @return 1 */
+    private static int age(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(context, "stage");
+        var stage = LifeStage.byId(name).orElseThrow(() -> NOT_A_STAGE.create(name));
+        var server = player.level().getServer();
+        var dragons = SavedVoidDragons.of(server);
+        var record = lookedAtDragon(player).flatMap(VoidDragon::dragonId).flatMap(dragons::get)
+                .orElseThrow(NOT_LOOKING_AT_A_DRAGON::create);
+        dragons.update(record.agedTo(VoidworksConfig.lifeStages().start(stage)));
+        DragonPresences.show(server);
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.age", name), false);
+        return 1;
+    }
+
+    /** @return the Void Dragon presence within {@link #LOOK_REACH} blocks along the player's look, if any */
+    private static Optional<VoidDragon> lookedAtDragon(ServerPlayer player) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 end = eye.add(player.getLookAngle().scale(LOOK_REACH));
+        var hit = ProjectileUtil.getEntityHitResult(player, eye, end,
+                player.getBoundingBox().expandTowards(end.subtract(eye)).inflate(1), entity -> entity instanceof VoidDragon, LOOK_REACH * LOOK_REACH);
+        return hit == null ? Optional.empty() : Optional.of((VoidDragon) hit.getEntity());
+    }
+
     /** @return the Void Well core at the command's {@code pos}; else it refuses with {@code notAWell} */
     private static VoidWellBlockEntity wellAt(CommandContext<CommandSourceStack> context, DynamicCommandExceptionType notAWell) throws CommandSyntaxException {
         var level = context.getSource().getLevel();
@@ -172,10 +220,12 @@ public final class VoidworksCommands {
         var box = BoundingBox.fromCorners(BlockPosArgument.getBlockPos(context, "from"), BlockPosArgument.getBlockPos(context, "to"));
         var dimension = level.dimension().identifier();
         var server = level.getServer();
-        int removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos())).size();
+        var removed = SavedVoidDragons.of(server).removeAt(place -> place.dimension().equals(dimension) && box.isInside(place.pos()));
+        // A dragon taken out no longer counts toward its owner's next egg, as one that died does not.
+        removed.forEach(dragon -> SavedHatchery.of(server).lose(dragon.owner()));
         DragonPresences.show(server);
-        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed), false);
-        return removed;
+        context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.remove", removed.size()), false);
+        return removed.size();
     }
 
     /** Builds the conduction showcase two blocks ahead of the player, at their feet. @return how many motes went in */

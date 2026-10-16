@@ -15,11 +15,14 @@ import com.mojang.authlib.GameProfile;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
+import io.github._5thlayer.voidworks.dragon.LifeStage;
 import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedHatchery;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Showing;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
+import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.network.MoteStore;
 import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
@@ -50,6 +53,7 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -101,6 +105,137 @@ final class RideTests {
         tests.testAlone("a_rider_leaving_the_game_is_set_down_first_on_the_rim_of_the_well_the_dragon_is_at_or_diving_to", TICKS, RideTests::leaves);
         tests.testAlone("a_void_dragon_resting_at_a_well_takes_off_to_hover_as_its_owner_mounts_it_and_lands_again_once_they_get_off", TICKS,
                 RideTests::takesOffForItsRider);
+        tests.testAlone("life_stage_an_old_void_dragon_that_outlives_its_stage_dies_at_the_well_it_unloads_at_and_lowers_its_owners_next_egg_price",
+                TICKS, RideTests::diesOfOldAge);
+        tests.testAlone("life_stage_a_void_dragon_dying_of_old_age_sets_its_rider_down_on_the_rim_of_the_well_it_dies_at", TICKS,
+                RideTests::setsItsRiderDownAsItDies);
+        tests.testAlone("life_stage_a_void_dragon_dying_of_old_age_sets_down_a_rider_who_mounted_it_as_it_unloaded_and_stayed_on", TICKS,
+                RideTests::setsDownARiderStillMountedAsItDies);
+    }
+
+    /**
+     * An old dragon a few motes short of the end of its stage loads at the test's Well for the high
+     * one, unloads there, and dies: its record is gone, its presence plays its death over the high Well
+     * and is gone, and its owner's next egg costs as it did before they hatched it.
+     */
+    private static void diesOfOldAge(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var hatchery = SavedHatchery.of(server);
+        var hatched = Place.of(helper.getLevel(), helper.absolutePos(new BlockPos(0, 1, 0)));
+        var dragonId = new AtomicReference<UUID>();
+        var dying = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, HELD);
+                    shortOfItsTarget(helper, owner, HIGH_WELL, SHORT);
+                    // Its owner hatched it: it counts toward their next egg while it lives.
+                    hatchery.startSoaking(hatched, owner.getUUID(), EggTests.eggPrice());
+                    hatchery.hatch(hatched);
+                    helper.assertTrue(hatchery.dragons(owner.getUUID()) == 1, "the hatched dragon does not count");
+                    dragonId.set(old(helper, owner, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(SavedVoidDragons.of(server).get(dragonId.get()).isEmpty(), "the old dragon has not died"))
+                .thenExecute(() -> {
+                    helper.assertTrue(total(helper, HIGH_WELL) == FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow(),
+                            "the dragon died before it unloaded: the high Well holds " + total(helper, HIGH_WELL));
+                    helper.assertTrue(hatchery.dragons(owner.getUUID()) == 0, "the dead dragon still counts toward its owner's next egg");
+                    helper.assertTrue(DragonPresences.presence(server, dragonId.get()).isEmpty(), "the dead dragon is still shown as its presence");
+                    var shown = helper.getLevel().getEntitiesOfClass(VoidDragon.class, new AABB(helper.absolutePos(HIGH_WELL)).inflate(16),
+                            presence -> presence.dying() && presence.dragonId().equals(Optional.of(dragonId.get())));
+                    helper.assertTrue(shown.size() == 1, "the dragon's death is shown " + shown.size() + " times over the high Well");
+                    dying.set(shown.getFirst());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(dying.get() != null && dying.get().isRemoved(), "the dying presence is not gone"))
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /**
+     * Its owner rides an old dragon loading at the test's Well and picks the high Well, short of its
+     * target: the dragon dives there, unloads, and dies, setting them down on that Well's rim.
+     */
+    private static void setsItsRiderDownAsItDies(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, HELD);
+                    shortOfItsTarget(helper, owner, HIGH_WELL, SHORT);
+                    dragonId.set(old(helper, owner, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    presence.get().interact(owner, InteractionHand.MAIN_HAND, presence.get().position());
+                    helper.assertTrue(owner.getVehicle() == presence.get(), "its owner did not mount the old dragon");
+                    owner.setLastClientInput(RIGHT);
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(Input.EMPTY))
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.TO_PICKED)), "jumping did not dive to the high Well");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(SavedVoidDragons.of(server).get(dragonId.get()).isEmpty(), "the old dragon has not died"))
+                .thenExecute(() -> {
+                    helper.assertTrue(!owner.isPassenger(), "the dead dragon's rider still rides");
+                    assertOnTheRim(helper, owner, HIGH_WELL);
+                    helper.assertTrue(!DragonRiding.inTheDive(owner) && !owner.hasEffect(MobEffects.INVISIBILITY), "the rider set down is still in the dive");
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /**
+     * An old dragon loads at the test's Well for the high one and dives there alone; its owner mounts
+     * it as it unloads there and stays on through the end of its stop: it dies with them on its back,
+     * setting them down on the high Well's rim.
+     */
+    private static void setsDownARiderStillMountedAsItDies(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var dragonId = new AtomicReference<UUID>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, HELD);
+                    shortOfItsTarget(helper, owner, HIGH_WELL, SHORT);
+                    dragonId.set(old(helper, owner, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.UNLOADING)), "the old dragon is not unloading");
+                    var presence = atWork(helper, dragonId.get());
+                    helper.assertTrue(PresenceTests.record(helper, dragonId.get()).rest().equals(place(helper, HIGH_WELL)), "the old dragon is not unloading at the high Well");
+                    presence.interact(owner, InteractionHand.MAIN_HAND, presence.position());
+                    helper.assertTrue(owner.getVehicle() == presence, "its owner did not mount the unloading dragon");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(SavedVoidDragons.of(server).get(dragonId.get()).isEmpty(), "the ridden old dragon has not died"))
+                .thenExecute(() -> {
+                    helper.assertTrue(!owner.isPassenger(), "the dead dragon's rider still rides");
+                    assertOnTheRim(helper, owner, HIGH_WELL);
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of()))
+                .thenSucceed();
+    }
+
+    /** @return a new dragon of {@code owner}'s resting at {@code rest}, old, a few motes short of the end of its stage */
+    private static VoidDragonRecord old(GameTestHelper helper, Rider owner, Place rest) {
+        var dragons = SavedVoidDragons.of(helper.getLevel().getServer());
+        var grown = dragons.add(owner.getUUID(), rest);
+        var old = new VoidDragonRecord(grown.id(), grown.owner(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0,
+                LifeStage.values().length * VoidworksConfig.lifeStageMotes() - 1);
+        dragons.update(old);
+        return old;
     }
 
     /**

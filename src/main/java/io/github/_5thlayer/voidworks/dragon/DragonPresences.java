@@ -73,7 +73,7 @@ public final class DragonPresences {
         var saved = SavedVoidDragons.saved(server);
         long now = server.overworld().getGameTime();
         var dragons = SavedVoidDragons.of(server);
-        // A dragon is gone only when a command takes it out; a rider it carried is set down where it was.
+        // A dragon is gone when a command takes it out, or once it has died (die); a rider it carried is set down where it was.
         saved.presences.entrySet().removeIf(shown -> {
             if (dragons.get(shown.getKey()).isPresent()) {
                 return false;
@@ -88,9 +88,13 @@ public final class DragonPresences {
             presence.discard();
             return true;
         });
+        var stages = VoidworksConfig.lifeStages();
         for (var dragon : dragons.all()) {
+            var stage = stages.of(dragon.cargo());
             var showing = Showing.of(dragon, now, VoidworksConfig.dragonStopTicks());
             var shown = presence(server, dragon.id());
+            // Its new stage shows from its next stop, as it changes only at one.
+            shown.ifPresent(presence -> presence.showStage(stage));
             if (shown.isPresent() && shown.get().carrying() && showing != Showing.DIVING) {
                 bringOut(server, saved, dragon, shown.get());
                 continue;
@@ -116,13 +120,19 @@ public final class DragonPresences {
             if (!level.isPositionEntityTicking(showing == Showing.EMERGING ? spot.emerges() : spot.over())) {
                 continue;
             }
-            var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
-            if (presence != null) {
-                presence.showPresenceOf(dragon, showing, spot);
-                level.addFreshEntity(presence);
-                saved.presences.put(dragon.id(), presence);
-            }
+            spawn(level, dragon, showing, spot, stage).ifPresent(presence -> saved.presences.put(dragon.id(), presence));
         }
+    }
+
+    /** @return a new presence of {@code dragon} at {@code stage}, showing {@code showing} at {@code spot}, added to {@code level}; empty if none could be made */
+    private static Optional<VoidDragon> spawn(ServerLevel level, VoidDragonRecord dragon, Showing showing, Spot spot, LifeStage stage) {
+        var presence = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.TRIGGERED);
+        if (presence == null) {
+            return Optional.empty();
+        }
+        presence.showPresenceOf(dragon, showing, spot, stage);
+        level.addFreshEntity(presence);
+        return Optional.of(presence);
     }
 
     /**
@@ -138,7 +148,7 @@ public final class DragonPresences {
             return;
         }
         var spot = spot(level, dragon.rest().pos());
-        presence.showPresenceOf(dragon, Showing.EMERGING, spot);
+        presence.showPresenceOf(dragon, Showing.EMERGING, spot, VoidworksConfig.lifeStages().of(dragon.cargo()));
         level.addFreshEntity(presence);
         saved.presences.put(dragon.id(), presence);
         DragonRiding.handOver(carried, presence, level, spot.emerges());
@@ -173,6 +183,42 @@ public final class DragonPresences {
 
         /** Where a presence is shown before it is the presence of a dragon: a Dragonling's, never read. */
         static final Spot NOWHERE = new Spot(BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, BlockPos.ZERO, Optional.empty());
+    }
+
+    /**
+     * The {@code dragon} has died of old age at the Well where it rests: its presence, or one shown there
+     * now if it has none, sets any rider down on the Well's rim and plays its death over the Well, unless
+     * nothing there is loaded to see it. It is no longer the dragon's presence, and nothing else is.
+     */
+    public static void die(MinecraftServer server, VoidDragonRecord dragon) {
+        var shown = SavedVoidDragons.saved(server).presences.remove(dragon.id());
+        if (shown != null && !shown.isRemoved()) {
+            if (shown.shows(dragon.rest()) && !shown.carrying()) {
+                DragonRiding.setRidersDown(server, shown, dragon.rest());
+                shown.dieOfOldAge();
+                return;
+            }
+            // The presence that carried its rider through the dive is elsewhere, out of sight.
+            DragonRiding.setDown(server, shown, dragon.rest());
+        }
+        var level = dragon.rest().level(server);
+        if (level == null || !level.isLoaded(dragon.rest().pos())) {
+            return;
+        }
+        var spot = spot(level, dragon.rest().pos());
+        if (!showsAt(level, spot)) {
+            return;
+        }
+        spawn(level, dragon, Showing.WORKING, spot, LifeStage.OLD).ifPresent(VoidDragon::dieOfOldAge);
+    }
+
+    /** @return whether a presence over the shaft of the Well core at {@code pos} is entity-ticking, so shows */
+    static boolean showsAt(ServerLevel level, BlockPos pos) {
+        return showsAt(level, spot(level, pos));
+    }
+
+    private static boolean showsAt(ServerLevel level, Spot spot) {
+        return level.isPositionEntityTicking(spot.over());
     }
 
     /** @return whether the dragon with {@code id} shows a presence its owner rides at its stop, before any dive */

@@ -51,6 +51,13 @@ public final class VoidDragons {
         }
     }
 
+    /** Takes out the dragon with {@code id}, which has died; one it does not have stays gone. */
+    public void remove(UUID id) {
+        if (dragons.remove(id) != null) {
+            onChange.run();
+        }
+    }
+
     /**
      * Takes out every dragon that rests at a place {@code at} accepts, or is on a trip to or from one,
      * or to a stop added there, whoever owns it.

@@ -1,3 +1,7 @@
+---
+status: accepted
+---
+
 # A Void Dragon dies of old age
 
 #5 promised that nothing hurts a Void Dragon and that it never dies. #54 takes that back for old age alone: a grown dragon ages through four life stages by the cargo it unloads, and dies when its old stage runs out, so a player keeps hatching dragons and the egg economy stays alive. Weakening still never kills, nothing else does, and a dragon dies only at a stop after unloading, so no load or rider is lost to it.

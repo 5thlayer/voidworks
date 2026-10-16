@@ -123,11 +123,12 @@ class VoidDragonsTest {
     @Test
     void aSaveAndReloadKeepsTheMotesCarriedSinceItsLastEgg() {
         var dragon = dragons.add(ALICE, HERE);
-        var carried = dragon.unloaded(3_000);
+        var carried = dragon.unloaded(5_000, 3_000);
         dragons.update(carried);
         var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
-        assertEquals(3_000, read.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(3_000, read.get(dragon.id()).orElseThrow().towardEgg());
+        assertEquals(5_000, read.get(dragon.id()).orElseThrow().cargo());
     }
 
     @Test
@@ -139,8 +140,19 @@ class VoidDragonsTest {
         var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
         assertTrue(read.load().isEmpty());
         assertTrue(read.trip().isEmpty());
-        assertEquals(0, read.sinceEgg());
+        assertEquals(0, read.towardEgg());
         assertEquals(HERE, read.rest());
+    }
+
+    @Test
+    void aDragonSavedBeforeLifeStagesReadsYoungWithItsEggCountDropped() {
+        var saved = JsonParser.parseString("""
+                [{"id": [0, 0, 0, 1], "owner": [0, 0, 0, 2], "health": 100,
+                  "rest": {"dimension": "minecraft:overworld", "pos": [1, 64, 2]}, "since_egg": 40000}]
+                """);
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow().all().iterator().next();
+        assertEquals(0, read.towardEgg());
+        assertEquals(0, read.cargo());
     }
 
     @Test

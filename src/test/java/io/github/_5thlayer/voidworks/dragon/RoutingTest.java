@@ -49,6 +49,10 @@ class RoutingTest {
     private static final int STOP = 100;
     /** The motes a dragon carries for each egg it lays. */
     private static final long EGG = 250;
+    /** Stages too long for any test to outlive, which change neither speed nor load: a young dragon stays young. */
+    private static final LifeStages AGELESS = LifeStages.of(1_000_000_000L, List.of(1.0, 1.0, 1.0, 1.0), List.of(1.0, 1.0, 1.0, 1.0));
+    /** Stages of 1,000 motes, at the provisional factors. */
+    private static final LifeStages AGEING = new LifeStages(1_000, LifeStages.DEFAULTS);
     /** A second a dive per 64 blocks, the Nether's counting eight, and 200 ticks more between dimensions. */
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     /** No harm anywhere, so a trip's motes go only where it carries them. */
@@ -65,8 +69,10 @@ class RoutingTest {
     private final FakeWells wells = new FakeWells();
     private final FakeOwners owners = new FakeOwners();
     private final VoidDragons dragons = new VoidDragons();
-    private Routing routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG);
+    private Routing routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGELESS);
     private long now;
+    /** The dragons that have died, as they were when they did. */
+    private final List<VoidDragonRecord> died = new ArrayList<>();
 
     @Test
     void aDragonCarriesFromAReservoirToAWellBelowItsTargetUntilItIsMet() {
@@ -441,37 +447,37 @@ class RoutingTest {
     void aDragonLaysAnEggAtTheWellItStopsAtOnceItHasCarriedTheSetNumberOfMotes() {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
         wells.add(ALICE, NETHER_WELL, OptionalLong.of(200), 1, Map.of());
-        var dragon = dragons.add(ALICE, END_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), AGELESS.length());
         runFor(20_000);
         // 200 carried, short of the 250 an egg takes.
         assertEquals(List.of(), wells.laid);
-        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().towardEgg());
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
         runFor(20_000);
         // A load of 100 makes 300: it lays at the Overworld Well, as it unloads there, and the 50 over count on.
         assertEquals(List.of(OVERWORLD_WELL), wells.laid);
-        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
     void theCountRestartsAfterEachEggWithWhatItCarriedBeyondIt() {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
         wells.add(ALICE, NETHER_WELL, OptionalLong.of(500), 1, Map.of());
-        var dragon = dragons.add(ALICE, END_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), AGELESS.length());
         runFor(20_000);
         // Five loads of 100: an egg as it unloads the third, at 300, and the next at the fifth, at 50 and 200 more.
         assertEquals(List.of(NETHER_WELL, NETHER_WELL), wells.laid);
-        assertEquals(0, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(0, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
     void aStowedLoadCountsTowardAnEgg() {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
-        var dragon = carrying(ALICE, END_WELL, VoidDragonRecord.FULL_HEALTH, Map.of(4, 300L));
+        var dragon = aged(carrying(ALICE, END_WELL, VoidDragonRecord.FULL_HEALTH, Map.of(4, 300L)), AGELESS.length());
         runFor(20_000);
         assertEquals(Map.of(4, 300L), wells.motes(END_WELL));
         assertEquals(List.of(END_WELL), wells.laid);
-        assertEquals(50, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(50, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -479,16 +485,16 @@ class RoutingTest {
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
         wells.add(ALICE, NETHER_WELL, OptionalLong.of(600), 1, Map.of());
         wells.unseen.addAll(Set.of(END_WELL, NETHER_WELL));
-        var dragon = dragons.add(ALICE, END_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), AGELESS.length());
         runFor(20_000);
         assertEquals(List.of(), wells.laid);
-        assertEquals(600, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(600, dragons.get(dragon.id()).orElseThrow().towardEgg());
         wells.unseen.remove(END_WELL);
         wells.add(ALICE, OVERWORLD_WELL, OptionalLong.of(100), 2, Map.of());
         runFor(20_000);
         // It stops next at the End's Well, to load for the Overworld, and lays both eggs it owes there.
         assertEquals(List.of(END_WELL, END_WELL), wells.laid);
-        assertEquals(200, dragons.get(dragon.id()).orElseThrow().sinceEgg());
+        assertEquals(200, dragons.get(dragon.id()).orElseThrow().towardEgg());
     }
 
     @Test
@@ -653,6 +659,176 @@ class RoutingTest {
         assertEquals(END_WELL, dragons.get(dragon.id()).orElseThrow().rest());
     }
 
+    @Test
+    void aDragonsLoadFollowsItsLifeStage() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 10_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(5_000), 1, Map.of());
+        var young = dragons.add(ALICE, END_WELL);
+        var adult = aged(dragons.add(ALICE, END_WELL), 1_000);
+        var old = aged(dragons.add(ALICE, END_WELL), 3_000);
+        runFor(1);
+        assertEquals(100, dragons.get(young.id()).orElseThrow().trip().orElseThrow().claimed());
+        assertEquals(200, dragons.get(adult.id()).orElseThrow().trip().orElseThrow().claimed());
+        assertEquals(600, dragons.get(old.id()).orElseThrow().trip().orElseThrow().claimed());
+    }
+
+    @Test
+    void anOlderDragonFliesMoreSlowly() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 300L));
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(1_000), 3, Map.of());
+        var young = dragons.add(ALICE, OTHER_END_WELL);
+        var adult = aged(dragons.add(ALICE, OTHER_END_WELL), 1_000);
+        // 64 blocks a second at full speed is the 2 second least; at 0.6 of it, past it.
+        runFor(41);
+        assertEquals(Optional.of(Trip.Leg.LOADING), leg(young));
+        assertEquals(Optional.of(Trip.Leg.TO_SOURCE), leg(adult));
+        runFor(30);
+        assertEquals(Optional.of(Trip.Leg.LOADING), leg(adult));
+    }
+
+    @Test
+    void aDragonAgesOnlyAsItUnloads() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(200), 1, Map.of());
+        var dragon = aged(dragons.add(ALICE, END_WELL), 950);
+        while (dragons.get(dragon.id()).orElseThrow().carried() == 0) {
+            runFor(1);
+        }
+        assertEquals(950, dragons.get(dragon.id()).orElseThrow().cargo());
+        runFor(20_000);
+        // A young load of 100 makes it an adult, whose next load is up to 200, of which the Well needs 100.
+        assertEquals(1_150, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(Map.of(4, 200L), wells.motes(NETHER_WELL));
+    }
+
+    @Test
+    void aYoungDragonLaysNoEggs() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 1_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(900), 1, Map.of());
+        var dragon = dragons.add(ALICE, END_WELL);
+        runFor(40_000);
+        assertEquals(900, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(List.of(), wells.laid);
+        assertEquals(0, dragons.get(dragon.id()).orElseThrow().towardEgg());
+    }
+
+    @Test
+    void eggsOwedOnTurningSeniorAreLaidAtTheNextLoadedStopThenItLaysNoMore() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(2_000), 1, Map.of());
+        wells.unseen.add(NETHER_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 1_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 240, 1_950));
+        runFor(100_000);
+        // Its first load of 200 is 50 more as an adult, an egg owed it cannot lay at the Nether Well, so lays
+        // as it next loads at the End's; senior, nothing it carries counts toward another.
+        assertEquals(List.of(END_WELL), wells.laid);
+        assertEquals(40, dragons.get(dragon.id()).orElseThrow().towardEgg());
+    }
+
+    @Test
+    void anOldDragonThatOutlivesItsStageDiesAtAStopAfterUnloadingAndLayingWhatItOwes() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        // Its End Well's chunk not loaded, it still owes its egg when it reaches the Nether's.
+        wells.unseen.add(END_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), EGG, 3_950));
+        runFor(1);
+        assertEquals(List.of(), died);
+        runFor(20_000);
+        assertEquals(Optional.empty(), dragons.get(dragon.id()));
+        assertEquals(1, died.size());
+        assertEquals(NETHER_WELL, died.getFirst().rest());
+        // An old load of 600, all unloaded before it died, and the egg it owed laid there.
+        assertEquals(Map.of(4, 600L), wells.motes(NETHER_WELL));
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+    }
+
+    @Test
+    void anOldDragonDiesOnlyOnceItsStopIsOver() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        // It has outlived its old stage as it began to unload, and lives on until its stop is over.
+        runFor(STOP - 1);
+        assertTrue(dragons.get(dragon.id()).isPresent(), "the old dragon died before its stop was over");
+        runFor(2);
+        assertEquals(Optional.empty(), dragons.get(dragon.id()));
+        assertEquals(1, died.size());
+    }
+
+    @Test
+    void anOldDragonOutlivingItsStageAtAnUnloadedWellLivesOnAndDiesAtItsNextLoadedStopLosingNoEgg() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.unseen.add(NETHER_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), EGG, 3_950));
+        // Its End Well loaded, it lays its owed egg there as it loads; it unloads at the unloaded Nether Well and lives on.
+        runFor(20_000);
+        assertEquals(List.of(), died);
+        assertEquals(List.of(END_WELL), wells.laid);
+        assertTrue(dragons.get(dragon.id()).orElseThrow().cargo() >= 4_000, "the old dragon did not outlive its stage");
+        wells.unseen.remove(NETHER_WELL);
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.of(1_000), 3, Map.of());
+        runFor(20_000);
+        assertEquals(1, died.size());
+        assertEquals(List.of(END_WELL), wells.laid);
+    }
+
+    @Test
+    void anOldDragonLaysTheEggItOwesAtTheEndOfItsStopBeforeItDies() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        wells.unseen.add(END_WELL);
+        wells.unseen.add(NETHER_WELL);
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), EGG, 3_950));
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        // The Nether Well's chunk loads while it unloads there: it lays the egg it could not as it arrived, then dies.
+        assertEquals(List.of(), wells.laid);
+        wells.unseen.remove(NETHER_WELL);
+        runFor(STOP + 1);
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(1, died.size());
+    }
+
+    @Test
+    void anOldDragonDiesAtTheEndOfItsStopThoughItsOwnerStillRidesIt() {
+        routing = new Routing(wells, owners, DIVE, HARMLESS, LOAD, STOP, EGG, AGEING);
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 5_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.of(1_000), 1, Map.of());
+        var dragon = aged(dragons.add(ALICE, END_WELL), 3_950);
+        while (leg(dragon).orElse(null) != Trip.Leg.UNLOADING) {
+            runFor(1);
+        }
+        owners.riding.add(dragon.id());
+        runFor(STOP + 1);
+        assertEquals(1, died.size());
+    }
+
+    /** @return {@code dragon} as one that has unloaded {@code cargo} over its life */
+    private VoidDragonRecord aged(VoidDragonRecord dragon, long cargo) {
+        var aged = new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), dragon.towardEgg(), cargo);
+        dragons.update(aged);
+        return aged;
+    }
+
     /** @return the leg {@code dragon} is on now, if it is on a trip */
     private Optional<Trip.Leg> leg(VoidDragonRecord dragon) {
         return dragons.get(dragon.id()).orElseThrow().trip().map(Trip::leg);
@@ -660,7 +836,7 @@ class RoutingTest {
 
     /** Runs the rest of the test with {@link #HARM}. */
     private void harming() {
-        routing = new Routing(wells, owners, DIVE, HARM, LOAD, STOP, EGG);
+        routing = new Routing(wells, owners, DIVE, HARM, LOAD, STOP, EGG, AGELESS);
     }
 
     /** @return {@code dragon}, now of {@code health} */
@@ -680,7 +856,7 @@ class RoutingTest {
     /** Runs routing a step a tick for {@code ticks} ticks. */
     private void runFor(long ticks) {
         for (long end = now + ticks; now < end; now++) {
-            routing.step(dragons, now);
+            died.addAll(routing.step(dragons, now));
         }
     }
 
@@ -780,6 +956,11 @@ class RoutingTest {
             long put = Math.min(count, network.capacity() - total);
             network.motes().merge(grade, put, Long::sum);
             return put;
+        }
+
+        @Override
+        public boolean loaded(Place place) {
+            return wells.containsKey(place) && !unseen.contains(place);
         }
 
         @Override
