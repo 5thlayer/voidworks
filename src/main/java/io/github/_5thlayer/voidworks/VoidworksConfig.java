@@ -38,7 +38,6 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue SIPHON_INTERVAL;
     private static final ModConfigSpec.ConfigValue<List<? extends Integer>> SIPHON_RATE;
     private static final ModConfigSpec.LongValue FE_PER_VOID_ENERGY;
-    private static final ModConfigSpec.LongValue FIRST_EGG_PRICE;
     private static final ModConfigSpec.IntValue DRAGONLING_GROW_TICKS;
     private static final ModConfigSpec.LongValue DRAGONLING_FEED_ENERGY;
     private static final ModConfigSpec.IntValue DRAGON_LOAD;
@@ -119,10 +118,6 @@ public final class VoidworksConfig {
                         "any mod's. Provisional, tuned against Gearworks' Gear, whose battery upgrade holds 100,000 FE;",
                         "balance it against the FE mods in the pack.")
                 .defineInRange("fePerVoidEnergy", 10L, 1L, 1L << 20);
-        FIRST_EGG_PRICE = builder
-                .comment("The void energy a player's first dragon egg soaks before it hatches. Each egg's price is fixed when it",
-                        "starts soaking, at this doubled for every dragon its owner has hatched or is soaking.")
-                .defineInRange("firstEggPrice", 25_600L, 1L, Long.MAX_VALUE);
         DRAGONLING_GROW_TICKS = builder
                 .comment("Ticks a Dragonling takes to grow into a Void Dragon, counted only while its chunk is loaded.")
                 .defineInRange("dragonlingGrowTicks", 48_000, 1, Integer.MAX_VALUE);
@@ -237,11 +232,6 @@ public final class VoidworksConfig {
     /** @return the FE each void energy a Void Siphon releases charges into an FE item */
     public static long fePerVoidEnergy() {
         return FE_PER_VOID_ENERGY.getAsLong();
-    }
-
-    /** @return the void energy a player's first dragon egg soaks before it hatches */
-    public static long firstEggPrice() {
-        return FIRST_EGG_PRICE.getAsLong();
     }
 
     /** @return ticks a Dragonling takes to grow up, while its chunk is loaded */

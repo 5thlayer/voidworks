@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
 import com.mojang.serialization.Codec;
@@ -16,8 +15,8 @@ import net.minecraft.core.UUIDUtil;
 
 /**
  * Every owner's dragons, server-wide: the eggs soaking, by where they stand and who placed them, and
- * how many dragons each owner has hatched. It sets an egg's price when the egg starts soaking: the
- * first egg's price, doubled for every dragon its owner has hatched or is soaking, so two eggs
+ * how many dragons each owner has hatched. It sets an egg's price when the egg starts soaking, by
+ * the {@link EggPrice} for every dragon its owner has hatched or is soaking, so two eggs
  * placed together never both get the cheap price, and an egg given away starts its new owner cheap.
  * Plain logic with no game running; {@link SavedHatchery} saves it with the world.
  */
@@ -31,16 +30,10 @@ public final class Hatchery {
         ).apply(instance, Soaking::new));
     }
 
-    private final LongSupplier firstPrice;
     private final Map<UUID, Integer> hatched = new HashMap<>();
     private final Map<Place, UUID> soaking = new HashMap<>();
     private Runnable onChange = () -> {
     };
-
-    /** @param firstPrice what an owner's first egg costs, in void energy */
-    public Hatchery(LongSupplier firstPrice) {
-        this.firstPrice = firstPrice;
-    }
 
     /** Runs {@code onChange} after each change, so the saved data that holds it is saved. */
     public void onChange(Runnable onChange) {
@@ -48,26 +41,15 @@ public final class Hatchery {
     }
 
     /**
-     * An egg's price: {@code first} doubled for each of the owner's {@code dragons}, hatched or
-     * soaking, and {@link Long#MAX_VALUE} once that would pass it.
-     */
-    public static long price(long first, int dragons) {
-        if (dragons >= Long.SIZE - 1 || first > Long.MAX_VALUE >> dragons) {
-            return Long.MAX_VALUE;
-        }
-        return first << dragons;
-    }
-
-    /**
-     * Starts the egg at {@code egg} soaking for {@code owner}, who placed it.
+     * Starts the egg at {@code egg} soaking for {@code owner}, who placed it, at {@code price}.
      *
      * @return its price, fixed now, in void energy
      */
-    public long startSoaking(Place egg, UUID owner) {
-        long price = price(firstPrice.getAsLong(), dragons(owner));
+    public long startSoaking(Place egg, UUID owner, EggPrice price) {
+        long fixed = price.of(dragons(owner));
         soaking.put(egg, owner);
         onChange.run();
-        return price;
+        return fixed;
     }
 
     /** The egg at {@code egg} has hatched: its owner has one more dragon, and it soaks no longer. */
@@ -107,17 +89,15 @@ public final class Hatchery {
         return !hatched.isEmpty();
     }
 
-    /** @return the codec that saves it, reading back with {@code firstPrice} */
-    public static Codec<Hatchery> codec(LongSupplier firstPrice) {
-        return RecordCodecBuilder.create(instance -> instance.group(
-                Codec.unboundedMap(UUIDUtil.STRING_CODEC, Codec.INT).fieldOf("hatched").forGetter(hatchery -> hatchery.hatched),
-                Soaking.CODEC.listOf().fieldOf("soaking").forGetter(hatchery -> hatchery.soaking.entrySet().stream()
-                        .map(entry -> new Soaking(entry.getKey(), entry.getValue())).toList())
-        ).apply(instance, (hatched, soaking) -> read(firstPrice, hatched, soaking)));
-    }
+    /** The codec that saves it. */
+    public static final Codec<Hatchery> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.unboundedMap(UUIDUtil.STRING_CODEC, Codec.INT).fieldOf("hatched").forGetter(hatchery -> hatchery.hatched),
+            Soaking.CODEC.listOf().fieldOf("soaking").forGetter(hatchery -> hatchery.soaking.entrySet().stream()
+                    .map(entry -> new Soaking(entry.getKey(), entry.getValue())).toList())
+    ).apply(instance, Hatchery::read));
 
-    private static Hatchery read(LongSupplier firstPrice, Map<UUID, Integer> hatched, List<Soaking> soaking) {
-        var hatchery = new Hatchery(firstPrice);
+    private static Hatchery read(Map<UUID, Integer> hatched, List<Soaking> soaking) {
+        var hatchery = new Hatchery();
         hatchery.hatched.putAll(hatched);
         soaking.forEach(egg -> hatchery.soaking.put(egg.egg(), egg.owner()));
         return hatchery;

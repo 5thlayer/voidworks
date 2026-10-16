@@ -9,6 +9,7 @@ import io.github._5thlayer.voidworks.displacer.Displacement;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
+import io.github._5thlayer.voidworks.dragon.EggPrice;
 import io.github._5thlayer.voidworks.dragon.DragonRouting;
 import io.github._5thlayer.voidworks.dragon.Hatching;
 import io.github._5thlayer.voidworks.gametest.VoidworksGameTests;
@@ -47,6 +48,7 @@ public final class Voidworks {
         modBus.addListener(WorksTabContents::add);
         Displacement.register(modBus);
         Dormancy.register(modBus);
+        EggPrice.register(modBus);
         Families.register(modBus);
         UnmakingRecipes.register(modBus);
         container.registerConfig(ModConfig.Type.SERVER, VoidworksConfig.SPEC);

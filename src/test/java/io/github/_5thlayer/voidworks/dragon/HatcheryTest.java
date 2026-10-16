@@ -22,44 +22,45 @@ import org.junit.jupiter.api.Test;
 class HatcheryTest {
 
     private static final long FIRST = 25_600;
+    private static final EggPrice PRICE = new EggPrice(FIRST, 2);
     private static final UUID ALICE = UUID.fromString("00000000-0000-0000-0000-00000000a11c");
     private static final UUID BOB = UUID.fromString("00000000-0000-0000-0000-000000000b0b");
 
-    private final Hatchery hatchery = new Hatchery(() -> FIRST);
+    private final Hatchery hatchery = new Hatchery();
 
     @Test
     void anOwnersFirstEggCostsTheFirstPrice() {
-        assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE));
+        assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE, PRICE));
     }
 
     @Test
     void twoEggsPlacedTogetherDoNotBothGetTheCheapPrice() {
-        assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE));
-        assertEquals(2 * FIRST, hatchery.startSoaking(egg(1), ALICE));
-        assertEquals(4 * FIRST, hatchery.startSoaking(egg(2), ALICE));
+        assertEquals(FIRST, hatchery.startSoaking(egg(0), ALICE, PRICE));
+        assertEquals(2 * FIRST, hatchery.startSoaking(egg(1), ALICE, PRICE));
+        assertEquals(4 * FIRST, hatchery.startSoaking(egg(2), ALICE, PRICE));
     }
 
     @Test
     void aHatchedDragonStillDoublesItsOwnersNextEgg() {
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.hatch(egg(0));
         assertEquals(1, hatchery.dragons(ALICE));
-        assertEquals(2 * FIRST, hatchery.startSoaking(egg(1), ALICE));
+        assertEquals(2 * FIRST, hatchery.startSoaking(egg(1), ALICE, PRICE));
     }
 
     @Test
     void anEggLostWhileSoakingNoLongerCounts() {
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.lose(egg(0));
         assertEquals(0, hatchery.dragons(ALICE));
-        assertEquals(FIRST, hatchery.startSoaking(egg(1), ALICE));
+        assertEquals(FIRST, hatchery.startSoaking(egg(1), ALICE, PRICE));
     }
 
     @Test
     void anEggThatIsNoLongerThereIsForgottenAndNoLongerCounts() {
-        hatchery.startSoaking(egg(0), ALICE);
-        hatchery.startSoaking(egg(1), ALICE);
-        hatchery.startSoaking(egg(2), BOB);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
+        hatchery.startSoaking(egg(1), ALICE, PRICE);
+        hatchery.startSoaking(egg(2), BOB, PRICE);
         hatchery.forgetGone(ALICE, egg -> egg.equals(egg(0)));
         assertEquals(1, hatchery.dragons(ALICE));
         hatchery.hatch(egg(0));
@@ -71,15 +72,15 @@ class HatcheryTest {
 
     @Test
     void anotherOwnerStartsCheap() {
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.hatch(egg(0));
-        hatchery.startSoaking(egg(1), ALICE);
-        assertEquals(FIRST, hatchery.startSoaking(egg(2), BOB));
+        hatchery.startSoaking(egg(1), ALICE, PRICE);
+        assertEquals(FIRST, hatchery.startSoaking(egg(2), BOB, PRICE));
     }
 
     @Test
     void anEggLostOrHatchedTwiceCountsOnce() {
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.hatch(egg(0));
         hatchery.hatch(egg(0));
         hatchery.lose(egg(0));
@@ -89,8 +90,8 @@ class HatcheryTest {
     @Test
     void anEggInAnotherDimensionAtTheSamePositionIsAnotherEgg() {
         var end = new Place(Identifier.withDefaultNamespace("the_end"), egg(0).pos());
-        hatchery.startSoaking(egg(0), ALICE);
-        hatchery.startSoaking(end, ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
+        hatchery.startSoaking(end, ALICE, PRICE);
         hatchery.lose(egg(0));
         assertEquals(1, hatchery.dragons(ALICE));
     }
@@ -98,45 +99,35 @@ class HatcheryTest {
     @Test
     void untilAnyoneHatchesADragonNoneHasBeenHatched() {
         assertFalse(hatchery.anyHatched());
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         assertFalse(hatchery.anyHatched(), "a soaking egg is not a hatched dragon");
         hatchery.hatch(egg(0));
         assertTrue(hatchery.anyHatched());
     }
 
     @Test
-    void thePriceDoublesPerDragonAndStopsAtTheLargestPrice() {
-        assertEquals(FIRST, Hatchery.price(FIRST, 0));
-        assertEquals(8 * FIRST, Hatchery.price(FIRST, 3));
-        assertEquals(1L << 62, Hatchery.price(1, 62));
-        assertEquals(Long.MAX_VALUE, Hatchery.price(1, 63));
-        assertEquals(Long.MAX_VALUE, Hatchery.price(FIRST, 60));
-        assertEquals(Long.MAX_VALUE, Hatchery.price(FIRST, Integer.MAX_VALUE));
-    }
-
-    @Test
     void aSaveAndReloadKeepsTheHatchedAndTheSoaking() {
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.hatch(egg(0));
-        hatchery.startSoaking(egg(1), ALICE);
-        hatchery.startSoaking(egg(2), BOB);
-        var codec = Hatchery.codec(() -> FIRST);
+        hatchery.startSoaking(egg(1), ALICE, PRICE);
+        hatchery.startSoaking(egg(2), BOB, PRICE);
+        var codec = Hatchery.CODEC;
         var read = codec.parse(JsonOps.INSTANCE, codec.encodeStart(JsonOps.INSTANCE, hatchery).getOrThrow()).getOrThrow();
         assertEquals(2, read.dragons(ALICE));
         assertEquals(1, read.dragons(BOB));
         assertTrue(read.anyHatched());
         read.hatch(egg(2));
         assertEquals(1, read.dragons(BOB));
-        assertEquals(2 * FIRST, read.startSoaking(egg(3), BOB));
+        assertEquals(2 * FIRST, read.startSoaking(egg(3), BOB, PRICE));
     }
 
     @Test
     void aChangeIsReported() {
         int[] changes = {0};
         hatchery.onChange(() -> changes[0]++);
-        hatchery.startSoaking(egg(0), ALICE);
+        hatchery.startSoaking(egg(0), ALICE, PRICE);
         hatchery.hatch(egg(0));
-        hatchery.startSoaking(egg(1), ALICE);
+        hatchery.startSoaking(egg(1), ALICE, PRICE);
         hatchery.lose(egg(1));
         hatchery.lose(egg(1));
         assertEquals(4, changes[0]);

@@ -4,7 +4,6 @@
 package io.github._5thlayer.voidworks.dragon;
 
 import io.github._5thlayer.voidworks.Voidworks;
-import io.github._5thlayer.voidworks.VoidworksConfig;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -15,8 +14,8 @@ public final class SavedHatchery extends SavedData {
 
     private static final SavedDataType<SavedHatchery> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "hatchery"),
-            () -> new SavedHatchery(new Hatchery(VoidworksConfig::firstEggPrice)),
-            Hatchery.codec(VoidworksConfig::firstEggPrice).xmap(SavedHatchery::new, saved -> saved.hatchery));
+            () -> new SavedHatchery(new Hatchery()),
+            Hatchery.CODEC.xmap(SavedHatchery::new, saved -> saved.hatchery));
 
     private final Hatchery hatchery;
 
