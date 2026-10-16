@@ -85,9 +85,10 @@ final class CreatureReport<E extends Entity, D> implements StreamServerDataProvi
             report.decodeFromData(accessor).ifPresent(data -> {
                 // Jade's hearts are added first, at a lower priority than this.
                 tooltip.remove(JadeIds.MC_ENTITY_HEALTH);
+                // Jade's own heart element, from its impl: its API offers none, so a Jade update may move it.
                 if (config.get(JadeIds.MC_ENTITY_HEALTH)) {
                     health.apply(data).ifPresent(shown ->
-                            tooltip.add(new HealthElement(Gui.HeartType.NORMAL, shown.max(), shown.health(), 0).tag(JadeIds.MC_ENTITY_HEALTH)));
+                            tooltip.add(new HealthElement(Gui.HeartType.NORMAL, shown.max(), shown.current(), 0).tag(JadeIds.MC_ENTITY_HEALTH)));
                 }
                 lines.apply(data).forEach(tooltip::add);
             });
@@ -100,6 +101,6 @@ final class CreatureReport<E extends Entity, D> implements StreamServerDataProvi
     }
 
     /** A creature's health of its full health, as Jade's hearts show it. */
-    record Health(float health, float max) {
+    record Health(float current, float max) {
     }
 }
