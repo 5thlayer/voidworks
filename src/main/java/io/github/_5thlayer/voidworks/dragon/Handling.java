@@ -15,7 +15,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * moves between its hatch and the dragon's paws in {@link #PASS_TICKS}, their starts spread so the last,
  * or a lone one, lands {@link #LANDS_BEFORE_END} before the stop ends, and it holds still over the shaft while they
  * move. Loading, it hangs its first stack once the first has reached its paws; unloading, it hangs what
- * it hung as the stop began until the last has landed, then the first stack of what it still carries.
+ * it hung as the stop began until the last leaves its paws, then the first stack of what it still carries.
  * With nothing passing, what it hangs changes once it is up. Plain logic, tested with no game running.
  *
  * @param loading whether the items move from the hatches to its paws, else from its paws into them
@@ -68,7 +68,12 @@ public record Handling(boolean loading, List<Passing> passing, Optional<Ware> hu
      * @return what it hangs then
      */
     public Optional<Ware> hangs(long into, Optional<Ware> after, int stopTicks) {
-        long changes = loading && !passing.isEmpty() ? start(0, stopTicks) + PASS_TICKS : landed(stopTicks);
+        long changes;
+        if (passing.isEmpty()) {
+            changes = Showing.EMERGE_TICKS;
+        } else {
+            changes = loading ? start(0, stopTicks) + PASS_TICKS : start(passing.size() - 1, stopTicks);
+        }
         return into < changes ? hung : after;
     }
 

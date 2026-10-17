@@ -573,7 +573,7 @@ Factorio's chests.
   Hatches on the stop's other Wells show nothing, and the hatch itself does not move. Unloading
   and dropping at a rider's Well are its mirror: each hatch it puts into on the Well it stopped at
   sees the first item put there move from its paws, over the rim and into the hatch, and once the
-  last has landed it hangs the first stack of what it still carries, or nothing. Only the look
+  last has left its paws it hangs the first stack of what it still carries, or nothing. Only the look
   waits: the hatches are emptied or filled, and the Toll paid, as the stop begins, and what moves
   shows what has already gone. Its timing is the stop's, read from the record, so a presence shown
   partway through a stop joins it there, what has landed already hung, and every player sees the

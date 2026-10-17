@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  * How a Matter-line dragon is seen loading or unloading at a stop: once it is up, the first item of each
  * hatch it takes from or puts into moves between that hatch and its paws, their starts spread so the
  * last, or a lone one, lands half a second before the stop ends; loading, it hangs its first stack once the first lands,
- * and unloading, the stack it hung until the last has landed.
+ * and unloading, the stack it hung until the last leaves its paws.
  */
 class HandlingTest {
 
@@ -68,11 +68,11 @@ class HandlingTest {
     }
 
     @Test
-    void unloadingItHangsWhatItCarriedUntilTheLastItemHasLandedThenWhatItStillCarries() {
+    void unloadingItHangsWhatItCarriedUntilTheLastItemLeavesItsPawsThenWhatItStillCarries() {
         var handling = Handling.unloading(passings(3), COBBLE_STACK);
-        assertEquals(COBBLE_STACK, handling.hangs(89, DIRT_STACK, STOP));
-        assertEquals(DIRT_STACK, handling.hangs(90, DIRT_STACK, STOP));
-        assertEquals(Optional.empty(), handling.hangs(90, Optional.empty(), STOP));
+        assertEquals(COBBLE_STACK, handling.hangs(69, DIRT_STACK, STOP));
+        assertEquals(DIRT_STACK, handling.hangs(70, DIRT_STACK, STOP));
+        assertEquals(Optional.empty(), handling.hangs(70, Optional.empty(), STOP));
     }
 
     @Test

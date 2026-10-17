@@ -183,7 +183,7 @@ final class SeenLoadingTests {
     /**
      * Resting at a Nether provider, the dragon brings cobblestone to a requester on the test's Well: it
      * emerges hanging it, the lone item moves from its paws into the requester to land half a second
-     * before the stop ends, and it hangs its stack until the item has landed, then nothing.
+     * before the stop ends, and it hangs its stack until the item leaves its paws, then nothing.
      */
     private static void unloads(GameTestHelper helper) {
         var server = helper.getLevel().getServer();
@@ -212,6 +212,10 @@ final class SeenLoadingTests {
                     dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Line.MATTER, under).id());
                     shown.listen(dragonId.get());
                 })
+                .thenWaitUntil(() -> {
+                    var presence = DragonPresences.presence(server, dragonId.get());
+                    helper.assertTrue(presence.isPresent() && presence.get().hung().is(Items.COBBLESTONE), "the dragon unloading is not seen hanging what it carried");
+                })
                 .thenWaitUntil(() -> helper.assertTrue(shown.passings.size() == 1, "nothing is seen moving"))
                 .thenExecute(() -> {
                     var put = shown.passings.getFirst();
@@ -220,7 +224,7 @@ final class SeenLoadingTests {
                     helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.UNLOADING)), "the item moved while the dragon is " + leg(helper, dragonId.get()));
                     helper.assertTrue(put.into() == loneStart(), "the lone item started " + put.into() + " ticks into the stop, not to land half a second before it ends");
                     var presence = DragonPresences.presence(server, dragonId.get()).orElseThrow();
-                    helper.assertTrue(presence.hung().is(Items.COBBLESTONE), "the dragon unloading hangs " + presence.hung() + ", not what it carried");
+                    helper.assertTrue(presence.hung().isEmpty(), "the dragon hangs " + presence.hung() + " as the item leaves its paws");
                 })
                 .thenWaitUntil(() -> {
                     var presence = DragonPresences.presence(server, dragonId.get());
@@ -230,8 +234,8 @@ final class SeenLoadingTests {
                 })
                 .thenExecute(() -> {
                     long into = into(helper, dragonId.get());
-                    helper.assertTrue(into >= loneStart() + Handling.PASS_TICKS && into <= loneStart() + Handling.PASS_TICKS + 1,
-                            "the dragon let its stack go " + into + " ticks into the stop, not as the item landed");
+                    helper.assertTrue(into >= loneStart() && into <= loneStart() + 1,
+                            "the dragon let its stack go " + into + " ticks into the stop, not as the item left its paws");
                     shown.stop();
                     SavedVoidDragons.of(server).remove(dragonId.get());
                     List.of(requester.get(), provider.get()).forEach(hatch -> hatches.remove(hatch.place()));
