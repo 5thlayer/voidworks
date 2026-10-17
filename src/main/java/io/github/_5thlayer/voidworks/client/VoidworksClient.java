@@ -63,7 +63,7 @@ public final class VoidworksClient {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "call"), CallOverlay::render));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> DiveSound.tickClient());
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
-        VoidDragon.onTrail((dragon, grade, offset) -> {
+        VoidDragon.onFollower((dragon, grade, offset) -> {
             if (sprites != null && dragon.level() instanceof ClientLevel level) {
                 Minecraft.getInstance().particleEngine.add(ButterflyParticle.follow(level, dragon, offset, grade, sprites));
             }

@@ -183,7 +183,7 @@ public final class VoidDragon extends PathfinderMob {
     /** The grades a Mote-line presence trails butterflies of ({@link Trail#bits()}): which it carries, not how many. */
     private static final EntityDataAccessor<Integer> DATA_TRAIL = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
 
-    private static Trailing trailing = (dragon, grade, offset) -> {};
+    private static Follower follower = (dragon, grade, offset) -> {};
 
     private static final String OWNER_KEY = "owner";
     private static final String LINE_KEY = "line";
@@ -630,7 +630,7 @@ public final class VoidDragon extends PathfinderMob {
         return new Trail(entityData.get(DATA_TRAIL));
     }
 
-    /** On a client, a butterfly of each grade it carries now and then joins those following it about its body, while it is seen. */
+    /** On a client, a butterfly of each grade it carries now and then joins those following it about its body, while it is seen and not dying of old age. */
     private void gainFollowers() {
         if (isInvisible()) {
             return;
@@ -638,20 +638,20 @@ public final class VoidDragon extends PathfinderMob {
         var box = getBoundingBox();
         for (int grade : trail().grades()) {
             if (random.nextFloat() < TRAIL_CHANCE) {
-                trailing.show(this, grade, new Vec3(box.minX + random.nextDouble() * box.getXsize(), box.minY + random.nextDouble() * box.getYsize(),
+                follower.show(this, grade, new Vec3(box.minX + random.nextDouble() * box.getXsize(), box.minY + random.nextDouble() * box.getYsize(),
                         box.minZ + random.nextDouble() * box.getZsize()).subtract(position()));
             }
         }
     }
 
     /** Has a watcher show the butterflies following a Mote-line presence with {@code show}, as the client does. */
-    public static void onTrail(Trailing show) {
-        trailing = show;
+    public static void onFollower(Follower show) {
+        follower = show;
     }
 
     /** Shows one butterfly of {@code grade} following a presence, keeping {@code offset} off its position. */
     @FunctionalInterface
-    public interface Trailing {
+    public interface Follower {
         void show(VoidDragon dragon, int grade, Vec3 offset);
     }
 
@@ -854,12 +854,12 @@ public final class VoidDragon extends PathfinderMob {
         oSettled = settled(1.0F);
         settled = Settling.settle(oSettled, perch(), fromSeat(position()));
         recordFlight();
-        if (level().isClientSide()) {
-            gainFollowers();
-        }
         if (dying()) {
             dieOn();
             return;
+        }
+        if (level().isClientSide()) {
+            gainFollowers();
         }
         if (level() instanceof ServerLevel level) {
             if (carrying()) {

@@ -13,7 +13,6 @@ import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.Line;
-import io.github._5thlayer.voidworks.dragon.Load;
 import io.github._5thlayer.voidworks.dragon.MatterLoad;
 import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
@@ -21,8 +20,6 @@ import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Showing;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
-import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
-import io.github._5thlayer.voidworks.dragon.VoidDragons;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 
@@ -58,21 +55,19 @@ final class TrailTests {
 
         var load = MoteLoad.of(Map.of(3, 1_000L, 4, 7L));
         var both = List.of(GradeColor.of(3), GradeColor.of(4));
-        carrying(dragons, dragon, Line.MOTE, load, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, load, Optional.empty());
         DragonPresences.show(server);
         assertTrails(helper, presence, Showing.RESTING, both, "resting");
-        int loaded = presence.trail().bits();
-        helper.assertTrue(synced(presence).contains(loaded), "the grades it trails are not in its synced data");
 
         long now = server.overworld().getGameTime();
         int stop = VoidworksConfig.dragonStopTicks();
-        carrying(dragons, dragon, Line.MOTE, load, Optional.of(trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
         DragonPresences.show(server);
         assertTrails(helper, presence, Showing.WORKING, both, "working");
-        carrying(dragons, dragon, Line.MOTE, load, Optional.of(trip(here, load, Trip.Leg.TO_DESTINATION, now + 1_000)));
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.TO_DESTINATION, now + 1_000)));
         DragonPresences.show(server);
         assertTrails(helper, presence, Showing.DIVING, both, "diving");
-        carrying(dragons, dragon, Line.MOTE, load, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, load, Optional.empty());
 
         // A presence shown anew trails its load at once.
         presence.discard();
@@ -82,12 +77,11 @@ final class TrailTests {
         helper.assertTrue(anew != presence, "the presence taken away is still shown");
         assertTrails(helper, anew, Showing.RESTING, both, "shown anew");
 
-        carrying(dragons, dragon, Line.MOTE, MoteLoad.NONE, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, MoteLoad.NONE, Optional.empty());
         DragonPresences.show(server);
         assertTrails(helper, anew, Showing.RESTING, List.of(), "having unloaded");
-        helper.assertTrue(!synced(anew).contains(loaded), "the empty dragon's synced data still holds the grades it carried");
 
-        carrying(dragons, dragon, Line.MATTER, MatterLoad.NONE, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, MatterLoad.NONE, Optional.empty());
         DragonPresences.show(server);
         assertTrails(helper, anew, Showing.RESTING, List.of(), "of the Matter line");
         dragons.remove(id);
@@ -103,25 +97,13 @@ final class TrailTests {
         helper.succeed();
     }
 
-    private static void carrying(VoidDragons dragons, VoidDragonRecord dragon, Line line, Load load, Optional<Trip> trip) {
-        dragons.update(new VoidDragonRecord(dragon.id(), dragon.owner(), line, dragon.health(), dragon.rest(), load, trip, 0, 0));
-    }
-
-    private static Trip trip(Place here, MoteLoad load, Trip.Leg leg, long until) {
-        return new Trip(Optional.empty(), here, load.amount(), false, leg, until, 0, 0, Optional.empty(), load.items());
-    }
-
-    /** The presence shows {@code showing} and trails butterflies of {@code colours}. */
+    /** The presence shows {@code showing} and trails butterflies of {@code colours}, and a client given its synced data sees them so. */
     private static void assertTrails(GameTestHelper helper, VoidDragon presence, Showing showing, List<Integer> colours, String doing) {
         helper.assertTrue(presence.showing() == showing, "the presence " + doing + " shows " + presence.showing() + ", not " + showing);
         var trail = presence.trail();
         helper.assertTrue(trail.colours().equals(colours), "the presence " + doing + " trails " + trail.colours() + ", not " + colours);
+        var seen = DragonClients.seen(helper, presence).trail();
+        helper.assertTrue(seen.colours().equals(colours), "a client sees the presence " + doing + " trail " + seen.colours() + ", not " + colours);
     }
 
-    /** @return the whole numbers in {@code dragon}'s synced data that differ from their defaults, as a client joining sees them */
-    private static List<Integer> synced(VoidDragon dragon) {
-        var values = dragon.getEntityData().getNonDefaultValues();
-        return values == null ? List.of()
-                : values.stream().map(value -> value.value()).filter(Integer.class::isInstance).map(Integer.class::cast).toList();
-    }
 }

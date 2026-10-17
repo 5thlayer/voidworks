@@ -60,9 +60,31 @@ final class ButterflyParticle extends SingleQuadParticle {
     private static final int FOLLOW_LIFETIME = 60;
     /** Blocks per tick a butterfly following a dragon goes at most: faster than the dragon dives, so it keeps up. */
     private static final double FOLLOW_SPEED = 0.7;
+    /** How far, in blocks, a dragon must leap from a butterfly following it to leave it behind, as when it is moved at once. */
+    private static final double FOLLOW_LOST = 8.0;
 
-    /** Where a butterfly drifts: within {@code room}, under a {@code surface} that rises and falls. */
-    private record Drift(AABB room, DoubleSupplier surface) {
+    /** How a butterfly goes, each kind its own way. */
+    private sealed interface Way permits Flight, Crawl, Drift, Follow {
+    }
+
+    /** A flight's: to {@code target}, following {@code targetEntity} there if it has one, which moves the target. */
+    private static final class Flight implements Way {
+
+        private Vec3 target;
+        private final int targetEntity;
+
+        Flight(Vec3 target, int targetEntity) {
+            this.target = target;
+            this.targetEntity = targetEntity;
+        }
+    }
+
+    /** A step of conduction's: walking straight to {@code target}. */
+    private record Crawl(Vec3 target) implements Way {
+    }
+
+    /** A shaft's: within {@code room}, under a {@code surface} that rises and falls. */
+    private record Drift(AABB room, DoubleSupplier surface) implements Way {
 
         /** @return how far it keeps from the floor and the surface: its margin, or half the fluid's depth where that is less */
         double margin(double surface) {
@@ -70,28 +92,22 @@ final class ButterflyParticle extends SingleQuadParticle {
         }
     }
 
-    private final SpriteSet sprites;
-    private final int targetEntity;
-    private Vec3 target;
-    private final int phase;
-    private final boolean crawling;
-    private final @Nullable Drift drift;
-    /** Where about its target entity a butterfly following it keeps, from that entity's position; none for any other butterfly. */
-    private final @Nullable Vec3 follow;
-
-    ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites) {
-        this(level, source, target, targetEntity, grade, motes, sprites, false, null, null);
+    /** A Mote-line dragon's follower's: keeping {@code offset} off the position of the entity {@code dragon}. */
+    private record Follow(int dragon, Vec3 offset) implements Way {
     }
 
-    private ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites,
-            boolean crawling, @Nullable Drift drift, @Nullable Vec3 follow) {
+    private final SpriteSet sprites;
+    private final int phase;
+    private final Way way;
+
+    ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites) {
+        this(level, source, grade, motes, sprites, new Flight(target, targetEntity));
+    }
+
+    private ButterflyParticle(ClientLevel level, Vec3 source, int grade, int motes, SpriteSet sprites, Way way) {
         super(level, source.x, source.y, source.z, sprites.first());
-        this.crawling = crawling;
-        this.drift = drift;
-        this.follow = follow;
+        this.way = way;
         this.sprites = sprites;
-        this.target = target;
-        this.targetEntity = targetEntity;
         this.phase = random.nextInt(WINGBEAT);
         this.hasPhysics = false;
         this.gravity = 0;
@@ -100,24 +116,27 @@ final class ButterflyParticle extends SingleQuadParticle {
         this.quadSize = Butterflies.scale(motes);
         int rgb = GradeColor.of(grade);
         setColor((rgb >> 16 & 0xFF) / 255F, (rgb >> 8 & 0xFF) / 255F, (rgb & 0xFF) / 255F);
-        if (follow != null) {
-            this.lifetime = FOLLOW_LIFETIME;
-        } else if (drift != null) {
-            this.lifetime = DRIFT_LIFETIME;
-            this.xd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
-            this.yd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
-            this.zd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
-        } else if (crawling) {
-            this.quadSize *= CRAWL_SCALE;
-            var step = target.subtract(source).normalize().scale(CRAWL_SPEED);
-            this.xd = step.x;
-            this.yd = step.y;
-            this.zd = step.z;
-        } else {
-            // A scattered take-off, so a harvest's butterflies part before they converge.
-            this.xd = (random.nextDouble() - 0.5) * 0.3;
-            this.yd = random.nextDouble() * 0.2 + 0.05;
-            this.zd = (random.nextDouble() - 0.5) * 0.3;
+        switch (way) {
+            case Follow follow -> this.lifetime = FOLLOW_LIFETIME;
+            case Drift drift -> {
+                this.lifetime = DRIFT_LIFETIME;
+                this.xd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
+                this.yd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
+                this.zd = (random.nextDouble() - 0.5) * 2 * DRIFT_SPEED;
+            }
+            case Crawl crawl -> {
+                this.quadSize *= CRAWL_SCALE;
+                var step = crawl.target().subtract(source).normalize().scale(CRAWL_SPEED);
+                this.xd = step.x;
+                this.yd = step.y;
+                this.zd = step.z;
+            }
+            case Flight flight -> {
+                // A scattered take-off, so a harvest's butterflies part before they converge.
+                this.xd = (random.nextDouble() - 0.5) * 0.3;
+                this.yd = random.nextDouble() * 0.2 + 0.05;
+                this.zd = (random.nextDouble() - 0.5) * 0.3;
+            }
         }
         setSprite(frame());
     }
@@ -125,8 +144,7 @@ final class ButterflyParticle extends SingleQuadParticle {
     /** Shows a step of conduction's butterflies, one per size its count splits into, walking. */
     static void crawl(ClientLevel level, MoteCrawl crawl, SpriteSet sprites, Consumer<ButterflyParticle> add) {
         for (int motes : Butterflies.sizes(crawl.count())) {
-            add.accept(new ButterflyParticle(level, crawl.source(), crawl.target(), MoteFlight.NO_ENTITY, crawl.grade(), motes, sprites,
-                    true, null, null));
+            add.accept(new ButterflyParticle(level, crawl.source(), crawl.grade(), motes, sprites, new Crawl(crawl.target())));
         }
     }
 
@@ -146,17 +164,16 @@ final class ButterflyParticle extends SingleQuadParticle {
         var at = new Vec3(Mth.lerp(random.nextDouble(), room.minX + DRIFT_MARGIN, room.maxX - DRIFT_MARGIN),
                 Mth.lerp(random.nextDouble(), room.minY + margin, top - margin),
                 Mth.lerp(random.nextDouble(), room.minZ + DRIFT_MARGIN, room.maxZ - DRIFT_MARGIN));
-        return new ButterflyParticle(level, at, at, MoteFlight.NO_ENTITY, grade, UNCOUNTED_SIZE, sprites, false, drift, null);
+        return new ButterflyParticle(level, at, grade, UNCOUNTED_SIZE, sprites, drift);
     }
 
     /**
      * @return one butterfly of {@code grade} following {@code dragon}, from {@code offset} off its
-     *         position, where it keeps as the dragon flies, until it vanishes or the dragon is gone or
-     *         out of sight
+     *         position, where it keeps as the dragon flies, until it vanishes, the dragon is gone or
+     *         out of sight, or the dragon leaps beyond {@link #FOLLOW_LOST} of it
      */
     static ButterflyParticle follow(ClientLevel level, Entity dragon, Vec3 offset, int grade, SpriteSet sprites) {
-        var at = dragon.position().add(offset);
-        return new ButterflyParticle(level, at, at, dragon.getId(), grade, UNCOUNTED_SIZE, sprites, false, null, offset);
+        return new ButterflyParticle(level, dragon.position().add(offset), grade, UNCOUNTED_SIZE, sprites, new Follow(dragon.getId(), offset));
     }
 
     /** Shows a flight's butterflies, one per size its count splits into. */
@@ -176,39 +193,49 @@ final class ButterflyParticle extends SingleQuadParticle {
             remove();
             return;
         }
-        if (drift != null) {
-            drift(drift);
+        switch (way) {
+            case Drift drift -> drift(drift);
+            case Follow follow -> follow(follow);
+            case Crawl crawl -> crawl(crawl);
+            case Flight flight -> fly(flight);
+        }
+    }
+
+    /** Keeps its place about the dragon it follows; gone with the dragon, out of sight with it, or left behind by a leap. */
+    private void follow(Follow follow) {
+        var dragon = level.getEntity(follow.dragon());
+        if (dragon == null || dragon.isRemoved() || dragon.isInvisible()) {
+            remove();
             return;
         }
-        if (follow != null) {
-            var entity = level.getEntity(targetEntity);
-            if (entity == null || entity.isRemoved() || entity.isInvisible()) {
-                remove();
-                return;
-            }
-            target = entity.position().add(follow);
-            flyToward(target.subtract(x, y, z), FOLLOW_SPEED, 1);
+        var toPlace = dragon.position().add(follow.offset()).subtract(x, y, z);
+        if (toPlace.length() > FOLLOW_LOST) {
+            remove();
             return;
         }
-        if (targetEntity != MoteFlight.NO_ENTITY) {
-            var entity = level.getEntity(targetEntity);
+        flyToward(toPlace, FOLLOW_SPEED, 1);
+    }
+
+    /** Straight along the face, at a walk, until it is there. */
+    private void crawl(Crawl crawl) {
+        if (crawl.target().distanceTo(new Vec3(x, y, z)) <= CRAWL_SPEED) {
+            remove();
+            return;
+        }
+        move(xd, yd, zd);
+        setSprite(frame());
+    }
+
+    /** Flies to its target, steering ever harder, and vanishes on arrival. */
+    private void fly(Flight flight) {
+        if (flight.targetEntity != MoteFlight.NO_ENTITY) {
+            var entity = level.getEntity(flight.targetEntity);
             if (entity != null) {
-                target = MoteFlight.aimAt(entity);
+                flight.target = MoteFlight.aimAt(entity);
             }
         }
-        var toTarget = target.subtract(x, y, z);
-        double distance = toTarget.length();
-        if (crawling) {
-            // Straight along the face, at a walk, until it is there.
-            if (distance <= CRAWL_SPEED) {
-                remove();
-                return;
-            }
-            move(xd, yd, zd);
-            setSprite(frame());
-            return;
-        }
-        if (distance < 0.3) {
+        var toTarget = flight.target.subtract(x, y, z);
+        if (toTarget.length() < 0.3) {
             remove();
             return;
         }
