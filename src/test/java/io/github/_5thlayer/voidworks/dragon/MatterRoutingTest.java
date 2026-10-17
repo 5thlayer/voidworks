@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -71,6 +72,8 @@ class MatterRoutingTest {
     private final FakeHatches hatches = new FakeHatches();
     private final FakeOwners owners = new FakeOwners();
     private final VoidDragons dragons = new VoidDragons();
+    /** Free, so routing alone is tested, but where a test prices it. */
+    private Toll toll = Toll.FREE;
     private Routing routing = routing(LOAD, AGELESS_LIFE);
     private long now;
 
@@ -330,6 +333,137 @@ class MatterRoutingTest {
     }
 
     @Test
+    void aLoadPaysItsTollAsItLoadsFromTheDepartureNetworkByTheSpendRulePricedToItsDestination() {
+        priced();
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(2, 100L, 3, 10_000L));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, OVERWORLD_WELL);
+        runFor(1);
+        var loaded = (MatterLoad) dragons.get(dragon.id()).orElseThrow().load();
+        // Three stacks lifted a step, 512 base void energy each, paid in grade-3 motes worth one each in the Overworld.
+        assertEquals(List.of(stacks(COBBLESTONE, 3)), loaded.wares());
+        assertEquals(3 * 512, loaded.toll());
+        assertEquals(Map.of(2, 100L, 3, 10_000L - 3 * 512), wells.motes(OVERWORLD_WELL));
+    }
+
+    @Test
+    void aNetworkThatCanPayForPartOfALoadLoadsOnlyThat() {
+        priced();
+        // Worth 640 base void energy: a stack and a quarter lifted a step.
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(3, 640L));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, OVERWORLD_WELL);
+        runFor(1);
+        var loading = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Map.of(COBBLESTONE, 80L), loading.load().items());
+        assertEquals(Map.of(COBBLESTONE, 80L), loading.trip().orElseThrow().items());
+        assertEquals(Map.of(), wells.motes(OVERWORLD_WELL));
+    }
+
+    @Test
+    void aStopThatCanPayForNoneIsNeverLoadedFrom() {
+        priced();
+        // The Overworld holds most, but its grade-2 motes are worth nothing there; the Nether can pay for a stack.
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(2, 100_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of(2, 1_024L));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 5));
+        hatches.provider(hatchOf(NETHER_WELL, 2), NETHER_WELL, stacks(COBBLESTONE, 1));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(Optional.of(NETHER_WELL), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().source());
+        runFor(A_WHILE);
+        // The Nether paid two steps for its stack, and the Overworld never could.
+        assertEquals(64, hatches.holds(END_REQUESTER, COBBLESTONE));
+        assertEquals(5 * 64, hatches.holds(OVERWORLD_PROVIDER, COBBLESTONE));
+        assertEquals(Map.of(), wells.motes(NETHER_WELL));
+        assertTrue(dragons.get(dragon.id()).orElseThrow().trip().isEmpty(), "the dragon took a trip no network can pay for");
+    }
+
+    @Test
+    void theTollIsTakenFirstAndTheDragonHealsFromWhatIsLeft() {
+        priced();
+        // The Toll for three stacks, and 5 health's worth over.
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(3, 3 * 512L + 5 * 16));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, OVERWORLD_WELL).weakened(50);
+        dragons.update(dragon);
+        runFor(STOP + 1);
+        var diving = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Trip.Leg.TO_DESTINATION, diving.trip().orElseThrow().leg());
+        assertEquals(3, diving.carried());
+        assertEquals(VoidDragonRecord.FULL_HEALTH - 50 + 5, diving.health());
+        assertEquals(Map.of(), wells.motes(OVERWORLD_WELL));
+    }
+
+    @Test
+    void aLoadSentOnPaysNothingMoreAndGetsNothingBack() {
+        priced();
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of(2, 10_000L));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 10_000L));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 3);
+        // At the Nether Well, whose requesters ask for nothing it carries, with a load that paid its Toll.
+        var dragon = dragons.add(ALICE, Line.MATTER, NETHER_WELL);
+        var load = new MatterLoad(List.of(stacks(COBBLESTONE, 2)), 2 * 1_024);
+        dragons.update(dragon.carrying(load));
+        runFor(A_WHILE);
+        assertEquals(2 * 64, hatches.holds(END_REQUESTER, COBBLESTONE));
+        assertEquals(Map.of(2, 10_000L), wells.motes(NETHER_WELL));
+        assertEquals(Map.of(4, 10_000L), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aShulkerBoxPaysForWhatItHoldsPlusOne() {
+        priced();
+        var filled = new Ware(SHULKER_BOX, Optional.of(contents("diamond_block")), 1, 1, new TreeMap<>(Map.of(64, 27 * 64L)));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of(4, 100_000L));
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, filled);
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, SHULKER_BOX, 1, 1);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(28 * 256, ((MatterLoad) dragons.get(dragon.id()).orElseThrow().load()).toll());
+        assertEquals(Map.of(4, 100_000L - 28 * 256), wells.motes(END_WELL));
+    }
+
+    @Test
+    void aProviderShowsHowManyOfItsStacksItsNetworkCanPayTheTollForToTheCheapestStopWantingThem() {
+        priced();
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(3, 1_024L));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 9));
+        // Wanted only in the End, a step up: 1,024 pays for two stacks.
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 9);
+        assertEquals(Optional.of(new Payable(9, 2)), routing.payable(ALICE, OVERWORLD_WELL, OVERWORLD_PROVIDER));
+        // Wanted in the Nether too, downhill, so four.
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 1);
+        assertEquals(Optional.of(new Payable(9, 4)), routing.payable(ALICE, OVERWORLD_WELL, OVERWORLD_PROVIDER));
+        assertEquals(Optional.empty(), routing.payable(ALICE, END_WELL, END_REQUESTER));
+    }
+
+    @Test
+    void aProviderWhoseNetworkCanPayForNoneShowsNone() {
+        priced();
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of(2, 100_000L));
+        hatches.provider(OVERWORLD_PROVIDER, OVERWORLD_WELL, stacks(COBBLESTONE, 9));
+        assertEquals(Optional.of(new Payable(9, 0)), routing.payable(ALICE, OVERWORLD_WELL, OVERWORLD_PROVIDER));
+    }
+
+    /** Prices the Toll as the shipped data does. */
+    private void priced() {
+        toll = new Toll(256);
+        routing = routing(LOAD, AGELESS_LIFE);
+    }
+
+    @Test
     void aMatterLineDragonAgesByTheStacksItUnloadsAtItsOwnLinesStageLength() {
         // Stages of 54 stacks for the Matter line, while a Mote-line stage lasts far longer.
         routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), EGG));
@@ -558,12 +692,12 @@ class MatterRoutingTest {
     }
 
     private Routing routing(long load, Life matter) {
-        return new Routing(wells, hatches, owners, DIVE, HARMLESS, MOTE_LOAD, load, STOP, AGELESS_LIFE, matter);
+        return new Routing(wells, hatches, owners, DIVE, HARMLESS, MOTE_LOAD, load, toll, STOP, AGELESS_LIFE, matter);
     }
 
     /** @return a routing whose ridden dives take no more than {@link #RIDDEN} */
     private Routing riddenRouting() {
-        return new Routing(wells, hatches, owners, RIDDEN_DIVE, HARMLESS, MOTE_LOAD, LOAD, STOP, AGELESS_LIFE, AGELESS_LIFE);
+        return new Routing(wells, hatches, owners, RIDDEN_DIVE, HARMLESS, MOTE_LOAD, LOAD, toll, STOP, AGELESS_LIFE, AGELESS_LIFE);
     }
 
     private Optional<Trip.Leg> leg(VoidDragonRecord dragon) {

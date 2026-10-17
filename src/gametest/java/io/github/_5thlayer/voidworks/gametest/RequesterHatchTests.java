@@ -72,7 +72,7 @@ final class RequesterHatchTests {
         var hatch = hatch(helper, HATCH);
         helper.assertTrue(hatch.mode() == WellHatches.Mode.PROVIDER, "a hatch is placed a " + hatch.mode());
         helper.assertBlockProperty(HATCH, WellHatchBlock.MODE, WellHatches.Mode.PROVIDER);
-        helper.assertTrue(lines(hatch).isEmpty(), "Jade shows a provider, which its name already says it is, as " + lines(hatch));
+        helper.assertTrue(lines(helper, hatch).isEmpty(), "Jade shows a provider, which its name already says it is, as " + lines(helper, hatch));
         insert(hatch.contents(), Items.ENDER_PEARL, 16);
 
         sneakUse(helper, owner, ItemStack.EMPTY);
@@ -83,8 +83,8 @@ final class RequesterHatchTests {
         helper.assertTrue(owner.getMainHandItem().isEmpty() && held(hatch.contents(), Items.ENDER_PEARL) == 16,
                 "a provider switched to a requester did not keep what it holds");
         helper.assertTrue(hatch.request().isEmpty(), "a provider switched to a requester asks for " + hatch.request());
-        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting_nothing"))),
-                "Jade shows a requester asking for nothing as " + lines(hatch));
+        helper.assertTrue(lines(helper, hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting_nothing"))),
+                "Jade shows a requester asking for nothing as " + lines(helper, hatch));
 
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         helper.assertTrue(hatch.request().isPresent(), "using an item on a requester set no request");
@@ -121,8 +121,8 @@ final class RequesterHatchTests {
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         use(helper, owner, new ItemStack(Items.IRON_INGOT));
         assertRequest(helper, owner, hatch, Items.IRON_INGOT, 3);
-        helper.assertTrue(lines(hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting")))
-                && HatchReport.of(hatch).request().equals(hatch.request()), "Jade shows a requester's request as " + lines(hatch));
+        helper.assertTrue(lines(helper, hatch).equals(List.of(Component.translatable("voidworks.jade.hatch.requesting")))
+                && HatchReport.of(hatch, helper.getLevel().getServer()).request().equals(hatch.request()), "Jade shows a requester's request as " + lines(helper, hatch));
 
         for (int use = 0; use < 30; use++) {
             use(helper, owner, new ItemStack(Items.IRON_INGOT));
@@ -308,7 +308,7 @@ final class RequesterHatchTests {
         helper.assertTrue(owner.overlays.getLast().equals(told), "setting the request told " + owner.overlays.getLast() + ", not " + told);
     }
 
-    private static List<Component> lines(WellHatches.Hatch hatch) {
-        return HatchReport.of(hatch).lines();
+    private static List<Component> lines(GameTestHelper helper, WellHatches.Hatch hatch) {
+        return HatchReport.of(hatch, helper.getLevel().getServer()).lines();
     }
 }

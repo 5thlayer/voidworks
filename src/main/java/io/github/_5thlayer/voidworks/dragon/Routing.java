@@ -68,16 +68,18 @@ public final class Routing {
     private final Map<Line, Life> lives = new EnumMap<>(Line.class);
     /** What each Line's dragons carry. */
     private final Map<Line, Cargo> cargoes = new EnumMap<>(Line.class);
+    private final MatterCargo matter;
 
     /**
      * @param load the most motes a young Mote-line dragon carries
      * @param matterLoad the most stacks a young Matter-line dragon carries
+     * @param toll what a Matter-line load pays as it loads
      * @param stopTicks how long a dragon stops at a Well to load or unload
      * @param moteLife how a Mote-line dragon ages and lays, in motes unloaded
      * @param matterLife how a Matter-line dragon ages and lays, in stacks unloaded
      */
-    public Routing(Wells wells, Hatches hatches, Owners owners, Dive dive, Harm harm, long load, long matterLoad, int stopTicks, Life moteLife,
-            Life matterLife) {
+    public Routing(Wells wells, Hatches hatches, Owners owners, Dive dive, Harm harm, long load, long matterLoad, Toll toll, int stopTicks,
+            Life moteLife, Life matterLife) {
         this.wells = wells;
         this.owners = owners;
         this.dive = dive;
@@ -86,7 +88,8 @@ public final class Routing {
         lives.put(Line.MOTE, moteLife);
         lives.put(Line.MATTER, matterLife);
         cargoes.put(Line.MOTE, new MoteCargo(wells, load));
-        cargoes.put(Line.MATTER, new MatterCargo(hatches, matterLoad));
+        matter = new MatterCargo(hatches, wells, matterLoad, toll);
+        cargoes.put(Line.MATTER, matter);
     }
 
     /**
@@ -94,7 +97,17 @@ public final class Routing {
      * stack at most; every Line ages by {@code stages} and lays an egg each {@code eggMotes} carried.
      */
     public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes, LifeStages stages) {
-        this(wells, Hatches.NONE, owners, dive, harm, load, 1, stopTicks, new Life(stages, eggMotes), new Life(stages, eggMotes));
+        this(wells, Hatches.NONE, owners, dive, harm, load, 1, Toll.FREE, stopTicks, new Life(stages, eggMotes), new Life(stages, eggMotes));
+    }
+
+    /**
+     * @return how many stacks the provider hatch at {@code hatch}, on {@code owner}'s Well at {@code well},
+     *         holds, and how many of them its network can pay the Toll to lift, to the cheapest of the
+     *         owner's stops that lacks something it holds; empty while that Well is not one of their stops
+     *         or the hatch is not one of its providers
+     */
+    public Optional<Payable> payable(UUID owner, Place well, Place hatch) {
+        return stop(owner, well).flatMap(from -> matter.payable(hatch, from, stops(owner)));
     }
 
     /**

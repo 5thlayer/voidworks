@@ -84,7 +84,8 @@ final class MatterLifeTests {
                 .thenWaitUntil(() -> helper.assertTrue(PresenceTests.stored(helper, WELL).isPresent(), "the Well has not woken"))
                 .thenExecute(() -> {
                     RoutingTests.assertUnloaded(helper, nether, under.pos());
-                    VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
+                    // Motes enough for the Toll on a stack lifted a step, from the Nether to the Overworld, in grade-2 motes worth one each.
+                    VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of(2, 1_000L));
                     SavedVoidWells.of(server).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
                     var provider = hatches.put(Place.of(nether, under.pos().east(3)), Optional.of(under), Optional.of(name), WellHatches.Mode.PROVIDER, 27);
                     try (var transaction = Transaction.openRoot()) {

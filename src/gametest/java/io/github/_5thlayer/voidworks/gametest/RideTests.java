@@ -107,6 +107,8 @@ final class RideTests {
     /** How many motes a ridden dive's Nether Well is short of its target: more than a ridden dive to it carries. */
     private static final int FAR_SHORT = 4_000;
     private static final String HIGH_NAME = "Eyrie";
+    /** Motes of {@link PresenceTests#GRADE} enough for the Toll on a whole Matter-line load lifted from the test's Well, level or downhill. */
+    private static final int TOLL_MOTES = 4_000;
     /** How many slots a Well hatch holds. */
     private static final int HATCH_SLOTS = 27;
 
@@ -711,6 +713,7 @@ final class RideTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
                 .thenExecute(() -> {
+                    PresenceTests.deposit(helper, WELL, TOLL_MOTES);
                     var provider = hatch(helper, owner, place(helper, WELL), WellHatches.Mode.PROVIDER);
                     MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), 5);
                     netherWell(helper, owner, under);
@@ -841,6 +844,7 @@ final class RideTests {
      */
     private static List<WellHatches.Hatch> loadedAtTheTestsWell(GameTestHelper helper, Rider owner, Place under) {
         int load = VoidworksConfig.dragonMatterLoad();
+        PresenceTests.deposit(helper, WELL, TOLL_MOTES);
         var provider = hatch(helper, owner, place(helper, WELL), WellHatches.Mode.PROVIDER);
         MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), load);
         netherWell(helper, owner, under);
@@ -866,7 +870,8 @@ final class RideTests {
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
                 .thenExecute(() -> {
-                    netherWell(helper, owner, under);
+                    // Grade-2 motes, worth one each in the Nether, for the Toll on two stacks lifted a step to the Overworld.
+                    netherWell(helper, owner, under, Map.of(2, 2_000L));
                     var provider = hatch(helper, owner, under, WellHatches.Mode.PROVIDER);
                     MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), 5);
                     placed.addAll(List.of(provider, requester(helper, owner, place(helper, HIGH_WELL), 2), requester(helper, owner, here, 1)));
@@ -913,9 +918,14 @@ final class RideTests {
 
     /** Makes a Well of {@code owner}'s at {@code under} in the Nether, which nothing loads, holding nothing and with no target. */
     private static void netherWell(GameTestHelper helper, ServerPlayer owner, Place under) {
+        netherWell(helper, owner, under, Map.of());
+    }
+
+    /** Makes a Well of {@code owner}'s at {@code under} in the Nether, which nothing loads, holding {@code motes} and with no target. */
+    private static void netherWell(GameTestHelper helper, ServerPlayer owner, Place under, Map<Integer, Long> motes) {
         var nether = helper.getLevel().getServer().getLevel(Level.NETHER);
         RoutingTests.assertUnloaded(helper, nether, under.pos());
-        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
+        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), motes);
         SavedVoidWells.of(helper.getLevel().getServer()).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
     }
 

@@ -72,7 +72,8 @@ final class MatterRoutingTests {
         var other = new NameAndId(UUID.randomUUID(), "someone-else");
         var providing = Place.of(overworld, PROVIDING_WELL);
         var requesting = Place.of(nether, REQUESTING_WELL);
-        VoidstoneNetworks.of(overworld).rejoin(PROVIDING_WELL, StoreKind.WELL, Set.of(), Map.of());
+        // Motes enough for the Toll, three stacks downhill at 256 base void energy each, in grade-3 motes worth one each.
+        VoidstoneNetworks.of(overworld).rejoin(PROVIDING_WELL, StoreKind.WELL, Set.of(), Map.of(3, 1_000L));
         VoidstoneNetworks.of(nether).rejoin(REQUESTING_WELL, StoreKind.WELL, Set.of(), Map.of());
         var wells = SavedVoidWells.of(server);
         wells.put(new VoidWells.Entry(providing, owner.id(), FillTarget.NONE));

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.google.common.math.LongMath;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -19,17 +20,29 @@ import net.minecraft.resources.Identifier;
  * dragons are on their way to load there, so trips claim items by kind and never overshoot a request.
  * A dragon loads from the stop whose providers hold most of what its destination lacks, the item most
  * short first, up to its load, and unloads into the requesters asking for what it carries; a load
- * stowed goes into providers with room. It never touches motes, which only heal it.
+ * stowed goes into providers with room.
+ *
+ * <p>As it loads, it pays the {@link Toll} for what it loads, priced to its destination, from the motes of
+ * the network it loads on, by the spend rule at that Well's core; it never carries motes, and those
+ * left after the Toll heal it. A stop offers only what its network can pay the Toll for, so a stop that
+ * can pay for none is never loaded from.
  */
 final class MatterCargo implements Cargo {
 
     private final Hatches hatches;
+    private final Wells wells;
     private final long load;
+    private final Toll toll;
 
-    /** @param load the most stacks a young dragon carries */
-    MatterCargo(Hatches hatches, long load) {
+    /**
+     * @param load the most stacks a young dragon carries
+     * @param toll what a load pays as it loads, out of {@code wells}
+     */
+    MatterCargo(Hatches hatches, Wells wells, long load, Toll toll) {
         this.hatches = hatches;
+        this.wells = wells;
         this.load = load;
+        this.toll = toll;
     }
 
     @Override
@@ -52,10 +65,13 @@ final class MatterCargo implements Cargo {
         return providers(stop).stream().mapToLong(Hatches.Hatch::emptySlots).sum();
     }
 
-    /** Of each item {@code to} lacks, what {@code from}'s providers hold, less what is spoken for there, in stacks. */
+    /**
+     * Of each item {@code to} lacks, what {@code from}'s providers hold, less what is spoken for there, as
+     * far as {@code from}'s network can pay the Toll to {@code to} for it, in stacks.
+     */
     @Override
     public long offer(Stop from, Stop to, List<Trip> loading, List<Trip> bound) {
-        return covered(lacking(to, bound), held(from, loading));
+        return plan(from, to, Long.MAX_VALUE, loading, bound).values().stream().mapToLong(Lack::stacks).sum();
     }
 
     /** The stop whose providers hold most of what {@code to} lacks. */
@@ -79,17 +95,24 @@ final class MatterCargo implements Cargo {
         return trip.claiming(plan.values().stream().mapToLong(Lack::stacks).sum(), counts(plan));
     }
 
-    /** The items of {@link #plan}, out of {@code from}'s providers, components and all, filling no more than {@code most} stacks. */
+    /**
+     * The items of {@link #plan}, out of {@code from}'s providers, components and all, filling no more than
+     * {@code most} stacks, their Toll to {@code to} paid out of the network at the Well at {@code place}.
+     */
     @Override
     public Load take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
         var taken = MatterLoad.NONE;
         var providers = providers(from);
+        var budget = new Budget(from, to.pressure());
         for (var planned : plan(from, to, most, loading, bound).entrySet()) {
             long left = planned.getValue().count();
             for (var provider : providers) {
                 for (var ware : provider.contents()) {
-                    long count = Math.min(left, Math.min(ware.count(), taken.room(ware, most)));
-                    if (ware.item().equals(planned.getKey()) && count > 0) {
+                    if (!ware.item().equals(planned.getKey())) {
+                        continue;
+                    }
+                    long count = budget.lift(ware.withCount(Math.min(left, Math.min(ware.count(), taken.room(ware, most)))));
+                    if (count > 0) {
                         long took = hatches.take(provider.place(), ware.withCount(count));
                         taken = taken.adding(ware.withCount(took));
                         left -= took;
@@ -97,7 +120,40 @@ final class MatterCargo implements Cargo {
                 }
             }
         }
-        return taken;
+        long paid = toll.of(taken.wares(), from.pressure(), to.pressure());
+        Toll.spend(from.motes(), from.pressure(), paid).ifPresent(spend -> spend.motes().forEach((grade, count) -> wells.take(place, grade, count)));
+        return taken.paid(paid);
+    }
+
+    /**
+     * @return how many stacks the provider at {@code place} on {@code from} holds, and for how many of them,
+     *         in the order it holds them, its network can pay the Toll: to the stop of {@code stops} that
+     *         lacks something it holds and stands lowest, the cheapest it is wanted at, else on a level
+     *         trip; empty when no provider of {@code from}'s is there
+     */
+    Optional<Payable> payable(Place place, Stop from, List<Stop> stops) {
+        return providers(from).stream()
+                .filter(hatch -> hatch.place().equals(place))
+                .findFirst()
+                .map(hatch -> payable(hatch, from, stops));
+    }
+
+    private Payable payable(Hatches.Hatch hatch, Stop from, List<Stop> stops) {
+        var held = hatch.contents().stream().map(Ware::item).toList();
+        int to = stops.stream()
+                .filter(stop -> !stop.equals(from) && lacking(stop, List.of()).keySet().stream().anyMatch(held::contains))
+                .mapToInt(Stop::pressure)
+                .min().orElse(from.pressure());
+        var budget = new Budget(from, to);
+        long payable = 0;
+        for (var ware : hatch.contents()) {
+            long count = budget.lift(ware);
+            payable += Ware.stacks(count, ware.stackSize());
+            if (count < ware.count()) {
+                break;
+            }
+        }
+        return new Payable(new MatterLoad(hatch.contents()).amount(), payable);
     }
 
     /** Into the requesters asking for what it carries, as far as each lacks it; or for a load stowed, into the providers with room. */
@@ -191,20 +247,34 @@ final class MatterCargo implements Cargo {
     /**
      * @return the items to take out of {@code from} for {@code to}: of each item {@code to} lacks, after
      *         what is on its way to it, as many as {@code from} holds, after what is spoken for there, the
-     *         item most short first, until they fill {@code most} stacks
+     *         item most short first, until they fill {@code most} stacks or {@code from}'s network can pay
+     *         the Toll to {@code to} for no more, each ware as far as it pays for it in the order the
+     *         providers hold them
      */
     private Map<Identifier, Lack> plan(Stop from, Stop to, long most, List<Trip> loading, List<Trip> bound) {
-        var held = held(from, loading);
+        var spoken = new HashMap<Identifier, Long>();
+        loading.forEach(trip -> trip.items().forEach((item, count) -> spoken.merge(item, count, Long::sum)));
+        var budget = new Budget(from, to.pressure());
         var plan = new LinkedHashMap<Identifier, Lack>();
         long left = most;
         var lacking = lacking(to, bound).entrySet().stream()
                 .sorted(Map.Entry.<Identifier, Lack>comparingByValue(Comparator.comparingLong(Lack::stacks)).reversed())
                 .toList();
         for (var lack : lacking) {
-            var taking = lack.getValue().of(Math.min(held.getOrDefault(lack.getKey(), 0L), left * lack.getValue().stackSize()));
-            if (taking.count() > 0) {
-                plan.put(lack.getKey(), taking);
-                left -= taking.stacks();
+            long wanted = Math.min(lack.getValue().count(), LongMath.saturatedMultiply(left, lack.getValue().stackSize()));
+            // The first of its kind are spoken for, as other dragons take them first.
+            long stillSpoken = spoken.getOrDefault(lack.getKey(), 0L);
+            long taking = 0;
+            var held = providers(from).stream().flatMap(provider -> provider.contents().stream()).filter(ware -> ware.item().equals(lack.getKey())).toList();
+            for (var ware : held) {
+                long free = Math.max(0, ware.count() - stillSpoken);
+                stillSpoken = Math.max(0, stillSpoken - ware.count());
+                taking += budget.lift(ware.withCount(Math.min(free, wanted - taking)));
+            }
+            if (taking > 0) {
+                var taken = lack.getValue().of(taking);
+                plan.put(lack.getKey(), taken);
+                left -= taken.stacks();
             }
         }
         return plan;
@@ -259,6 +329,27 @@ final class MatterCargo implements Cargo {
             case MatterLoad matter -> matter;
             case MoteLoad motes -> MatterLoad.NONE;
         };
+    }
+
+    /** What a stop's network can still pay the Toll with, for wares lifted from it to a Well of pressure {@code to}. */
+    private final class Budget {
+
+        private final int from;
+        private final int to;
+        private long left;
+
+        Budget(Stop from, int to) {
+            this.from = from.pressure();
+            this.to = to;
+            this.left = Toll.budget(from.motes(), this.from);
+        }
+
+        /** @return how many of {@code ware}, up to its count, it pays the Toll for, which it then has paid */
+        long lift(Ware ware) {
+            long count = toll.affordable(ware, from, to, left);
+            left -= toll.of(ware.withCount(count), from, to);
+            return count;
+        }
     }
 
     /** So many of one item, {@code stackSize} to a stack. */
