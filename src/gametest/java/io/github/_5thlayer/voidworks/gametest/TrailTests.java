@@ -27,8 +27,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 
 /**
- * A Mote-line dragon shows its Line by trailing motes in the colours of the grades it carries, the
- * butterflies' colours, whatever it is doing, and none while it carries nothing; which grades they are is in its presence's
+ * A Mote-line dragon shows its Line by trailing butterflies of the grades it carries, in their
+ * grades' colours, whatever it is doing, and none while it carries nothing; which grades they are is in its presence's
  * synced data, which reaches every client, and their counts are not. A Matter-line dragon and a
  * Dragonling trail none.
  */
@@ -111,7 +111,7 @@ final class TrailTests {
         return new Trip(Optional.empty(), here, load.amount(), false, leg, until, 0, 0, Optional.empty(), load.items());
     }
 
-    /** The presence shows {@code showing} and trails motes of {@code colours}. */
+    /** The presence shows {@code showing} and trails butterflies of {@code colours}. */
     private static void assertTrails(GameTestHelper helper, VoidDragon presence, Showing showing, List<Integer> colours, String doing) {
         helper.assertTrue(presence.showing() == showing, "the presence " + doing + " shows " + presence.showing() + ", not " + showing);
         var trail = presence.trail();

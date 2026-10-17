@@ -54,9 +54,9 @@ final class ButterflyParticle extends SingleQuadParticle {
     private static final double DRIFT_FLUTTER = 0.005;
     /** How fast its flutter goes, in radians a tick. */
     private static final double FLUTTER_RATE = 0.9;
-    /** The motes a drifting butterfly is sized as, though it stands for none. */
-    private static final int DRIFT_SIZE = 8;
-    /** How long a butterfly follows a Mote-line dragon, in ticks, before it fades. */
+    /** The motes a butterfly that stands for none, drifting or following a dragon, is sized as. */
+    private static final int UNCOUNTED_SIZE = 8;
+    /** How long a butterfly follows a Mote-line dragon, in ticks, before it vanishes. */
     private static final int FOLLOW_LIFETIME = 60;
     /** Blocks per tick a butterfly following a dragon goes at most: faster than the dragon dives, so it keeps up. */
     private static final double FOLLOW_SPEED = 0.7;
@@ -76,7 +76,7 @@ final class ButterflyParticle extends SingleQuadParticle {
     private final int phase;
     private final boolean crawling;
     private final @Nullable Drift drift;
-    /** Where about its target entity a butterfly following it keeps, from that entity's position; none for a flight, which ends there. */
+    /** Where about its target entity a butterfly following it keeps, from that entity's position; none for any other butterfly. */
     private final @Nullable Vec3 follow;
 
     ButterflyParticle(ClientLevel level, Vec3 source, Vec3 target, int targetEntity, int grade, int motes, SpriteSet sprites) {
@@ -146,17 +146,17 @@ final class ButterflyParticle extends SingleQuadParticle {
         var at = new Vec3(Mth.lerp(random.nextDouble(), room.minX + DRIFT_MARGIN, room.maxX - DRIFT_MARGIN),
                 Mth.lerp(random.nextDouble(), room.minY + margin, top - margin),
                 Mth.lerp(random.nextDouble(), room.minZ + DRIFT_MARGIN, room.maxZ - DRIFT_MARGIN));
-        return new ButterflyParticle(level, at, at, MoteFlight.NO_ENTITY, grade, DRIFT_SIZE, sprites, false, drift, null);
+        return new ButterflyParticle(level, at, at, MoteFlight.NO_ENTITY, grade, UNCOUNTED_SIZE, sprites, false, drift, null);
     }
 
     /**
      * @return one butterfly of {@code grade} following {@code dragon}, from {@code offset} off its
-     *         position, where it keeps as the dragon flies, until it fades or the dragon is gone or
+     *         position, where it keeps as the dragon flies, until it vanishes or the dragon is gone or
      *         out of sight
      */
     static ButterflyParticle follow(ClientLevel level, Entity dragon, Vec3 offset, int grade, SpriteSet sprites) {
         var at = dragon.position().add(offset);
-        return new ButterflyParticle(level, at, at, dragon.getId(), grade, DRIFT_SIZE, sprites, false, null, offset);
+        return new ButterflyParticle(level, at, at, dragon.getId(), grade, UNCOUNTED_SIZE, sprites, false, null, offset);
     }
 
     /** Shows a flight's butterflies, one per size its count splits into. */

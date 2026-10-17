@@ -12,7 +12,7 @@ import java.util.Set;
 import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import org.junit.jupiter.api.Test;
 
-/** The motes a Mote-line dragon's presence trails: one colour per grade it carries, its counts left out. */
+/** The butterflies a Mote-line dragon's presence trails: one colour per grade it carries, its counts left out. */
 class TrailTest {
 
     @Test

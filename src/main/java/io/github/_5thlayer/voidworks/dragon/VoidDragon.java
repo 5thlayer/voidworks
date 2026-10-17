@@ -132,7 +132,7 @@ public final class VoidDragon extends PathfinderMob {
     /** How far through a wingbeat its model's wings hang lowest, the tips bent down too: where a sitting presence holds them. */
     private static final float WINGS_DOWN = 0.75F;
 
-    /** How likely a loaded Mote-line presence is to gain a mote of each grade it carries following it in a tick. */
+    /** How likely a loaded Mote-line presence is to gain a butterfly of each grade it carries following it in a tick. */
     private static final float TRAIL_CHANCE = 0.1F;
 
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
@@ -180,7 +180,7 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<ItemStack> DATA_HUNG = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.ITEM_STACK);
     /** Its Line: a Dragonling's, which its egg fixed, or a presence's dragon's; synced, so every client tints it by its Line. */
     private static final EntityDataAccessor<Byte> DATA_LINE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
-    /** The grades a Mote-line presence trails motes of ({@link Trail#bits()}): which it carries, not how many. */
+    /** The grades a Mote-line presence trails butterflies of ({@link Trail#bits()}): which it carries, not how many. */
     private static final EntityDataAccessor<Integer> DATA_TRAIL = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
 
     private static Trailing trailing = (dragon, grade, offset) -> {};
@@ -618,20 +618,20 @@ public final class VoidDragon extends PathfinderMob {
 
     /**
      * It hangs the first stack of {@code load} under its body, and nothing for motes or no load, and
-     * trails motes of the grades in it.
+     * trails butterflies of the grades in it.
      */
     void showLoad(Load load) {
         hang(load.firstStack().map(ware -> StackWares.stack(ware, registryAccess())).orElse(ItemStack.EMPTY));
         entityData.set(DATA_TRAIL, load.trail().bits());
     }
 
-    /** @return the motes it trails, synced to every client: of each grade its dragon carries, or none */
+    /** @return the butterflies it trails, synced to every client: of each grade its dragon carries, or none */
     public Trail trail() {
         return new Trail(entityData.get(DATA_TRAIL));
     }
 
-    /** On a client, a mote of each grade it carries now and then joins those following it about its body, while it is seen. */
-    private void leaveTrail() {
+    /** On a client, a butterfly of each grade it carries now and then joins those following it about its body, while it is seen. */
+    private void gainFollowers() {
         if (isInvisible()) {
             return;
         }
@@ -644,12 +644,12 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** Has a watcher show the motes following a Mote-line presence with {@code show}, as the client does with butterflies. */
+    /** Has a watcher show the butterflies following a Mote-line presence with {@code show}, as the client does. */
     public static void onTrail(Trailing show) {
         trailing = show;
     }
 
-    /** Shows one mote of {@code grade} following a presence, keeping {@code offset} off its position. */
+    /** Shows one butterfly of {@code grade} following a presence, keeping {@code offset} off its position. */
     @FunctionalInterface
     public interface Trailing {
         void show(VoidDragon dragon, int grade, Vec3 offset);
@@ -855,7 +855,7 @@ public final class VoidDragon extends PathfinderMob {
         settled = Settling.settle(oSettled, perch(), fromSeat(position()));
         recordFlight();
         if (level().isClientSide()) {
-            leaveTrail();
+            gainFollowers();
         }
         if (dying()) {
             dieOn();

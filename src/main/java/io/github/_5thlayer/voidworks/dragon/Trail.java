@@ -12,8 +12,8 @@ import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 
 /**
- * The motes following a Mote-line dragon's presence, butterflies of each grade it carries
- * tinted as every mote's are ({@link Load#trail()}); a Matter-line load and nothing carried trail none.
+ * The butterflies following a Mote-line dragon's presence, of each grade it carries, tinted as every
+ * mote's are ({@link Load#trail()}); a Matter-line load and nothing carried trail none.
  * Its presence syncs only which grades they are, as a bit per grade, never their counts.
  *
  * @param bits a bit per grade carried, grade {@code g} at bit {@code g}
@@ -45,7 +45,7 @@ public record Trail(int bits) {
         return grades;
     }
 
-    /** @return the RGB of each grade's motes, lowest grade first */
+    /** @return the RGB of each grade's butterflies, lowest grade first */
     public List<Integer> colours() {
         return grades().stream().map(GradeColor::of).toList();
     }
