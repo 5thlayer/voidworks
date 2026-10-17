@@ -132,7 +132,10 @@ final class MatterCargo implements Cargo {
      *         trip; empty when no provider of {@code from}'s is there
      */
     Optional<Payable> payable(Place place, Stop from, List<Stop> stops) {
-        return providers(from).stream().filter(hatch -> hatch.place().equals(place)).findFirst().map(hatch -> payable(hatch, from, stops));
+        return providers(from).stream()
+                .filter(hatch -> hatch.place().equals(place))
+                .findFirst()
+                .map(hatch -> payable(hatch, from, stops));
     }
 
     private Payable payable(Hatches.Hatch hatch, Stop from, List<Stop> stops) {

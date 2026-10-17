@@ -99,6 +99,15 @@ class TollTest {
     }
 
     @Test
+    void aBudgetCountsMotesAsASpendDoesSoATollWithinItIsNeverRefused() {
+        // More grade-3 motes than a spend counts in one grade.
+        var motes = Map.of(3, 3_000_000_000L);
+        long budget = Toll.budget(motes, OVERWORLD);
+        assertEquals(Integer.MAX_VALUE, budget);
+        assertEquals(Optional.of(Map.of(3, Integer.MAX_VALUE)), Toll.spend(motes, OVERWORLD, budget).map(VoidEnergy.Spend::motes));
+    }
+
+    @Test
     void thePriceIsReadFromItsDataAsADatapackSpellsIt() {
         var json = JsonParser.parseString("{\"stack_price\": 512}");
         assertEquals(new Toll(512), Toll.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow());
