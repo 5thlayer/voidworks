@@ -67,6 +67,10 @@ class MatterRoutingTest {
     private static final Place OVERWORLD_PROVIDER = hatchOf(OVERWORLD_WELL, 0);
     private static final Place OVERWORLD_REQUESTER = hatchOf(OVERWORLD_WELL, 1);
     private static final Place OTHER_END_REQUESTER = hatchOf(OTHER_END_WELL, 0);
+    /** A Well on {@link #END_WELL}'s network, where a test joins it. */
+    private static final Place END_WELL_BESIDE = new Place(END, new BlockPos(0, 64, 16));
+    private static final Place END_OTHER_PROVIDER = hatchOf(END_WELL, 2);
+    private static final Place BESIDE_PROVIDER = hatchOf(END_WELL_BESIDE, 0);
 
     private final FakeWells wells = new FakeWells(CAPACITY);
     private final FakeHatches hatches = new FakeHatches();
@@ -677,6 +681,61 @@ class MatterRoutingTest {
         runFor(A_WHILE);
         assertEquals(3 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE));
         assertEquals(64, hatches.holds(OTHER_END_REQUESTER, COBBLESTONE));
+    }
+
+    @Test
+    void itsLoadingIsSeenByTheFirstItemTakenFromEachHatchOnTheWellItStopsAtAndNoneFromTheStopsOtherWells() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.join(ALICE, END_WELL_BESIDE, OptionalLong.empty(), END_WELL);
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 2), stacks(DIRT, 1));
+        hatches.provider(END_OTHER_PROVIDER, END_WELL, stacks(DIRT, 2));
+        hatches.provider(BESIDE_PROVIDER, END_WELL_BESIDE, stacks(COBBLESTONE, 3));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 5);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, DIRT, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        var trip = dragons.get(dragon.id()).orElseThrow().trip().orElseThrow();
+        assertEquals(Trip.Leg.LOADING, trip.leg());
+        assertEquals(Handling.loading(List.of(new Passing(END_PROVIDER, stacks(COBBLESTONE, 1)), new Passing(END_OTHER_PROVIDER, stacks(DIRT, 1)))),
+                trip.handling());
+        runFor(STOP);
+        assertEquals(Handling.NONE, dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling(), "its dive still shows its loading");
+    }
+
+    @Test
+    void itsUnloadingIsSeenByTheFirstItemPutIntoEachHatchOnTheWellItStopsAtWithTheStackItHung() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5), stacks(DIRT, 1));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 5);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, DIRT, 64, 1);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        while (leg(dragon).filter(Trip.Leg.UNLOADING::equals).isEmpty()) {
+            runFor(1);
+        }
+        assertEquals(Handling.unloading(List.of(new Passing(NETHER_REQUESTER, stacks(COBBLESTONE, 1)), new Passing(NETHER_OTHER_REQUESTER, stacks(DIRT, 1))),
+                Optional.of(stacks(COBBLESTONE, 1))), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
+    }
+
+    @Test
+    void aRiddenDiveSheddingItsExcessShowsNothingAndTheWellItsRiderPickedSeesItUnload() {
+        routing = riddenRouting();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 3);
+        hatches.requester(OTHER_END_REQUESTER, OTHER_END_WELL, COBBLESTONE, 64, 1);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OTHER_END_WELL, now));
+        assertEquals(Handling.NONE, dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
+        while (leg(dragon).filter(Trip.Leg.SETTING_DOWN::equals).isEmpty()) {
+            runFor(1);
+        }
+        assertEquals(Handling.unloading(List.of(new Passing(OTHER_END_REQUESTER, stacks(COBBLESTONE, 1))), Optional.of(stacks(COBBLESTONE, 1))),
+                dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
     }
 
     /** @return how many stacks {@code dragon} carries as it next loads, run on until it has unloaded them all */

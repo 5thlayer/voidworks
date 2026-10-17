@@ -337,10 +337,18 @@ public final class Routing {
     private VoidDragonRecord drop(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
         var place = trip.added().orElseThrow();
         var stopped = dragon.resting(place);
-        var after = stop(dragon.owner(), place).map(stop -> stopped.carrying(cargo(dragon).put(stopped.load(), place, stop, need(dragons, stop, dragon), false))).orElse(stopped);
+        var put = stop(dragon.owner(), place).map(stop -> cargo(dragon).put(stopped.load(), place, stop, need(dragons, stop, dragon), false));
+        var after = put.map(handled -> stopped.carrying(handled.load())).orElse(stopped);
         long dropped = stopped.carried() - after.carried();
         var laid = dropped > 0 ? laying(unloaded(after, dropped), place) : after;
-        return laid.on(Optional.of(trip.claimingAtMost(laid.load()).then(Trip.Leg.SETTING_DOWN, now + stopTicks)));
+        return laid.on(Optional.of(trip.claimingAtMost(laid.load()).then(Trip.Leg.SETTING_DOWN, now + stopTicks).seen(unloading(stopped, put))));
+    }
+
+    /** @return how {@code dragon}, as it stopped, is seen unloading what it {@code put}, if it put anything */
+    private static Handling unloading(VoidDragonRecord dragon, Optional<Cargo.Handled> put) {
+        return put.filter(handled -> !handled.passing().isEmpty() || dragon.load().firstStack().isPresent())
+                .map(handled -> Handling.unloading(handled.passing(), dragon.load().firstStack()))
+                .orElse(Handling.NONE);
     }
 
     /** A dragon with nothing to do and nothing carried: a trip to the stop that needs most, from the fullest that can give it something; or none. */
@@ -373,11 +381,13 @@ public final class Routing {
         if (from.isEmpty() || to.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        var loaded = cargo(dragon).take(from.get(), source, to.get(), loadOf(dragon), loading(dragons, from.get(), dragon), bound(dragons, to.get(), dragon));
+        var taken = cargo(dragon).take(from.get(), source, to.get(), loadOf(dragon), loading(dragons, from.get(), dragon), bound(dragons, to.get(), dragon));
+        var loaded = taken.load();
         if (loaded.isEmpty()) {
             return stopped.on(Optional.empty());
         }
-        return laying(stopped.carrying(loaded), source).on(Optional.of(trip.claiming(loaded).then(Trip.Leg.LOADING, now + stopTicks)));
+        return laying(stopped.carrying(loaded), source)
+                .on(Optional.of(trip.claiming(loaded).then(Trip.Leg.LOADING, now + stopTicks).seen(Handling.loading(taken.passing()))));
     }
 
     /**
@@ -387,14 +397,15 @@ public final class Routing {
      */
     private VoidDragonRecord unload(VoidDragons dragons, VoidDragonRecord dragon, Trip trip, long now) {
         var stopped = dragon.resting(trip.destination());
-        var after = stop(dragon.owner(), trip.destination())
-                .map(stop -> stopped.carrying(cargo(dragon).put(stopped.load(), trip.destination(), stop, trip.stow() ? cargo(dragon).room(stop) : need(dragons, stop, dragon), trip.stow())))
-                .orElse(stopped);
+        var handled = stop(dragon.owner(), trip.destination())
+                .map(stop -> cargo(dragon).put(stopped.load(), trip.destination(), stop, trip.stow() ? cargo(dragon).room(stop) : need(dragons, stop, dragon), trip.stow()));
+        var after = handled.map(put -> stopped.carrying(put.load())).orElse(stopped);
         long put = stopped.carried() - after.carried();
         if (put == 0) {
             return stopped.on(Optional.empty());
         }
-        return laying(unloaded(after, put), trip.destination()).on(Optional.of(trip.claimingNothing().then(Trip.Leg.UNLOADING, now + stopTicks)));
+        return laying(unloaded(after, put), trip.destination())
+                .on(Optional.of(trip.claimingNothing().then(Trip.Leg.UNLOADING, now + stopTicks).seen(unloading(stopped, handled))));
     }
 
     /** @return {@code dragon} having unloaded {@code amount}, in its Line's unit, which it has carried over its life, and as an adult toward its eggs */

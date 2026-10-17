@@ -41,16 +41,20 @@ interface Cargo {
     /** @return {@code trip}, planned from {@code from} to {@code to}, claiming what it is to load there, up to {@code most} */
     Trip planning(Trip trip, Stop from, Stop to, long most, List<Trip> loading, List<Trip> bound);
 
-    /** Takes up to {@code most} of what {@code to} wants out of {@code from}, at its Well at {@code place}. @return what it took */
-    Load take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound);
+    /**
+     * Takes up to {@code most} of what {@code to} wants out of {@code from}, at its Well at {@code place}.
+     *
+     * @return what it took, and the items seen taken out of the hatches on that Well
+     */
+    Handled take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound);
 
     /**
      * Puts up to {@code most} of {@code load} into {@code to}, at its Well at {@code place}: what {@code to}
      * wants, or for a load stowed, anything it has room for.
      *
-     * @return what is left of {@code load}
+     * @return what is left of {@code load}, and the items seen put into the hatches on that Well
      */
-    Load put(Load load, Place place, Stop to, long most, boolean stow);
+    Handled put(Load load, Place place, Stop to, long most, boolean stow);
 
     /**
      * Puts what {@code load} holds beyond {@code keep} into {@code at}, the stop it is at, at its Well at
@@ -61,4 +65,20 @@ interface Cargo {
      *         {@code at} has no room for all the rest
      */
     Optional<Load> shed(Load load, Place place, Stop at, long keep, long healing);
+
+    /**
+     * A load handled at a Well, and the items seen moving as it was ({@link Passing}): the first taken
+     * out of or put into each hatch on that Well, in that order; none for motes.
+     */
+    record Handled(Load load, List<Passing> passing) {
+
+        public Handled {
+            passing = List.copyOf(passing);
+        }
+
+        /** @return {@code load}, with nothing seen moving */
+        static Handled unseen(Load load) {
+            return new Handled(load, List.of());
+        }
+    }
 }

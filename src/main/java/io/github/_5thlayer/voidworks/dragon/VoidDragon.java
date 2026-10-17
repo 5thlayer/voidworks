@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.dragon;
 
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -156,6 +157,16 @@ public final class VoidDragon extends PathfinderMob {
     /** The most ticks a presence takes to take off, should something keep it down; it goes on as if it were up, so a dive is never held up. */
     private static final int MOST_TAKE_OFF_TICKS = 40;
 
+    /** How fast, in blocks a tick, a presence goes to where it holds still over the shaft while items move to or from its paws. */
+    private static final double HOLD_SPEED = 0.25;
+
+    /**
+     * Where what a presence hangs is, its paws, in blocks from where it stands, at a grown presence's
+     * size before its stage scales it: just under its body, where items it loads or unloads come and go.
+     * Tuned in game.
+     */
+    private static final Vec3 PAWS = new Vec3(0.0, 0.6, 0.0);
+
     private static final EntityDataAccessor<Boolean> DATA_GROWN = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
     /** Whether a presence carries its rider through its dragon's dive, which it holds them in until it sets them down: synced, so every client seats them down the shaft. */
     private static final EntityDataAccessor<Boolean> DATA_CARRYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
@@ -184,6 +195,8 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Integer> DATA_FOLLOWERS = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
 
     private static Follower follower = (dragon, grade, offset) -> {};
+
+    private static Passer passer = PassingShown::send;
 
     private static final String OWNER_KEY = "owner";
     private static final String LINE_KEY = "line";
@@ -227,6 +240,14 @@ public final class VoidDragon extends PathfinderMob {
     private @Nullable Seat seat;
     /** The heading, as a mob's, a presence sits at on its seat, along the core's wall; NaN until it is picked, over the seat. */
     private float seatYaw = Float.NaN;
+    /** The stop a presence's dragon is at, as it is seen loading or unloading there; null while it is at none. */
+    private @Nullable StopShown stopShown;
+    /** How many of that stop's passings it has shown, or let go by. */
+    private int passingsShown;
+    /** The first stack its dragon carries, which it hangs off a stop. */
+    private Optional<Ware> carried = Optional.empty();
+    /** Whether a presence holds still over the shaft while items move to or from its paws. */
+    private boolean holdingStill;
     /** Whether a presence emerging brings up the rider its dragon carried through its dive, to set them down once out. */
     private boolean bringing;
     /** The Well its rider has picked to dive to, by strafing; null until they pick one. */
@@ -255,7 +276,7 @@ public final class VoidDragon extends PathfinderMob {
      */
     @Override
     public void travel(Vec3 input) {
-        if (passing() || perch() != Perch.FLYING) {
+        if (passing() || perch() != Perch.FLYING || holdingStill) {
             move(MoverType.SELF, getDeltaMovement());
             return;
         }
@@ -322,7 +343,7 @@ public final class VoidDragon extends PathfinderMob {
      */
     void showPresenceOf(VoidDragonRecord record, Showing showing, DragonPresences.Spot spot, LifeStage stage) {
         showStage(stage);
-        showLoad(record.load());
+        showLoad(record);
         dragon = record.id();
         owner = record.owner();
         setLine(record.line());
@@ -617,12 +638,96 @@ public final class VoidDragon extends PathfinderMob {
     }
 
     /**
-     * It hangs the first stack of {@code load} under its body, and nothing for motes or no load, and
-     * is followed by butterflies of the grades in it.
+     * It shows what {@code record} carries: it is followed by butterflies of the grades in it, and hangs
+     * its first stack under its body, nothing for motes or no load. At a stop where a Matter-line dragon
+     * loads or unloads, it is seen to ({@link Handling}), as far through the stop as its record is.
      */
-    void showLoad(Load load) {
-        hang(load.firstStack().map(ware -> StackWares.stack(ware, registryAccess())).orElse(ItemStack.EMPTY));
-        entityData.set(DATA_FOLLOWERS, load.followers().bits());
+    void showLoad(VoidDragonRecord record) {
+        entityData.set(DATA_FOLLOWERS, record.load().followers().bits());
+        carried = record.load().firstStack();
+        var stop = record.trip().filter(trip -> trip.divingTo().isEmpty())
+                .map(trip -> new StopShown(trip.until() - VoidworksConfig.dragonStopTicks(), trip.handling()))
+                .orElse(null);
+        if (!Objects.equals(stop, stopShown)) {
+            stopShown = stop;
+            passingsShown = 0;
+        }
+        if (level() instanceof ServerLevel level) {
+            hang(stopShown == null ? carried : stopShown.handling().hangs(into(level), carried, VoidworksConfig.dragonStopTicks()));
+        }
+    }
+
+    /**
+     * A tick of its stop, as its dragon's record times it: it hangs what it hangs then, shows each item
+     * that starts to move, or one on its way, if it was not here to show it start, and holds still over the
+     * shaft while they move, unless it is ridden or not at work there.
+     */
+    private void showHandling(ServerLevel level) {
+        if (stopShown == null) {
+            hang(carried);
+            holdingStill = false;
+            return;
+        }
+        var handling = stopShown.handling();
+        int stopTicks = VoidworksConfig.dragonStopTicks();
+        long into = into(level);
+        hang(handling.hangs(into, carried, stopTicks));
+        var passing = handling.passing();
+        while (passingsShown < passing.size() && handling.start(passingsShown, stopTicks) <= into) {
+            long since = into - handling.start(passingsShown, stopTicks);
+            if (since < Handling.PASS_TICKS && !isInvisible()) {
+                passer.show(this, passing.get(passingsShown), handling.loading(), (int) since);
+            }
+            passingsShown++;
+        }
+        holdingStill = handling.holdsStill(into, stopTicks) && showing == Showing.WORKING && perch() == Perch.FLYING && !isVehicle();
+    }
+
+    /** @return how many ticks into its stop its dragon is, by the game time its record runs on */
+    private long into(ServerLevel level) {
+        return level.getServer().overworld().getGameTime() - Objects.requireNonNull(stopShown).began();
+    }
+
+    /** It goes to over the middle of the shaft, along the core's wall, and holds still there. */
+    private void holdStill() {
+        getNavigation().stop();
+        var way = Vec3.atBottomCenterOf(spot.over()).subtract(position());
+        setDeltaMovement(way.length() > HOLD_SPEED ? way.normalize().scale(HOLD_SPEED) : way);
+        spot.seat().ifPresent(seat -> {
+            float yaw = seat.headWay(getYRot()).toYRot();
+            setYRot(yaw);
+            setYBodyRot(yaw);
+        });
+    }
+
+    /** @return the middle of the mouth of the shaft it emerges from and dives into: the first open air over its Well's rim */
+    Vec3 mouth() {
+        return Vec3.atBottomCenterOf(spot.emerges());
+    }
+
+    /** @return where its paws are now, where what it hangs is, and where items it loads or unloads come and go */
+    public Vec3 paws() {
+        return position().add(PAWS.scale(size(stage())));
+    }
+
+    /** @return how it shows each item seen moving to or from its paws */
+    public static Passer passer() {
+        return passer;
+    }
+
+    /** It shows each item seen moving to or from its paws with {@code show}: to the players watching it, unless a watcher hears it first. */
+    public static void onPassing(Passer show) {
+        passer = show;
+    }
+
+    /** Shows {@code passing} moving between its hatch and {@code dragon}'s paws, {@code elapsed} ticks on already. */
+    @FunctionalInterface
+    public interface Passer {
+        void show(VoidDragon dragon, Passing passing, boolean loading, int elapsed);
+    }
+
+    /** The stop its dragon is at: when it {@code began}, and how it is seen loading or unloading there. */
+    private record StopShown(long began, Handling handling) {
     }
 
     /** @return the butterflies following it, synced to every client: of each grade its dragon carries, or none */
@@ -658,6 +763,11 @@ public final class VoidDragon extends PathfinderMob {
     /** As a Dragonling, which is all that is ever saved, it holds a chest under its body if it is of the Matter line, and nothing else. */
     private void holdForLine() {
         hang(line() == Line.MATTER ? new ItemStack(Items.CHEST) : ItemStack.EMPTY);
+    }
+
+    /** It hangs a stack of {@code ware}, or nothing. */
+    private void hang(Optional<Ware> ware) {
+        hang(ware.map(hung -> StackWares.stack(hung, registryAccess())).orElse(ItemStack.EMPTY));
     }
 
     /** It hangs {@code stack}, synced only if it is not what it hangs already. */
@@ -865,6 +975,9 @@ public final class VoidDragon extends PathfinderMob {
             if (carrying()) {
                 getPassengers().forEach(DragonRiding::hide);
             }
+            if (grown()) {
+                showHandling(level);
+            }
             if (passing()) {
                 passOn(level);
                 return;
@@ -872,6 +985,9 @@ public final class VoidDragon extends PathfinderMob {
             keepPerch();
             if (passing()) {
                 return;
+            }
+            if (holdingStill) {
+                holdStill();
             }
             if (getFirstPassenger() instanceof ServerPlayer rider) {
                 DragonRiding.steer(level, this, rider);
@@ -1014,7 +1130,7 @@ public final class VoidDragon extends PathfinderMob {
     @Override
     protected void updateControlFlags() {
         super.updateControlFlags();
-        goalSelector.setControlFlag(Goal.Flag.MOVE, !passing() && perch() == Perch.FLYING && !isVehicle());
+        goalSelector.setControlFlag(Goal.Flag.MOVE, !passing() && perch() == Perch.FLYING && !isVehicle() && !holdingStill);
         goalSelector.setControlFlag(Goal.Flag.LOOK, !passing());
     }
 

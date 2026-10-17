@@ -112,6 +112,7 @@ public final class VoidworksGameTests {
         RequesterHatchTests.register(tests);
         RideTests.register(tests);
         RoutingTests.register(tests);
+        SeenLoadingTests.register(tests);
         SiphonTests.register(tests);
         SpendTests.register(tests);
         TollTests.register(tests);

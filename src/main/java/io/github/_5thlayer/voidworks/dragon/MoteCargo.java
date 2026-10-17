@@ -72,7 +72,7 @@ final class MoteCargo implements Cargo {
 
     /** Highest grade first, as many as {@code to} still needs and {@code from} still offers. */
     @Override
-    public Load take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
+    public Handled take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
         var taken = new TreeMap<Integer, Long>();
         long left = Math.min(most, Math.min(shortfall(to, bound), offer(from, to, loading, bound)));
         for (var grade : from.motes().sequencedKeySet().reversed()) {
@@ -87,12 +87,12 @@ final class MoteCargo implements Cargo {
                 }
             }
         }
-        return new MoteLoad(taken);
+        return Handled.unseen(new MoteLoad(taken));
     }
 
     /** Highest grade first: of grades worth something there, or for a load stowed, of any. */
     @Override
-    public Load put(Load load, Place place, Stop to, long most, boolean stow) {
+    public Handled put(Load load, Place place, Stop to, long most, boolean stow) {
         var motes = motes(load);
         var left = new TreeMap<>(motes);
         long room = most;
@@ -108,7 +108,7 @@ final class MoteCargo implements Cargo {
                 }
             }
         }
-        return new MoteLoad(left);
+        return Handled.unseen(new MoteLoad(left));
     }
 
     /** Lowest grade first, into the Well at {@code place}, if its network has room for all of them, counting what the dragon's healing frees. */

@@ -107,7 +107,7 @@ public final class DragonPresences {
             // Its new stage shows from its next stop, as it changes only at one.
             shown.ifPresent(presence -> {
                 presence.showStage(stage);
-                presence.showLoad(dragon.load());
+                presence.showLoad(dragon);
             });
             if (shown.isPresent() && shown.get().carrying() && showing != Showing.DIVING) {
                 bringOut(server, saved, dragon, shown.get());

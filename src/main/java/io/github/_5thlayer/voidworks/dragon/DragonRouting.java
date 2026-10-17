@@ -77,7 +77,9 @@ public final class DragonRouting {
 
     public static void register(IEventBus modBus) {
         // Optional, so a client without Voidworks can still join; it shows nothing it was not sent.
-        modBus.addListener((RegisterPayloadHandlersEvent event) -> event.registrar("1").optional().playToClient(CallPayload.TYPE, CallPayload.STREAM_CODEC));
+        modBus.addListener((RegisterPayloadHandlersEvent event) -> event.registrar("1").optional()
+                .playToClient(CallPayload.TYPE, CallPayload.STREAM_CODEC)
+                .playToClient(PassingShown.TYPE, PassingShown.STREAM_CODEC));
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> {
             if (event.getServer().getTickCount() % INTERVAL == 0) {
                 step(event.getServer());

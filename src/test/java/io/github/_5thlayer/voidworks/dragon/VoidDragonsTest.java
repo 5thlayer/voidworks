@@ -110,6 +110,18 @@ class VoidDragonsTest {
     }
 
     @Test
+    void aSaveAndReloadKeepsHowAStopIsSeenUnloading() {
+        var dragon = dragons.add(ALICE, HERE);
+        var cobblestone = Ware.of(Identifier.withDefaultNamespace("cobblestone"), 64, 64);
+        var seen = Handling.unloading(List.of(new Passing(THERE, cobblestone)), Optional.of(cobblestone));
+        var unloading = dragon.on(Optional.of(new Trip(Optional.empty(), THERE, 0, false, Trip.Leg.UNLOADING, 1_234, 1_000, 0).seen(seen)));
+        dragons.update(unloading);
+        var saved = VoidDragons.CODEC.encodeStart(JsonOps.INSTANCE, dragons).getOrThrow();
+        var read = VoidDragons.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        assertEquals(unloading, read.get(dragon.id()).orElseThrow());
+    }
+
+    @Test
     void aSaveAndReloadKeepsAHurtDragonsHealth() {
         var dragon = dragons.add(ALICE, HERE);
         var hurt = dragon.weakened(63);

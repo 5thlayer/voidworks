@@ -9,6 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.math.LongMath;
 import net.minecraft.resources.Identifier;
@@ -100,8 +102,9 @@ final class MatterCargo implements Cargo {
      * {@code most} stacks, their Toll to {@code to} paid out of the network at the Well at {@code place}.
      */
     @Override
-    public Load take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
+    public Handled take(Stop from, Place place, Stop to, long most, List<Trip> loading, List<Trip> bound) {
         var taken = MatterLoad.NONE;
+        var seen = seenAt(place);
         var providers = providers(from);
         var budget = new Budget(from, to.pressure());
         for (var planned : plan(from, to, most, loading, bound).entrySet()) {
@@ -115,6 +118,7 @@ final class MatterCargo implements Cargo {
                     if (count > 0) {
                         long took = hatches.take(provider.place(), ware.withCount(count));
                         taken = taken.adding(ware.withCount(took));
+                        seen.moved(provider.place(), ware.withCount(took));
                         left -= took;
                     }
                 }
@@ -122,7 +126,7 @@ final class MatterCargo implements Cargo {
         }
         long paid = toll.of(taken.wares(), from.pressure(), to.pressure());
         Toll.spend(from.motes(), from.pressure(), paid).ifPresent(spend -> spend.motes().forEach((grade, count) -> wells.take(place, grade, count)));
-        return taken.paid(paid);
+        return new Handled(taken.paid(paid), seen.passing());
     }
 
     /**
@@ -158,8 +162,10 @@ final class MatterCargo implements Cargo {
 
     /** Into the requesters asking for what it carries, as far as each lacks it; or for a load stowed, into the providers with room. */
     @Override
-    public Load put(Load load, Place place, Stop to, long most, boolean stow) {
-        return stow ? fill(matter(load), List.of(), providers(to), most) : fill(matter(load), requesters(to), List.of(), most);
+    public Handled put(Load load, Place place, Stop to, long most, boolean stow) {
+        var seen = seenAt(place);
+        var left = stow ? fill(matter(load), List.of(), providers(to), most, seen) : fill(matter(load), requesters(to), List.of(), most, seen);
+        return new Handled(left, seen.passing());
     }
 
     /**
@@ -177,17 +183,17 @@ final class MatterCargo implements Cargo {
         if (!fits(rest, requesters, providers)) {
             return Optional.empty();
         }
-        return Optional.of(kept.plus(fill(rest, requesters, providers, Long.MAX_VALUE)));
+        return Optional.of(kept.plus(fill(rest, requesters, providers, Long.MAX_VALUE, Seen.UNSEEN)));
     }
 
     /**
      * Puts {@code load} into {@code requesters}, each as far as it lacks what it asks for, then into
      * {@code providers} as far as they have room, no more of it than {@code most} stacks' worth, each
-     * put counting its part stack as one.
+     * put counting its part stack as one, each seen by {@code seen}.
      *
      * @return what is left of it
      */
-    private MatterLoad fill(MatterLoad load, List<Hatches.Hatch> requesters, List<Hatches.Hatch> providers, long most) {
+    private MatterLoad fill(MatterLoad load, List<Hatches.Hatch> requesters, List<Hatches.Hatch> providers, long most, Seen seen) {
         var left = load;
         // What is left to put, in stacks, each worth its item's stack size.
         long stacks = most;
@@ -198,6 +204,7 @@ final class MatterCargo implements Cargo {
                 if (asked.isPresent() && ware.item().equals(asked.get().item())) {
                     long put = hatches.put(requester.place(), ware.withCount(Math.min(lacks, ware.within(stacks))));
                     left = left.less(ware.withCount(put));
+                    seen.moved(requester.place(), ware.withCount(put));
                     lacks -= put;
                     stacks -= Ware.stacks(put, ware.stackSize());
                 }
@@ -207,6 +214,7 @@ final class MatterCargo implements Cargo {
             for (var ware : left.wares()) {
                 long put = hatches.put(provider.place(), ware.withCount(ware.within(stacks)));
                 left = left.less(ware.withCount(put));
+                seen.moved(provider.place(), ware.withCount(put));
                 stacks -= Ware.stacks(put, ware.stackSize());
             }
         }
@@ -309,6 +317,11 @@ final class MatterCargo implements Cargo {
         return stop.wells().stream().flatMap(well -> hatches.on(well.place()).stream()).toList();
     }
 
+    /** @return what is seen moving at the Well at {@code well}: what goes in or out of the hatches on it */
+    private Seen seenAt(Place well) {
+        return new Seen(hatches.on(well).stream().map(Hatches.Hatch::place).collect(Collectors.toSet()));
+    }
+
     private List<Hatches.Hatch> providers(Stop stop) {
         return hatches(stop).stream().filter(Hatches.Hatch::provider).toList();
     }
@@ -329,6 +342,34 @@ final class MatterCargo implements Cargo {
             case MatterLoad matter -> matter;
             case MoteLoad motes -> MatterLoad.NONE;
         };
+    }
+
+    /**
+     * The items seen moving at the Well a dragon handles a load at: the first taken out of or put into each
+     * hatch on that Well, a stack at most, in that order. Those of the stop's other Wells are not seen.
+     */
+    private static final class Seen {
+
+        /** What a ridden dive puts back as its rider jumps, which nobody sees. */
+        static final Seen UNSEEN = new Seen(Set.of());
+
+        private final Set<Place> here;
+        private final Map<Place, Ware> first = new LinkedHashMap<>();
+
+        /** @param here the hatches on the Well it is seen at */
+        Seen(Set<Place> here) {
+            this.here = Set.copyOf(here);
+        }
+
+        void moved(Place hatch, Ware ware) {
+            if (ware.count() > 0 && here.contains(hatch)) {
+                first.putIfAbsent(hatch, ware.withCount(Math.min(ware.count(), ware.stackSize())));
+            }
+        }
+
+        List<Passing> passing() {
+            return first.entrySet().stream().map(moved -> new Passing(moved.getKey(), moved.getValue())).toList();
+        }
     }
 
     /** What a stop's network can still pay the Toll with, for wares lifted from it to a Well of pressure {@code to}. */

@@ -10,6 +10,7 @@ import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.dragon.CallPayload;
+import io.github._5thlayer.voidworks.dragon.PassingShown;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
@@ -31,6 +32,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleGroupsEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -40,7 +42,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
  * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the item on a Well hatch's front ({@link WellHatchRenderer}), the Void Dragon
  * ({@link VoidDragonRenderer}), the butterflies following a Mote-line one ({@link ButterflyParticle#follow}), the void taking a block ({@link VoidTakings}) and a Matter Dragon Egg's amber
- * ({@link EggTint}), and keeps the Void Pressure
+ * ({@link EggTint}), the items a Matter-line dragon is seen loading and unloading ({@link PassingParticle}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
 @Mod(value = Voidworks.MOD_ID, dist = Dist.CLIENT)
@@ -51,6 +53,7 @@ public final class VoidworksClient {
 
     public VoidworksClient(IEventBus modBus) {
         modBus.addListener(VoidworksClient::registerParticles);
+        modBus.addListener((RegisterParticleGroupsEvent event) -> event.register(PassingParticle.GROUP, PassingParticle.Group::new));
         modBus.addListener(VoidworksClient::registerPayloadHandlers);
         modBus.addListener(VoidworksClient::registerRenderers);
         VoidTakings.register(modBus);
@@ -112,6 +115,12 @@ public final class VoidworksClient {
         event.register(PressurePayload.TYPE, (payload, context) -> KnownPressure.receive(payload));
         event.register(BreakdownsPayload.TYPE, (payload, context) -> KnownBreakdowns.receive(payload));
         event.register(CallPayload.TYPE, (payload, context) -> CallOverlay.receive(payload));
+        event.register(PassingShown.TYPE, (shown, context) -> {
+            var minecraft = Minecraft.getInstance();
+            if (minecraft.level != null) {
+                PassingParticle.show(minecraft.level, shown, minecraft.particleEngine);
+            }
+        });
         event.register(VoidTaking.TYPE, (taking, context) -> VoidTakings.receive(taking));
     }
 }
