@@ -26,14 +26,9 @@ import io.github._5thlayer.voidworks.dragon.VoidDragons;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemContainerContents;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 
 /**
  * A dragon shows its Line by what it carries: a Matter-line dragon's presence hangs its first carried
@@ -115,8 +110,8 @@ final class HangingTests {
         var mote = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
         mote.hatchFor(UUID.randomUUID(), Line.MOTE);
         helper.assertTrue(mote.hung().isEmpty(), "a Mote-line Dragonling holds " + mote.hung());
-        helper.assertTrue(read(helper, saved(helper, matter)).hung().is(Items.CHEST), "a Matter-line Dragonling reloads holding no chest");
-        helper.assertTrue(read(helper, saved(helper, mote)).hung().isEmpty(), "a Mote-line Dragonling reloads holding something");
+        helper.assertTrue(DragonSaves.reloaded(helper, matter).hung().is(Items.CHEST), "a Matter-line Dragonling reloads holding no chest");
+        helper.assertTrue(DragonSaves.reloaded(helper, mote).hung().isEmpty(), "a Mote-line Dragonling reloads holding something");
         matter.discard();
         mote.discard();
         helper.succeed();
@@ -146,15 +141,5 @@ final class HangingTests {
                 : values.stream().map(value -> value.value()).filter(ItemStack.class::isInstance).map(ItemStack.class::cast).toList();
     }
 
-    private static CompoundTag saved(GameTestHelper helper, VoidDragon dragonling) {
-        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
-        dragonling.saveWithoutId(output);
-        return output.buildResult();
-    }
 
-    private static VoidDragon read(GameTestHelper helper, CompoundTag saved) {
-        var reloaded = VoidworksEntities.VOID_DRAGON.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
-        reloaded.load(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), saved));
-        return reloaded;
-    }
 }

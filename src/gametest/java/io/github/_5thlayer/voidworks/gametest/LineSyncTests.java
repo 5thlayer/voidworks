@@ -13,11 +13,7 @@ import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 
 /**
  * A dragon's Line is in its synced data, so a client, which tints it by its Line, knows it: a
@@ -41,7 +37,7 @@ final class LineSyncTests {
             var dragonling = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
             dragonling.hatchFor(UUID.randomUUID(), line);
             assertSynced(helper, dragonling, line, "Dragonling");
-            var reloaded = read(helper, saved(helper, dragonling));
+            var reloaded = DragonSaves.reloaded(helper, dragonling);
             helper.assertTrue(reloaded.line() == line, "a " + line + " Dragonling reloads of the " + reloaded.line() + " line");
             assertSynced(helper, reloaded, line, "reloaded Dragonling");
             dragonling.discard();
@@ -74,15 +70,5 @@ final class LineSyncTests {
         helper.assertTrue(client.line() == line, "a client sees the " + line + " " + what + " of the " + client.line() + " line");
     }
 
-    private static CompoundTag saved(GameTestHelper helper, VoidDragon dragonling) {
-        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
-        dragonling.saveWithoutId(output);
-        return output.buildResult();
-    }
 
-    private static VoidDragon read(GameTestHelper helper, CompoundTag saved) {
-        var reloaded = VoidworksEntities.VOID_DRAGON.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
-        reloaded.load(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), saved));
-        return reloaded;
-    }
 }

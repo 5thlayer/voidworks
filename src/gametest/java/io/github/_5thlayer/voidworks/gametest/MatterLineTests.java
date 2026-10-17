@@ -30,17 +30,12 @@ import io.github._5thlayer.voidworks.well.SavedVoidWells;
 import io.github._5thlayer.voidworks.well.VoidWells;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DragonEggBlock;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
 /**
@@ -197,22 +192,14 @@ final class MatterLineTests {
         var level = helper.getLevel();
         var dragonling = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), EGG.above());
         dragonling.hatchFor(UUID.randomUUID(), Line.MATTER);
-        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
-        dragonling.saveWithoutId(output);
-        var saved = output.buildResult();
-        helper.assertTrue(read(helper, saved).line() == Line.MATTER, "a Matter-line Dragonling reloads of another line");
+        var saved = DragonSaves.saved(helper, dragonling);
+        helper.assertTrue(DragonSaves.read(helper, saved).line() == Line.MATTER, "a Matter-line Dragonling reloads of another line");
         saved.remove("line");
-        helper.assertTrue(read(helper, saved).line() == Line.MOTE, "a Dragonling saved before Lines reloads of the Matter line");
+        helper.assertTrue(DragonSaves.read(helper, saved).line() == Line.MOTE, "a Dragonling saved before Lines reloads of the Matter line");
         dragonling.discard();
         helper.succeed();
     }
 
-    private static VoidDragon read(GameTestHelper helper, CompoundTag saved) {
-        var level = helper.getLevel();
-        var reloaded = VoidworksEntities.VOID_DRAGON.get().create(level, EntitySpawnReason.LOAD);
-        reloaded.load(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), saved));
-        return reloaded;
-    }
 
     /** At a reservoir, with a Well of its owner's short of its target, a Matter-line dragon takes nothing for it, trip after trip's time. */
     private static void carriesNoMotes(GameTestHelper helper) {
