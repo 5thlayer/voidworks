@@ -1,7 +1,8 @@
 # The Matter Link: two of the runner's Void Wells 12 blocks apart, on networks of their own, each with
 # a Well hatch on its south wall beside its core. The west Well's provider holds four stacks of gold
-# blocks, the east Well's requester asks for three, and a grown Matter-line dragon resting at the
-# west Well carries them across, diving into one shaft and emerging from the other (ADR 0011).
+# blocks, its network filled with motes to pay the Toll, the east Well's requester asks for three,
+# and a grown Matter-line dragon resting at the west Well carries them across, diving into one shaft
+# and emerging from the other (ADR 0011).
 #
 # The plot runs from ~2 to ~25 east and from ~-12 to the sign at ~0 south, 16 high, cleared as
 # every scene's is, its dragons with it. Its hatches are broken first: a fill takes a block away
@@ -11,13 +12,18 @@ setblock ~9 ~2 ~-3 minecraft:air destroy
 setblock ~21 ~2 ~-3 minecraft:air destroy
 function voidworks:gallery/clear
 
-# The providing Well, its core in its south wall facing the sign, its provider east of the core.
+# The providing Well, its core in its south wall facing the sign, its provider east of the core and
+# a Voidstone pillar against its west wall.
 fill ~6 ~ ~-8 ~10 ~3 ~-4 voidworks:void_well_casing
 fill ~7 ~1 ~-7 ~9 ~3 ~-5 minecraft:air
 fill ~6 ~4 ~-8 ~10 ~4 ~-4 voidworks:void_well_rim
 fill ~7 ~4 ~-7 ~9 ~4 ~-5 minecraft:air
 setblock ~8 ~2 ~-4 voidworks:void_well[facing=south]
+fill ~5 ~ ~-6 ~5 ~1 ~-6 voidworks:voidstone
 voidworks well ~8 ~2 ~-4 none
+# The Void Dragon scene's motes, one grade above the End's Void Pressure over the open void, so they
+# pay the Toll wherever it is built: a full network pays for many loads.
+voidworks mote ~5 ~1 ~-6 5
 setblock ~9 ~2 ~-3 voidworks:well_hatch[facing=south,mode=provider]
 voidworks hatch ~9 ~2 ~-3 provider minecraft:gold_block 4
 
