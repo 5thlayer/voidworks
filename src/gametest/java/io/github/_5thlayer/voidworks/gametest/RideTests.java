@@ -35,13 +35,16 @@ import io.github._5thlayer.voidworks.network.StoreKind;
 import io.github._5thlayer.voidworks.network.VoidstoneNetworks;
 import io.github._5thlayer.voidworks.well.FillTarget;
 import io.github._5thlayer.voidworks.well.SavedVoidWells;
+import io.github._5thlayer.voidworks.well.SavedWellHatches;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import io.github._5thlayer.voidworks.well.VoidWells;
+import io.github._5thlayer.voidworks.well.WellHatches;
 import io.github._5thlayer.voidworks.well.WellStructure;
 import io.netty.channel.ChannelFutureListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
 import net.minecraft.network.PacketListener;
@@ -55,6 +58,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Input;
@@ -74,6 +78,8 @@ import org.jspecify.annotations.Nullable;
  * jumping dives there, holding them unseen and unhurt through the dive until it sets them down on that
  * Well's rim; the Well they pick is a stop added to the dragon's trip; and standing on a Well's rim for a
  * second calls a dragon there, which waits while they stay, the dragon pushing no one off the rim.
+ * A Matter-line dragon does the same in stacks: the rider's Well's requesters get what they are short of,
+ * a ridden dive puts the stacks it cannot carry into the hatches where it is, and a called one drops none.
  * The owner's other Well stands high over the test's, in its column, clear of every other test, so a
  * dive between them is the shortest a dive takes. Which trips a dragon makes is {@code RoutingTest}'s.
  */
@@ -94,9 +100,15 @@ final class RideTests {
     private static final int OTHERS_RIM_Y = 144;
     private static final int RIDDEN_DIVE_Y = 96;
     private static final int RIDDEN_REFUSED_Y = 112;
+    private static final int MATTER_ADDED_STOP_Y = 160;
+    private static final int MATTER_RIDDEN_DIVE_Y = 176;
+    private static final int MATTER_RIDDEN_REFUSED_Y = 192;
+    private static final int MATTER_CALLED_Y = 208;
     /** How many motes a ridden dive's Nether Well is short of its target: more than a ridden dive to it carries. */
     private static final int FAR_SHORT = 4_000;
     private static final String HIGH_NAME = "Eyrie";
+    /** How many slots a Well hatch holds. */
+    private static final int HATCH_SLOTS = 27;
 
     private static final Input RIGHT = new Input(false, false, false, true, false, false, false);
     private static final Input LEFT = new Input(false, false, true, false, false, false, false);
@@ -128,6 +140,14 @@ final class RideTests {
                 RideTests::riddenDive);
         tests.testAlone("ridden_dive_is_refused_while_the_well_it_is_at_has_no_room_for_what_it_cannot_carry", TICKS,
                 RideTests::riddenDiveRefused);
+        tests.testAlone("matter_ride_the_well_a_rider_picks_is_a_stop_whose_requesters_get_what_they_are_short_of_and_the_rest_goes_on", TICKS,
+                RideTests::matterAddedStop);
+        tests.testAlone("matter_ride_a_ridden_dive_carries_its_stacks_cut_putting_the_rest_into_the_hatches_where_it_is", TICKS,
+                RideTests::matterRiddenDive);
+        tests.testAlone("matter_ride_a_ridden_dive_is_refused_while_the_hatches_where_it_is_have_no_room_for_what_it_cannot_carry", TICKS,
+                RideTests::matterRiddenDiveRefused);
+        tests.testAlone("matter_ride_a_called_dragon_drops_none_of_its_load_at_the_well_it_is_called_to", TICKS,
+                RideTests::matterCalled);
         tests.testAlone("a_void_dragon_resting_at_a_well_takes_off_to_hover_as_its_owner_mounts_it_and_lands_again_once_they_get_off", TICKS,
                 RideTests::takesOffForItsRider);
         tests.testAlone("life_stage_an_old_void_dragon_that_outlives_its_stage_dies_at_the_well_it_unloads_at_and_lowers_its_owners_next_egg_price",
@@ -672,6 +692,233 @@ final class RideTests {
                 .thenSucceed();
     }
 
+    /**
+     * As {@link #addedStop}, for a Matter-line dragon: it loads cobblestone at the test's Well for a
+     * requester on a Well in the Nether, more short than one on the high Well; its rider picks the high
+     * Well, whose requester gets what it is short of as they are set down, and the rest goes on to the
+     * Nether.
+     */
+    private static void matterAddedStop(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var under = PresenceTests.under(helper, nether, MATTER_ADDED_STOP_Y);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        var placed = new ArrayList<WellHatches.Hatch>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    var provider = hatch(helper, owner, place(helper, WELL), WellHatches.Mode.PROVIDER);
+                    MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), 5);
+                    netherWell(helper, owner, under);
+                    placed.addAll(List.of(provider, requester(helper, owner, place(helper, HIGH_WELL), 1), requester(helper, owner, under, 3)));
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Line.MATTER, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    var loading = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(loading.trip().map(Trip::destination).equals(Optional.of(under)) && loading.carried() == 3,
+                            "the dragon is not loading what the Nether Well's requester is short of: " + loading);
+                    mountAndPick(helper, owner, presence.get());
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(Input.EMPTY))
+                .thenExecuteAfter(1, () -> {
+                    var picked = Component.translatable("voidworks.dragon.ride.picked", DragonRiding.label(server, place(helper, HIGH_WELL)));
+                    helper.assertTrue(owner.overlays.getLast().equals(picked), "strafing showed " + owner.overlays.getLast() + ", not the high Well");
+                    owner.setLastClientInput(JUMP);
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(Input.EMPTY))
+                .thenWaitUntil(() -> helper.assertTrue(!owner.isPassenger(), "the rider has not been set down"))
+                .thenExecute(() -> {
+                    assertOnTheRim(helper, owner, HIGH_WELL);
+                    long high = MatterRoutingTests.count(placed.get(1), Items.COBBLESTONE);
+                    helper.assertTrue(high == 64, "the high Well's requester holds " + high + " cobblestone, not the stack it is short of");
+                    var setDown = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(setDown.load().items().equals(Map.of(BuiltInRegistries.ITEM.getKey(Items.COBBLESTONE), 2 * 64L)),
+                            "the dragon carries " + setDown.load() + " on");
+                    // Staying on the rim would call the dragon to wait there for them.
+                    stepOff(helper, owner);
+                })
+                .thenWaitUntil(() -> {
+                    long far = MatterRoutingTests.count(placed.get(2), Items.COBBLESTONE);
+                    helper.assertTrue(far == 2 * 64, "the Nether Well's requester holds " + far + " cobblestone, not the rest of the load");
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of(under), placed))
+                .thenSucceed();
+    }
+
+    /**
+     * As {@link #riddenDive}, for a Matter-line dragon: it loads its whole load of cobblestone at the test's
+     * Well for a requester in the Nether; its rider picks that Well and jumps, and the dragon carries only
+     * the stacks the time saved leaves, having put the rest back into the test's Well's provider.
+     */
+    private static void matterRiddenDive(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, MATTER_RIDDEN_DIVE_Y);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        var placed = new ArrayList<WellHatches.Hatch>();
+        int load = VoidworksConfig.dragonMatterLoad();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> {
+                    placed.addAll(loadedAtTheTestsWell(helper, owner, under));
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Line.MATTER, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    var loading = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(loading.carried() == load, "the dragon is not loading its whole load: " + loading);
+                    mountAndPick(helper, owner, presence.get());
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    var diving = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(diving.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.TO_PICKED)), "jumping did not dive: " + diving);
+                    long most = (long) load * VoidworksConfig.dragonRiddenDiveTicks() / VoidworksConfig.dragonDiveTicks();
+                    helper.assertTrue(diving.carried() > 0 && diving.carried() <= most,
+                            "the ridden dragon carries " + diving.carried() + " stacks, more than the " + most + " its time saved leaves");
+                    long back = MatterRoutingTests.count(placed.getFirst(), Items.COBBLESTONE);
+                    helper.assertTrue(back == (load - diving.carried()) * 64, "the test's Well's provider holds " + back + " cobblestone, not what the dragon put back");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(PresenceTests.record(helper, dragonId.get()).rest().equals(under), "the dragon has not reached the Nether Well"))
+                .thenExecute(() -> clearAway(helper, owner, Set.of(under), placed))
+                .thenSucceed();
+    }
+
+    /**
+     * As {@link #matterRiddenDive}, but the test's Well's provider is full by the time its rider jumps: the
+     * dragon does not dive, keeps its load and its rider, and tells them why above the hotbar.
+     */
+    private static void matterRiddenDiveRefused(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        var under = PresenceTests.under(helper, nether, MATTER_RIDDEN_REFUSED_Y);
+        var dragonId = new AtomicReference<UUID>();
+        var presence = new AtomicReference<VoidDragon>();
+        var placed = new ArrayList<WellHatches.Hatch>();
+        int load = VoidworksConfig.dragonMatterLoad();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL), "the Well has not woken"))
+                .thenExecute(() -> {
+                    placed.addAll(loadedAtTheTestsWell(helper, owner, under));
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Line.MATTER, place(helper, WELL)).id());
+                })
+                .thenWaitUntil(() -> presence.set(atWork(helper, dragonId.get())))
+                .thenExecute(() -> {
+                    MatterRoutingTests.fill(placed.getFirst(), new ItemStack(Items.DIRT, 64), HATCH_SLOTS);
+                    mountAndPick(helper, owner, presence.get());
+                })
+                .thenExecuteAfter(1, () -> owner.setLastClientInput(JUMP))
+                .thenExecuteAfter(1, () -> {
+                    owner.setLastClientInput(Input.EMPTY);
+                    var refused = Component.translatable("voidworks.dragon.ride.no_room", DragonRiding.label(server, under));
+                    helper.assertTrue(owner.overlays.getLast().equals(refused), "the rider was told " + owner.overlays.getLast() + ", not that there is no room");
+                    var still = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(still.trip().map(Trip::leg).equals(Optional.of(Trip.Leg.LOADING)) && still.carried() == load,
+                            "the refused dragon is " + still);
+                    helper.assertTrue(MatterRoutingTests.count(placed.getFirst(), Items.COBBLESTONE) == 0, "the refused dragon put cobblestone back");
+                    helper.assertTrue(owner.getVehicle() == presence.get() && !presence.get().carrying(), "the refused rider is not still mounted at the Well");
+                    clearAway(helper, owner, Set.of(under), placed);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Makes a provider on the test's Well holding a whole Matter-line load of cobblestone, and a Well of
+     * {@code owner}'s at {@code under} in the Nether whose requester asks for all of it.
+     *
+     * @return the provider, then the requester
+     */
+    private static List<WellHatches.Hatch> loadedAtTheTestsWell(GameTestHelper helper, Rider owner, Place under) {
+        int load = VoidworksConfig.dragonMatterLoad();
+        var provider = hatch(helper, owner, place(helper, WELL), WellHatches.Mode.PROVIDER);
+        MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), load);
+        netherWell(helper, owner, under);
+        return List.of(provider, requester(helper, owner, under, load));
+    }
+
+    /**
+     * A Matter-line dragon loads cobblestone at its owner's Well in the Nether for a requester on the
+     * high Well, more short than one on the test's Well; its owner stands on the test's Well's rim, and it
+     * comes there and waits with its load whole, dropping none of it for the requester there; once they
+     * step off, it goes on to the high Well with all of it.
+     */
+    private static void matterCalled(GameTestHelper helper) {
+        var owner = Rider.join(helper);
+        var server = helper.getLevel().getServer();
+        var nether = server.getLevel(Level.NETHER);
+        PresenceTests.wakeWell(helper, owner, WELL);
+        PresenceTests.wakeWell(helper, owner, HIGH_WELL);
+        var under = PresenceTests.under(helper, nether, MATTER_CALLED_Y);
+        var here = place(helper, WELL);
+        var dragonId = new AtomicReference<UUID>();
+        var placed = new ArrayList<WellHatches.Hatch>();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(awake(helper, WELL) && awake(helper, HIGH_WELL), "the Wells have not woken"))
+                .thenExecute(() -> {
+                    netherWell(helper, owner, under);
+                    var provider = hatch(helper, owner, under, WellHatches.Mode.PROVIDER);
+                    MatterRoutingTests.fill(provider, new ItemStack(Items.COBBLESTONE, 64), 5);
+                    placed.addAll(List.of(provider, requester(helper, owner, place(helper, HIGH_WELL), 2), requester(helper, owner, here, 1)));
+                    dragonId.set(SavedVoidDragons.of(server).add(owner.getUUID(), Line.MATTER, under).id());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.LOADING)), "the dragon is not loading in the Nether"))
+                // Its owner calls only once it has loaded, else it would come carrying nothing.
+                .thenExecute(() -> standOnTheRim(helper, owner, WELL))
+                .thenWaitUntil(() -> {
+                    var called = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(called.rest().equals(here) && leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.WAITING)),
+                            "the dragon has not come to the Well its owner calls it to");
+                })
+                .thenExecute(() -> {
+                    var waiting = PresenceTests.record(helper, dragonId.get());
+                    helper.assertTrue(waiting.load().items().equals(Map.of(BuiltInRegistries.ITEM.getKey(Items.COBBLESTONE), 2 * 64L)),
+                            "the called dragon waits carrying " + waiting.load() + ", not its whole load");
+                    long dropped = MatterRoutingTests.count(placed.getLast(), Items.COBBLESTONE);
+                    helper.assertTrue(dropped == 0, "the called dragon dropped " + dropped + " cobblestone at the Well it was called to");
+                    stepOff(helper, owner);
+                })
+                .thenWaitUntil(() -> {
+                    long high = MatterRoutingTests.count(placed.get(1), Items.COBBLESTONE);
+                    helper.assertTrue(high == 2 * 64, "the high Well's requester holds " + high + " cobblestone, not the called dragon's load");
+                })
+                .thenExecute(() -> clearAway(helper, owner, Set.of(under), placed))
+                .thenSucceed();
+    }
+
+    /** @return a hatch of {@code owner}'s against their Well at {@code well}, held in saved data alone, as a dragon loads it with no chunk loaded */
+    private static WellHatches.Hatch hatch(GameTestHelper helper, Rider owner, Place well, WellHatches.Mode mode) {
+        return SavedWellHatches.of(helper.getLevel().getServer()).put(new Place(well.dimension(), well.pos().east(3)), Optional.of(well),
+                Optional.of(new NameAndId(owner.getGameProfile())), mode, HATCH_SLOTS);
+    }
+
+    /** @return a requester of {@code owner}'s against their Well at {@code well}, asking for {@code stacks} stacks of cobblestone */
+    private static WellHatches.Hatch requester(GameTestHelper helper, Rider owner, Place well, int stacks) {
+        var requester = hatch(helper, owner, well, WellHatches.Mode.REQUESTER);
+        for (int stack = 0; stack < stacks; stack++) {
+            requester.ask(Items.COBBLESTONE);
+        }
+        return requester;
+    }
+
+    /** Makes a Well of {@code owner}'s at {@code under} in the Nether, which nothing loads, holding nothing and with no target. */
+    private static void netherWell(GameTestHelper helper, ServerPlayer owner, Place under) {
+        var nether = helper.getLevel().getServer().getLevel(Level.NETHER);
+        RoutingTests.assertUnloaded(helper, nether, under.pos());
+        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
+        SavedVoidWells.of(helper.getLevel().getServer()).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
+    }
+
     /** Makes a Well of {@code owner}'s at {@code under} in the Nether, {@link #FAR_SHORT} short of a quarter's target. */
     private static void farShort(GameTestHelper helper, Rider owner, ServerLevel nether, Place under) {
         long target = FillTarget.QUARTER.motes(VoidworksConfig.wellCapacity()).orElseThrow();
@@ -861,12 +1108,8 @@ final class RideTests {
 
     /** @return the id of a new dragon of {@code owner}'s resting at their Well at {@code under} in the Nether, which nothing loads */
     private static UUID restingInTheNether(GameTestHelper helper, ServerPlayer owner, Place under) {
-        var server = helper.getLevel().getServer();
-        var nether = server.getLevel(Level.NETHER);
-        RoutingTests.assertUnloaded(helper, nether, under.pos());
-        VoidstoneNetworks.of(nether).rejoin(under.pos(), StoreKind.WELL, Set.of(), Map.of());
-        SavedVoidWells.of(server).put(new VoidWells.Entry(under, owner.getUUID(), FillTarget.NONE));
-        return SavedVoidDragons.of(server).add(owner.getUUID(), under).id();
+        netherWell(helper, owner, under);
+        return SavedVoidDragons.of(helper.getLevel().getServer()).add(owner.getUUID(), under).id();
     }
 
     /** Puts {@code player} back on the platform north of the test's Well, where they joined. */
@@ -971,6 +1214,12 @@ final class RideTests {
 
     private static Place place(GameTestHelper helper, BlockPos core) {
         return Place.of(helper.getLevel(), helper.absolutePos(core));
+    }
+
+    /** As {@link #clearAway(GameTestHelper, Rider, Set)}, taking away the hatches {@code placed} too. */
+    private static void clearAway(GameTestHelper helper, Rider owner, Set<Place> away, List<WellHatches.Hatch> placed) {
+        placed.forEach(hatch -> SavedWellHatches.of(helper.getLevel().getServer()).remove(hatch.place()));
+        clearAway(helper, owner, away);
     }
 
     /** Takes away the owner, their dragons, and the Nether Wells {@code away}, so nothing of the test is left to route. */

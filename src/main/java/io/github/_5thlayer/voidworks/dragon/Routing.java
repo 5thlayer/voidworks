@@ -190,12 +190,12 @@ public final class Routing {
      * Its owner, riding the dragon {@code id} at a stop of theirs, picks their Well at {@code picked}: it
      * dives there at once, healing first as it leaves a Well, carrying them, a stop added to its trip.
      * The dive takes no more than a ridden dive does ({@link Dive#ridden}), and its load is cut by the
-     * share of time saved, so it carries no more motes a second than unridden: it first puts what it
-     * holds beyond that into the Well it is at, lowest grade first, which counts toward neither its
-     * ageing nor its eggs.
+     * share of time saved, so it carries no more a second than unridden: it first puts what it holds
+     * beyond that back where it is ({@link Cargo#shed}), which counts toward neither its ageing nor its
+     * eggs.
      *
      * @return the dragon on its way; none, with nothing changed, while it is not stopped at one of its
-     *         owner's Wells, when {@code picked} is not one of theirs, or when the Well it is at has no
+     *         owner's Wells, when {@code picked} is not one of theirs, or when the stop it is at has no
      *         room for what it holds beyond its ridden load
      */
     public Ride ride(VoidDragons dragons, UUID id, Place picked, long now) {
@@ -219,11 +219,12 @@ public final class Routing {
     /**
      * {@code dragon}, at the stop {@code at}, if any, sets off on {@code trip} to the stop added to it
      * as a ridden dive goes: healing first as it leaves a Well, in no more than a ridden dive's time
-     * ({@link Dive#ridden}), its load cut by the share of time saved, so it carries no more motes a
-     * second than unridden. It first puts what it holds beyond that into the Well it is at, lowest grade
-     * first, which counts toward neither its ageing nor its eggs.
+     * ({@link Dive#ridden}), its load cut by the share of time saved, so it carries no more a second
+     * than unridden. It first puts what it holds beyond that back where it is ({@link Cargo#shed}): a
+     * Mote-line dragon into the Well, lowest grade first, a Matter-line one into the stop's hatches as on
+     * arrival. That counts toward neither its ageing nor its eggs.
      *
-     * @return the dragon on its way; empty when it holds more than its ridden load and the Well it is at,
+     * @return the dragon on its way; empty when it holds more than its ridden load and the stop it is at,
      *         if any, has no room for the rest
      */
     private Optional<VoidDragonRecord> diveAsRidden(VoidDragonRecord dragon, Optional<Stop> at, Trip trip, long now) {
@@ -232,12 +233,14 @@ public final class Routing {
         int speed = stages(dragon).speed(dragon.healed(healing));
         long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), trip.added().orElseThrow()) * VoidDragonRecord.WHOLE_SPEED, speed);
         long ridden = dive.ridden(unridden);
-        long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
-        if (excess > at.map(stop -> cargo(dragon).room(stop, (long) healing * harm.motesPerPoint())).orElse(0L)) {
+        long keep = ridden == unridden ? dragon.carried() : loadOf(dragon) * ridden / unridden;
+        var lightened = dragon.carried() <= keep ? Optional.of(dragon)
+                : at.flatMap(stop -> cargo(dragon).shed(dragon.load(), dragon.rest(), stop, keep, (long) healing * harm.motesPerPoint()))
+                        .map(dragon::carrying);
+        if (lightened.isEmpty()) {
             return Optional.empty();
         }
-        var lightened = excess > 0 ? dragon.carrying(cargo(dragon).putBack(dragon.load(), dragon.rest(), excess)) : dragon;
-        var healed = healed(lightened);
+        var healed = healed(lightened.get());
         int healedSpeed = stages(healed).speed(healed);
         return Optional.of(healed.on(Optional.of(trip.claimingAtMost(healed.load()).diving(now, ridden * healedSpeed, healedSpeed))));
     }

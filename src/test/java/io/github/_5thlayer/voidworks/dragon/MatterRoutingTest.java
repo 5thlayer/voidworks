@@ -46,6 +46,10 @@ class MatterRoutingTest {
     private static final LifeStages AGELESS = LifeStages.of(1_000_000_000L, List.of(1.0, 1.0, 1.0, 1.0), List.of(1.0, 1.0, 1.0, 1.0));
     private static final Life AGELESS_LIFE = new Life(AGELESS, EGG);
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
+    /** The most ticks a ridden dive takes. */
+    private static final int RIDDEN = 60;
+    /** {@link #DIVE}, a ridden dive taking no more than {@link #RIDDEN}. */
+    private static final Dive RIDDEN_DIVE = new Dive(200, 64, RIDDEN, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     private static final Harm HARMLESS = new Harm(dimension -> 0, 50, 16);
     /** Long enough for any trip here to end. */
     private static final int A_WHILE = 20_000;
@@ -53,6 +57,7 @@ class MatterRoutingTest {
     private static final Place END_WELL = new Place(END, new BlockPos(0, 64, 0));
     private static final Place NETHER_WELL = new Place(NETHER, new BlockPos(80, 64, 0));
     private static final Place OVERWORLD_WELL = new Place(OVERWORLD, new BlockPos(0, 64, 640));
+    private static final Place OTHER_END_WELL = new Place(END, new BlockPos(0, 64, 64));
 
     private static final Place END_PROVIDER = hatchOf(END_WELL, 0);
     private static final Place END_REQUESTER = hatchOf(END_WELL, 1);
@@ -60,6 +65,7 @@ class MatterRoutingTest {
     private static final Place NETHER_OTHER_REQUESTER = hatchOf(NETHER_WELL, 1);
     private static final Place OVERWORLD_PROVIDER = hatchOf(OVERWORLD_WELL, 0);
     private static final Place OVERWORLD_REQUESTER = hatchOf(OVERWORLD_WELL, 1);
+    private static final Place OTHER_END_REQUESTER = hatchOf(OTHER_END_WELL, 0);
 
     private final FakeWells wells = new FakeWells(CAPACITY);
     private final FakeHatches hatches = new FakeHatches();
@@ -413,6 +419,132 @@ class MatterRoutingTest {
         assertEquals(Optional.empty(), dragons.get(dragon.id()));
     }
 
+    @Test
+    void theRidersWellIsAStopWhoseRequestersGetWhatTheyAreShortOfAndTheRestGoesOn() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 3);
+        hatches.requester(OVERWORLD_REQUESTER, OVERWORLD_WELL, COBBLESTONE, 64, 1);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(Map.of(COBBLESTONE, 3 * 64L), dragons.get(dragon.id()).orElseThrow().load().items());
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OVERWORLD_WELL, now));
+        // 640 Overworld blocks and between dimensions: 400 ticks.
+        runFor(401);
+        assertEquals(Optional.of(Trip.Leg.SETTING_DOWN), leg(dragon));
+        assertEquals(64, hatches.holds(OVERWORLD_REQUESTER, COBBLESTONE));
+        var setDown = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(new MatterLoad(List.of(stacks(COBBLESTONE, 2))), setDown.load());
+        assertEquals(2, setDown.trip().orElseThrow().claimed());
+        assertEquals(Map.of(COBBLESTONE, 2 * 64L), setDown.trip().orElseThrow().items());
+        assertEquals(1, setDown.cargo(), "the stack it dropped at its rider's Well did not count toward its ageing");
+        // A stop to set the rider down, then a dive of 483 ticks to the Nether.
+        runFor(STOP + 490);
+        assertEquals(Optional.of(Trip.Leg.UNLOADING), leg(dragon));
+        assertEquals(2 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE));
+        runFor(A_WHILE);
+        assertEquals(3 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE));
+        assertEquals(64, hatches.holds(END_PROVIDER, COBBLESTONE));
+    }
+
+    @Test
+    void aRiddenDiveCarriesItsStacksCutByTheShareOfTimeSavedPuttingTheRestIntoTheHatchesWhereItIsAsOnArrival() {
+        routing = riddenRouting();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 12));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 10);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(10, dragons.get(dragon.id()).orElseThrow().carried());
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 2);
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        var riding = dragons.get(dragon.id()).orElseThrow();
+        // 60 ticks of 400: 4 of its 27 stacks.
+        assertEquals(new MatterLoad(List.of(stacks(COBBLESTONE, 4))), riding.load());
+        assertEquals(4, riding.trip().orElseThrow().claimed());
+        assertEquals(Map.of(COBBLESTONE, 4 * 64L), riding.trip().orElseThrow().items());
+        // Of the 6 it cannot carry, the requester asking for them takes 2, and the provider the rest.
+        assertEquals(2 * 64, hatches.holds(END_REQUESTER, COBBLESTONE));
+        assertEquals(6 * 64, hatches.holds(END_PROVIDER, COBBLESTONE));
+        assertEquals(0, riding.cargo(), "the stacks it put back counted toward its ageing");
+    }
+
+    @Test
+    void aRiddenDiveKeepsTheItemsItTookFirstInWholeStacks() {
+        routing = riddenRouting();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, Ware.of(COBBLESTONE, 64, 5 * 64 + 10), stacks(DIRT, 3));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 6);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, DIRT, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        assertEquals(Map.of(COBBLESTONE, 5 * 64 + 10L, DIRT, 3 * 64L), dragons.get(dragon.id()).orElseThrow().load().items());
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        assertEquals(new MatterLoad(List.of(stacks(COBBLESTONE, 4))), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(64 + 10, hatches.holds(END_PROVIDER, COBBLESTONE));
+        assertEquals(3 * 64, hatches.holds(END_PROVIDER, DIRT));
+    }
+
+    @Test
+    void aRiddenDiveIsRefusedWithNothingPutWhenTheHatchesWhereItIsHaveNoRoomForAllItCannotCarry() {
+        routing = riddenRouting();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 10);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        // Room for 5 of the 6 stacks it cannot carry.
+        hatches.put(END_PROVIDER, stacks(DIRT, 5));
+        var before = dragons.get(dragon.id()).orElseThrow();
+        assertEquals(Routing.Ride.NO_ROOM, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        assertEquals(before, dragons.get(dragon.id()).orElseThrow());
+        assertEquals(17 * 64, hatches.holds(END_PROVIDER, COBBLESTONE));
+    }
+
+    @Test
+    void aRequesterAskingForWhatItCannotCarryMakesRoomForARiddenDive() {
+        routing = riddenRouting();
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 10);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        hatches.put(END_PROVIDER, stacks(DIRT, 10));
+        hatches.requester(END_REQUESTER, END_WELL, COBBLESTONE, 64, 6);
+        assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), NETHER_WELL, now));
+        assertEquals(4, dragons.get(dragon.id()).orElseThrow().carried());
+        assertEquals(6 * 64, hatches.holds(END_REQUESTER, COBBLESTONE));
+    }
+
+    @Test
+    void aCalledMatterLineDragonDropsNoneOfItsLoadAtTheWellItIsCalledToAndThenGoesOn() {
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        wells.add(ALICE, OTHER_END_WELL, OptionalLong.empty(), 3, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 3);
+        hatches.requester(OTHER_END_REQUESTER, OTHER_END_WELL, COBBLESTONE, 64, 1);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        runFor(1);
+        owners.calling.put(ALICE, OTHER_END_WELL);
+        runFor(STOP);
+        assertEquals(Optional.of(Trip.Leg.TO_CALL), leg(dragon));
+        runFor(Dive.MINIMUM_TICKS);
+        assertEquals(Optional.of(Trip.Leg.WAITING), leg(dragon));
+        assertEquals(new MatterLoad(List.of(stacks(COBBLESTONE, 3))), dragons.get(dragon.id()).orElseThrow().load());
+        assertEquals(0, hatches.holds(OTHER_END_REQUESTER, COBBLESTONE));
+        owners.calling.remove(ALICE);
+        runFor(A_WHILE);
+        assertEquals(3 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE));
+        assertEquals(64, hatches.holds(OTHER_END_REQUESTER, COBBLESTONE));
+    }
+
     /** @return how many stacks {@code dragon} carries as it next loads, run on until it has unloaded them all */
     private long nextLoad(VoidDragonRecord dragon) {
         while (dragons.get(dragon.id()).orElseThrow().carried() == 0) {
@@ -427,6 +559,15 @@ class MatterRoutingTest {
 
     private Routing routing(long load, Life matter) {
         return new Routing(wells, hatches, owners, DIVE, HARMLESS, MOTE_LOAD, load, STOP, AGELESS_LIFE, matter);
+    }
+
+    /** @return a routing whose ridden dives take no more than {@link #RIDDEN} */
+    private Routing riddenRouting() {
+        return new Routing(wells, hatches, owners, RIDDEN_DIVE, HARMLESS, MOTE_LOAD, LOAD, STOP, AGELESS_LIFE, AGELESS_LIFE);
+    }
+
+    private Optional<Trip.Leg> leg(VoidDragonRecord dragon) {
+        return dragons.get(dragon.id()).orElseThrow().trip().map(Trip::leg);
     }
 
     /** @return {@code stacks} full stacks of {@code item}, 64 to a stack */

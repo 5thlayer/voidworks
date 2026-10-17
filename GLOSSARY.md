@@ -189,7 +189,7 @@ _Avoid_: teleport, flight
 
 **Ridden dive**:
 A dive with its owner riding, to the Well they picked. It takes at most a short set time, and its
-load shrinks by the share of time saved, so riding never carries more motes a second. The rider
+load shrinks by the share of time saved, so riding never carries more a second, motes or stacks. The rider
 sees its progress as a bar in the destination dimension's colour.
 _Avoid_: fast dive, rider dive
 

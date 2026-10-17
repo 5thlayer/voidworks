@@ -137,14 +137,15 @@ final class MatterRoutingTests {
     }
 
     /** Fills {@code hatch} with {@code stacks} of {@code stack}, through its item faces. */
-    private static void fill(WellHatches.Hatch hatch, ItemStack stack, int stacks) {
+    static void fill(WellHatches.Hatch hatch, ItemStack stack, int stacks) {
         try (var transaction = Transaction.openRoot()) {
             hatch.contents().insert(ItemResource.of(stack), stack.getCount() * stacks, transaction);
             transaction.commit();
         }
     }
 
-    private static long count(WellHatches.Hatch hatch, Item item) {
+    /** @return how many of {@code item} {@code hatch} holds */
+    static long count(WellHatches.Hatch hatch, Item item) {
         return hatch.contents().copyToList().stream().filter(stack -> stack.is(item)).mapToLong(ItemStack::getCount).sum();
     }
 

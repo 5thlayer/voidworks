@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import net.minecraft.resources.Identifier;
 
@@ -44,10 +45,10 @@ final class MatterCargo implements Cargo {
 
     /**
      * Its providers' empty slots, where a load no requester wants is stowed: a requester takes only what it
-     * asks for, so it makes no room for any load. Motes healing a dragon make it no room for items.
+     * asks for, so it makes no room for any load.
      */
     @Override
-    public long room(Stop stop, long healing) {
+    public long room(Stop stop) {
         return providers(stop).stream().mapToLong(Hatches.Hatch::emptySlots).sum();
     }
 
@@ -105,16 +106,28 @@ final class MatterCargo implements Cargo {
         return stow ? fill(matter(load), List.of(), providers(to), most) : fill(matter(load), requesters(to), List.of(), most);
     }
 
-    /** Into the requesters on the Well at {@code place} asking for what it carries, then into its providers with room. */
+    /**
+     * It keeps the items it took first, filling {@code keep} stacks, and puts the rest into {@code at}'s
+     * hatches as on arrival: into the requesters asking for them, then into the providers with room. Motes
+     * healing a dragon make no room for items.
+     */
     @Override
-    public Load putBack(Load load, Place place, long most) {
-        var on = hatches.on(place);
-        return fill(matter(load), on.stream().filter(Hatches.Hatch::requester).toList(), on.stream().filter(Hatches.Hatch::provider).toList(), most);
+    public Optional<Load> shed(Load load, Place place, Stop at, long keep, long healing) {
+        var carried = matter(load);
+        var kept = carried.upTo(keep);
+        var rest = carried.less(kept);
+        var requesters = requesters(at);
+        var providers = providers(at);
+        if (!fits(rest, requesters, providers)) {
+            return Optional.empty();
+        }
+        return Optional.of(kept.plus(fill(rest, requesters, providers, Long.MAX_VALUE)));
     }
 
     /**
      * Puts {@code load} into {@code requesters}, each as far as it lacks what it asks for, then into
-     * {@code providers} as far as they have room, no more of it than {@code most} stacks' worth.
+     * {@code providers} as far as they have room, no more of it than {@code most} stacks' worth, each
+     * put counting its part stack as one.
      *
      * @return what is left of it
      */
@@ -127,7 +140,7 @@ final class MatterCargo implements Cargo {
             long lacks = requester.lacks();
             for (var ware : left.wares()) {
                 if (asked.isPresent() && ware.item().equals(asked.get().item())) {
-                    long put = hatches.put(requester.place(), ware.withCount(Math.min(Math.min(ware.count(), lacks), stacks * ware.stackSize())));
+                    long put = hatches.put(requester.place(), ware.withCount(Math.min(lacks, ware.within(stacks))));
                     left = left.less(ware.withCount(put));
                     lacks -= put;
                     stacks -= Ware.stacks(put, ware.stackSize());
@@ -136,12 +149,43 @@ final class MatterCargo implements Cargo {
         }
         for (var provider : providers) {
             for (var ware : left.wares()) {
-                long put = hatches.put(provider.place(), ware.withCount(Math.min(ware.count(), stacks * ware.stackSize())));
+                long put = hatches.put(provider.place(), ware.withCount(ware.within(stacks)));
                 left = left.less(ware.withCount(put));
                 stacks -= Ware.stacks(put, ware.stackSize());
             }
         }
         return left;
+    }
+
+    /**
+     * @return whether {@link #fill} puts all of {@code load}: into {@code requesters}, each as far as it
+     *         lacks what it asks for and has empty slots, then into {@code providers}' empty slots. Room on
+     *         stacks alike is left out, so it may say no where all of it would fit, but never yes where it
+     *         would not.
+     */
+    private static boolean fits(MatterLoad load, List<Hatches.Hatch> requesters, List<Hatches.Hatch> providers) {
+        var wares = load.wares();
+        // What is left to put of each ware.
+        var left = wares.stream().mapToLong(Ware::count).toArray();
+        for (var requester : requesters) {
+            var asked = requester.request();
+            long lacks = requester.lacks();
+            long slots = requester.emptySlots();
+            for (int index = 0; index < wares.size(); index++) {
+                var ware = wares.get(index);
+                if (asked.isPresent() && ware.item().equals(asked.get().item())) {
+                    long put = Math.min(left[index], Math.min(lacks, slots * ware.stackSize()));
+                    left[index] -= put;
+                    lacks -= put;
+                    slots -= Ware.stacks(put, ware.stackSize());
+                }
+            }
+        }
+        long slots = 0;
+        for (int index = 0; index < wares.size(); index++) {
+            slots += Ware.stacks(left[index], wares.get(index).stackSize());
+        }
+        return slots <= providers.stream().mapToLong(Hatches.Hatch::emptySlots).sum();
     }
 
     /**

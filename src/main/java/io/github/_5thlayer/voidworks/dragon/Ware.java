@@ -58,6 +58,14 @@ public record Ware(Identifier item, Optional<CompoundTag> components, int stackS
         return Math.ceilDiv(count, stackSize);
     }
 
+    /**
+     * @return how many of it fill no more than {@code stacks} stacks: all of it at most, so any number of
+     *         stacks no fewer than its count, {@link Long#MAX_VALUE} too, is all of it
+     */
+    long within(long stacks) {
+        return stacks >= count ? count : Math.min(count, stacks * stackSize);
+    }
+
     /** @return the same item, {@code count} of it */
     public Ware withCount(long count) {
         return new Ware(item, components, stackSize, count);

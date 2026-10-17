@@ -6,6 +6,7 @@ package io.github._5thlayer.voidworks.dragon;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -41,8 +42,8 @@ final class MoteCargo implements Cargo {
     }
 
     @Override
-    public long room(Stop stop, long healing) {
-        return Math.max(0, capacity(stop) - stop.total()) + healing;
+    public long room(Stop stop) {
+        return Math.max(0, capacity(stop) - stop.total());
     }
 
     /** Of {@code from}'s excess, no more than it holds of grades worth something at {@code to}, less every mote spoken for there. */
@@ -110,12 +111,15 @@ final class MoteCargo implements Cargo {
         return new MoteLoad(left);
     }
 
-    /** Lowest grade first. */
+    /** Lowest grade first, into the Well at {@code place}, if its network has room for all of them, counting what the dragon's healing frees. */
     @Override
-    public Load putBack(Load load, Place place, long most) {
+    public Optional<Load> shed(Load load, Place place, Stop at, long keep, long healing) {
+        long rest = load.amount() - keep;
+        if (rest > room(at) + healing) {
+            return Optional.empty();
+        }
         var motes = motes(load);
         var left = new TreeMap<>(motes);
-        long rest = most;
         for (var grade : motes.sequencedKeySet()) {
             if (rest == 0) {
                 break;
@@ -126,7 +130,7 @@ final class MoteCargo implements Cargo {
                 left.remove(grade);
             }
         }
-        return new MoteLoad(left);
+        return Optional.of(new MoteLoad(left));
     }
 
     /** @return the motes of {@code load}, grade to count: none of a load of items, which a Mote-line dragon never takes up */
