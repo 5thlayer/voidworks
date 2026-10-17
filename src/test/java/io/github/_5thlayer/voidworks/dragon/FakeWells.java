@@ -31,6 +31,8 @@ final class FakeWells implements Wells {
     private final Map<Place, Entry> wells = new LinkedHashMap<>();
     /** Where an egg was laid, egg by egg. */
     final List<Place> laid = new ArrayList<>();
+    /** The Line of each egg laid, egg by egg. */
+    final List<Line> laidOf = new ArrayList<>();
     /** The Wells whose chunks are not loaded, where no egg is laid. */
     final Set<Place> unseen = new LinkedHashSet<>();
 
@@ -106,11 +108,12 @@ final class FakeWells implements Wells {
     }
 
     @Override
-    public boolean lay(Place place) {
+    public boolean lay(Place place, Line line) {
         if (!wells.containsKey(place) || unseen.contains(place)) {
             return false;
         }
         laid.add(place);
+        laidOf.add(line);
         return true;
     }
 }

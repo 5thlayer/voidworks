@@ -43,6 +43,14 @@ public enum EggKind implements StringRepresentable {
         return line;
     }
 
+    /** @return the egg a grown dragon of {@code line} lays: a Drained Dragon Egg, or a Matter Dragon Egg */
+    public static EggKind laidBy(Line line) {
+        return switch (line) {
+            case MOTE -> DRAINED;
+            case MATTER -> MATTER;
+        };
+    }
+
     /** @return the kind of egg {@code state} is, empty when it is no egg's own block */
     public static Optional<EggKind> of(BlockState state) {
         return Arrays.stream(values()).filter(kind -> state.is(kind.block())).findFirst();

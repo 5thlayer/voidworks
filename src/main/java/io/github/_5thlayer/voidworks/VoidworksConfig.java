@@ -3,9 +3,13 @@
 
 package io.github._5thlayer.voidworks;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
+import io.github._5thlayer.voidworks.dragon.Life;
 import io.github._5thlayer.voidworks.dragon.LifeStages;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.mutation.UnmakingYield;
 import io.github._5thlayer.voidworks.siphon.SiphonTier;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -53,11 +57,13 @@ public final class VoidworksConfig {
     private static final ModConfigSpec.IntValue DRAGON_HEAL_MOTES;
     private static final ModConfigSpec.LongValue DRAGON_EGG_MOTES;
     private static final ModConfigSpec.LongValue LIFE_STAGE_MOTES;
+    private static final ModConfigSpec.LongValue DRAGON_EGG_STACKS;
+    private static final ModConfigSpec.LongValue LIFE_STAGE_STACKS;
     private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_SPEEDS;
     private static final ModConfigSpec.ConfigValue<List<? extends Double>> LIFE_STAGE_LOADS;
 
     /** How dragons age, read from the config once a load of it; null until read. */
-    private static volatile LifeStages lifeStages;
+    private static volatile Map<Line, Life> lives;
 
     static {
         var builder = new ModConfigSpec.Builder();
@@ -171,13 +177,23 @@ public final class VoidworksConfig {
                         "of health.")
                 .defineInRange("dragonHealMotes", 16, 1, 1 << 20);
         DRAGON_EGG_MOTES = builder
-                .comment("Motes a grown Void Dragon carries, counted as it unloads them at Void Wells, for each Drained Dragon Egg",
-                        "it lays at a Well it stops at.")
+                .comment("Motes a grown Mote-line Void Dragon carries, counted as it unloads them at Void Wells, for each Drained",
+                        "Dragon Egg it lays at a Well it stops at.")
                 .defineInRange("dragonEggMotes", 65_536L, 1L, Long.MAX_VALUE);
         LIFE_STAGE_MOTES = builder
-                .comment("Motes a grown Void Dragon unloads at Void Wells over each of its four life stages, young, adult, senior",
-                        "and old; once its old stage runs out, it dies at that stop. Only an adult lays Drained Dragon Eggs.")
+                .comment("Motes a grown Mote-line Void Dragon unloads at Void Wells over each of its four life stages, young, adult,",
+                        "senior and old; once its old stage runs out, it dies at the end of a stop at a loaded Well with nothing aboard.",
+                        "Only an adult lays Drained Dragon Eggs.")
                 .defineInRange("lifeStageMotes", 524_288L, 1L, Long.MAX_VALUE);
+        DRAGON_EGG_STACKS = builder
+                .comment("Stacks a grown Matter-line Void Dragon carries, counted as it unloads them at Void Wells, for each Matter",
+                        "Dragon Egg it lays at a Well it stops at.")
+                .defineInRange("dragonEggStacks", 216L, 1L, Long.MAX_VALUE);
+        LIFE_STAGE_STACKS = builder
+                .comment("Stacks a grown Matter-line Void Dragon unloads at Void Wells over each of its four life stages, young,",
+                        "adult, senior and old; once its old stage runs out, it dies at the end of a stop at a loaded Well with nothing",
+                        "aboard. Only an adult lays Matter Dragon Eggs.")
+                .defineInRange("lifeStageStacks", 1_728L, 1L, Long.MAX_VALUE);
         LIFE_STAGE_SPEEDS = builder
                 .comment("What each life stage, young, adult, senior and old, multiplies a Void Dragon's speed by, stacked on its",
                         "health's share. Four positive factors; any other list is taken as the defaults.")
@@ -338,30 +354,33 @@ public final class VoidworksConfig {
         return DRAGON_HEAL_MOTES.getAsInt();
     }
 
-    /** @return motes a Void Dragon carries for each Drained Dragon Egg it lays */
-    public static long dragonEggMotes() {
-        return DRAGON_EGG_MOTES.getAsLong();
-    }
-
-    /** @return motes a Void Dragon unloads over each of its life stages */
-    public static long lifeStageMotes() {
-        return LIFE_STAGE_MOTES.getAsLong();
-    }
-
-    /** @return how Void Dragons age, at the configured stage length and factors, read once a load of the config */
-    public static LifeStages lifeStages() {
-        var stages = lifeStages;
-        if (stages == null) {
-            stages = LifeStages.of(lifeStageMotes(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get());
-            lifeStages = stages;
+    /**
+     * @return how {@code line}'s Void Dragons age and lay, at its configured stage length and egg, in motes
+     *         or stacks, and the stage factors every Line shares, read once a load of the config
+     */
+    public static Life life(Line line) {
+        var read = lives;
+        if (read == null) {
+            var byLine = new EnumMap<Line, Life>(Line.class);
+            byLine.put(Line.MOTE, new Life(LifeStages.of(LIFE_STAGE_MOTES.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
+                    DRAGON_EGG_MOTES.getAsLong()));
+            byLine.put(Line.MATTER, new Life(LifeStages.of(LIFE_STAGE_STACKS.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
+                    DRAGON_EGG_STACKS.getAsLong()));
+            read = byLine;
+            lives = read;
         }
-        return stages;
+        return read.get(line);
+    }
+
+    /** @return how {@code line}'s Void Dragons age ({@link #life}) */
+    public static LifeStages lifeStages(Line line) {
+        return life(line).stages();
     }
 
     /** Forgets what was read of the config as it loads or reloads, so it is read afresh. */
     public static void onLoad(ModConfigEvent event) {
         if (event.getConfig().getSpec() == SPEC) {
-            lifeStages = null;
+            lives = null;
         }
     }
 }

@@ -164,7 +164,7 @@ public final class DragonRouting {
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
         return new Routing(new ServerWells(server), new ServerHatches(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(),
-                VoidworksConfig.dragonMatterLoad(), VoidworksConfig.dragonStopTicks(), VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
+                VoidworksConfig.dragonMatterLoad(), VoidworksConfig.dragonStopTicks(), VoidworksConfig.life(Line.MOTE), VoidworksConfig.life(Line.MATTER));
     }
 
     /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */
@@ -351,7 +351,7 @@ public final class DragonRouting {
 
         /** Pops the egg out of the middle of the Well's shaft, while its chunk is loaded and ticking. */
         @Override
-        public boolean lay(Place place) {
+        public boolean lay(Place place, Line line) {
             var level = place.level(server);
             if (level == null || !level.isPositionEntityTicking(place.pos())) {
                 return false;
@@ -361,7 +361,7 @@ public final class DragonRouting {
                 return false;
             }
             var shaft = Vec3.atCenterOf(WellStructure.shaft(place.pos(), core.getValue(VoidWellBlock.FACING)));
-            var egg = new ItemEntity(level, shaft.x, shaft.y, shaft.z, new ItemStack(VoidworksBlocks.DRAINED_DRAGON_EGG_ITEM.get()));
+            var egg = new ItemEntity(level, shaft.x, shaft.y, shaft.z, new ItemStack(EggKind.laidBy(line).block()));
             egg.setDefaultPickUpDelay();
             return level.addFreshEntity(egg);
         }
