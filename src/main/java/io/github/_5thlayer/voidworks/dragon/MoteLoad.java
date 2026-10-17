@@ -47,6 +47,6 @@ public record MoteLoad(SortedMap<Integer, Long> motes) implements Load {
     /** @return followers of each grade it holds motes of */
     @Override
     public Followers followers() {
-        return Followers.of(motes.entrySet().stream().filter(grade -> grade.getValue() > 0).map(Map.Entry::getKey).toList());
+        return Followers.of(motes.entrySet().stream().filter(entry -> entry.getValue() > 0).map(Map.Entry::getKey).toList());
     }
 }

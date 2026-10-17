@@ -89,7 +89,8 @@ final class HangingTests {
         DragonLoads.carrying(dragons, dragon, Line.MATTER, MatterLoad.NONE, Optional.empty());
         DragonPresences.show(server);
         helper.assertTrue(anew.hung().isEmpty(), "the dragon having unloaded still hangs " + anew.hung());
-        helper.assertTrue(DragonClients.seen(helper, anew).hung().isEmpty(), "a client sees the empty dragon hang " + DragonClients.seen(helper, anew).hung());
+        var seen = DragonClients.seen(helper, anew).hung();
+        helper.assertTrue(seen.isEmpty(), "a client sees the empty dragon hang " + seen);
 
         // A Mote-line dragon carrying motes hangs nothing.
         dragons.update(new VoidDragonRecord(id, dragon.owner(), Line.MOTE, dragon.health(), here, MoteLoad.of(Map.of(4, 100L)), Optional.empty(), 0, 0));
