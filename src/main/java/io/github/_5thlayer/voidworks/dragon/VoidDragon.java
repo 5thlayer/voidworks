@@ -132,6 +132,9 @@ public final class VoidDragon extends PathfinderMob {
     /** How far through a wingbeat its model's wings hang lowest, the tips bent down too: where a sitting presence holds them. */
     private static final float WINGS_DOWN = 0.75F;
 
+    /** How likely a loaded Mote-line presence is to gain a butterfly of each grade it carries following it in a tick. */
+    private static final float FOLLOWER_CHANCE = 0.1F;
+
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
     private static final float MAX_TURN = 3.0F;
 
@@ -177,6 +180,10 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<ItemStack> DATA_HUNG = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.ITEM_STACK);
     /** Its Line: a Dragonling's, which its egg fixed, or a presence's dragon's; synced, so every client tints it by its Line. */
     private static final EntityDataAccessor<Byte> DATA_LINE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
+    /** The grades of the butterflies following a Mote-line presence ({@link Followers#bits()}): which it carries, not how many. */
+    private static final EntityDataAccessor<Integer> DATA_FOLLOWERS = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
+
+    private static Follower follower = (dragon, grade, offset) -> {};
 
     private static final String OWNER_KEY = "owner";
     private static final String LINE_KEY = "line";
@@ -280,6 +287,7 @@ public final class VoidDragon extends PathfinderMob {
         entityData.define(DATA_DIVE_COLOUR, DiveColour.VOID);
         entityData.define(DATA_HUNG, ItemStack.EMPTY);
         entityData.define(DATA_LINE, (byte) Line.MOTE.ordinal());
+        entityData.define(DATA_FOLLOWERS, Followers.NONE.bits());
     }
 
     @Override
@@ -608,9 +616,43 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** It hangs the first stack of {@code load} under its body, and nothing for motes or no load. */
+    /**
+     * It hangs the first stack of {@code load} under its body, and nothing for motes or no load, and
+     * is followed by butterflies of the grades in it.
+     */
     void showLoad(Load load) {
         hang(load.firstStack().map(ware -> StackWares.stack(ware, registryAccess())).orElse(ItemStack.EMPTY));
+        entityData.set(DATA_FOLLOWERS, load.followers().bits());
+    }
+
+    /** @return the butterflies following it, synced to every client: of each grade its dragon carries, or none */
+    public Followers followers() {
+        return new Followers(entityData.get(DATA_FOLLOWERS));
+    }
+
+    /** On a client, a butterfly of each grade it carries now and then joins those following it about its body, while it is seen and not dying of old age. */
+    private void gainFollowers() {
+        if (isInvisible() || dying()) {
+            return;
+        }
+        var box = getBoundingBox();
+        for (int grade : followers().grades()) {
+            if (random.nextFloat() < FOLLOWER_CHANCE) {
+                follower.show(this, grade, new Vec3(box.minX + random.nextDouble() * box.getXsize(), box.minY + random.nextDouble() * box.getYsize(),
+                        box.minZ + random.nextDouble() * box.getZsize()).subtract(position()));
+            }
+        }
+    }
+
+    /** Has a watcher show the butterflies following a Mote-line presence with {@code show}, as the client does. */
+    public static void onFollower(Follower show) {
+        follower = show;
+    }
+
+    /** Shows one butterfly of {@code grade} following a presence, keeping {@code offset} off its position. */
+    @FunctionalInterface
+    public interface Follower {
+        void show(VoidDragon dragon, int grade, Vec3 offset);
     }
 
     /** As a Dragonling, which is all that is ever saved, it holds a chest under its body if it is of the Matter line, and nothing else. */
@@ -812,6 +854,9 @@ public final class VoidDragon extends PathfinderMob {
         oSettled = settled(1.0F);
         settled = Settling.settle(oSettled, perch(), fromSeat(position()));
         recordFlight();
+        if (level().isClientSide()) {
+            gainFollowers();
+        }
         if (dying()) {
             dieOn();
             return;

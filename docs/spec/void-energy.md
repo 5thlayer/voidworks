@@ -459,8 +459,8 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
   its grown dragon: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
   1.1, old 1.2), the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
-  own. A dragon shows its Line by its tint, carrying or not, and by what it carries: a Mote-line one trails `DUST` sparks in the
-  colours of the grades it carries, and a Matter-line one hangs its first carried stack under its
+  own. A dragon shows its Line by its tint, carrying or not, and by what it carries: a Mote-line one is followed by mote butterflies
+  of the grades it carries, tinted as every mote is, and a Matter-line one hangs its first carried stack under its
   body (§ Moving matter), as a Matter-line Dragonling holds a chest. The Drained Dragon Egg is a pale, cracked dragon egg on the vanilla egg's shape, its cracks dark
   while it is only an egg. Soaking, either egg wears that look, the vanilla egg too, though it is still
   the vanilla egg it drops if broken; its cracks spread and glow brighter at each of its four stages,

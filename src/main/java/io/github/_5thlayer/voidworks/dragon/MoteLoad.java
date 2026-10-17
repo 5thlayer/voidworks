@@ -43,4 +43,10 @@ public record MoteLoad(SortedMap<Integer, Long> motes) implements Load {
     public boolean isEmpty() {
         return motes.isEmpty();
     }
+
+    /** @return followers of each grade it holds motes of */
+    @Override
+    public Followers followers() {
+        return Followers.of(motes.entrySet().stream().filter(entry -> entry.getValue() > 0).map(Map.Entry::getKey).toList());
+    }
 }

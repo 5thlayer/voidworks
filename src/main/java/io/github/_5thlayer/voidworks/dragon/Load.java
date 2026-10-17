@@ -40,4 +40,9 @@ public sealed interface Load permits MoteLoad, MatterLoad {
     default Optional<Ware> firstStack() {
         return Optional.empty();
     }
+
+    /** @return the butterflies following its dragon's presence, of each grade it carries: none for matter */
+    default Followers followers() {
+        return Followers.NONE;
+    }
 }

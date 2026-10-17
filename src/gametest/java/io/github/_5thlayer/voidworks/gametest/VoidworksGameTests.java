@@ -84,6 +84,7 @@ public final class VoidworksGameTests {
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
         FeChargingTests.register(tests);
+        FollowerTests.register(tests);
         GalleryTests.register(tests);
         HangingTests.register(tests);
         LineSyncTests.register(tests);
