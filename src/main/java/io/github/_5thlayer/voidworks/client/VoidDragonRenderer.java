@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -36,8 +37,9 @@ import org.joml.Vector3f;
  * {@link #DRAGONLING_SCALE} of its size for a Dragonling and {@link VoidDragon#GROWN_SCALE} times that
  * for a grown dragon's presence, posed from its flight history and wingbeat as the Ender Dragon is,
  * and sitting, landing and taking off as the Ender Dragon does on its portal. Nothing of Mojang's
- * ships in the jar: it wears the vanilla texture, read from the player's game, tinted the void's
- * purple, and has no texture of its own. A grown presence is sized by its dragon's life stage, and
+ * ships in the jar: it wears the vanilla texture, read from the player's game, tinted by its Line,
+ * the void's purple for the Mote line and a pale amber for the Matter line, whose eyes are tinted
+ * amber too, and has no texture of its own. A grown presence is sized by its dragon's life stage, and
  * dying of old age it shows beams of light as the Ender Dragon does. What it hangs under its body
  * ({@link VoidDragon#hung()}), a Matter-line dragon's first carried stack or a Matter-line Dragonling's
  * chest, is drawn there from that stack's own item model.
@@ -49,8 +51,17 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
 
     private static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon.png");
     private static final RenderType EYES = RenderTypes.eyes(Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon_eyes.png"));
-    /** The void's purple, which tints the vanilla texture. */
-    private static final int TINT = ARGB.color(255, 190, 130, 255);
+    /** The void's purple, which tints the vanilla texture for a Mote-line dragon. */
+    private static final int MOTE_TINT = ARGB.color(255, 190, 130, 255);
+    /**
+     * A pale amber, which tints it for a Matter-line dragon: paler than the Matter Dragon Egg's, since a
+     * tint only darkens the near-black texture, and the more of each channel it keeps the brighter it is.
+     */
+    private static final int MATTER_TINT = ARGB.color(255, 255, 210, 120);
+    /** What leaves a texture as it is: a Mote-line dragon's eyes. */
+    private static final int UNTINTED = -1;
+    /** What tints a Matter-line dragon's magenta eyes amber: their red kept, their blue cut, as they have little green to keep. */
+    private static final int MATTER_EYES_TINT = ARGB.color(255, 255, 255, 30);
 
     /** The most beams a dying dragon shows, at the end of its death. */
     private static final int MOST_BEAMS = 40;
@@ -91,10 +102,12 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     /** Turns what it hangs into its item model. */
     private final ItemModelResolver itemModelResolver;
 
-    /** The Ender Dragon's, how much smaller this one is drawn, and what it hangs under its body. */
+    /** The Ender Dragon's, how much smaller this one is drawn, how its body and eyes are tinted by its Line, and what it hangs under its body. */
     static final class State extends EnderDragonRenderState {
 
         float scale = DRAGONLING_SCALE;
+        int tint = MOTE_TINT;
+        int eyesTint = UNTINTED;
         final ItemStackRenderState hung = new ItemStackRenderState();
     }
 
@@ -114,6 +127,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     public void extractRenderState(VoidDragon dragon, State state, float partialTicks) {
         super.extractRenderState(dragon, state, partialTicks);
         state.scale = dragon.grown() ? DRAGONLING_SCALE * VoidDragon.GROWN_SCALE * VoidDragon.size(dragon.stage()) : DRAGONLING_SCALE;
+        tint(state, dragon.line());
         state.deathTime = dragon.deathTime(partialTicks);
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
@@ -127,6 +141,20 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         state.distanceToEgg = dragon.seatPos().map(seat -> Vec3.atBottomCenterOf(seat).distanceToSqr(at)).orElse(0.0) / (state.scale * state.scale);
         if (state.isSitting) {
             lookFromTheSeat(state, Mth.rotLerp(partialTicks, dragon.yHeadRotO, dragon.yHeadRot));
+        }
+    }
+
+    /** Tints {@code state} as a dragon of {@code line} is: its body over the vanilla texture, and its eyes, a Mote-line one's untinted. */
+    private static void tint(State state, Line line) {
+        switch (line) {
+            case MOTE -> {
+                state.tint = MOTE_TINT;
+                state.eyesTint = UNTINTED;
+            }
+            case MATTER -> {
+                state.tint = MATTER_TINT;
+                state.eyesTint = MATTER_EYES_TINT;
+            }
         }
     }
 
@@ -229,9 +257,10 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         poseStack.translate(0.0F, 0.0F, 1.0F);
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.translate(0.0F, -1.501F, 0.0F);
-        submitNodeCollector.submitModel(model, state, poseStack, model.renderType(TEXTURE), state.lightCoords, OverlayTexture.NO_OVERLAY, TINT, null,
+        submitNodeCollector.submitModel(model, state, poseStack, model.renderType(TEXTURE), state.lightCoords, OverlayTexture.NO_OVERLAY, state.tint, null,
                 state.outlineColor, null);
-        submitNodeCollector.submitModel(model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+        submitNodeCollector.submitModel(model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.eyesTint, null,
+                state.outlineColor, null);
         if (!state.hung.isEmpty()) {
             submitHung(state, poseStack, submitNodeCollector);
         }
