@@ -182,8 +182,8 @@ final class SeenLoadingTests {
 
     /**
      * Resting at a Nether provider, the dragon brings cobblestone to a requester on the test's Well: it
-     * emerges hanging it, the item moves from its paws into the requester once it is up, and it hangs
-     * its stack until the item has landed, then nothing.
+     * emerges hanging it, the lone item moves from its paws into the requester to land half a second
+     * before the stop ends, and it hangs its stack until the item has landed, then nothing.
      */
     private static void unloads(GameTestHelper helper) {
         var server = helper.getLevel().getServer();
@@ -218,7 +218,7 @@ final class SeenLoadingTests {
                     helper.assertTrue(put.passing().hatch().equals(requester.get().place()) && !put.loading() && put.elapsed() == 0,
                             "the item seen moving is " + put);
                     helper.assertTrue(leg(helper, dragonId.get()).equals(Optional.of(Trip.Leg.UNLOADING)), "the item moved while the dragon is " + leg(helper, dragonId.get()));
-                    helper.assertTrue(put.into() == Showing.EMERGE_TICKS, "the item started " + put.into() + " ticks into the stop, not once the dragon was up");
+                    helper.assertTrue(put.into() == loneStart(), "the lone item started " + put.into() + " ticks into the stop, not to land half a second before it ends");
                     var presence = DragonPresences.presence(server, dragonId.get()).orElseThrow();
                     helper.assertTrue(presence.hung().is(Items.COBBLESTONE), "the dragon unloading hangs " + presence.hung() + ", not what it carried");
                 })
@@ -230,7 +230,7 @@ final class SeenLoadingTests {
                 })
                 .thenExecute(() -> {
                     long into = into(helper, dragonId.get());
-                    helper.assertTrue(into >= Showing.EMERGE_TICKS + Handling.PASS_TICKS && into <= Showing.EMERGE_TICKS + Handling.PASS_TICKS + 1,
+                    helper.assertTrue(into >= loneStart() + Handling.PASS_TICKS && into <= loneStart() + Handling.PASS_TICKS + 1,
                             "the dragon let its stack go " + into + " ticks into the stop, not as the item landed");
                     shown.stop();
                     SavedVoidDragons.of(server).remove(dragonId.get());
@@ -257,7 +257,7 @@ final class SeenLoadingTests {
                 }
                 var server = dragon.level().getServer();
                 var record = SavedVoidDragons.of(server).get(dragon.dragonId().orElseThrow()).orElseThrow();
-                long into = server.overworld().getGameTime() - (record.trip().orElseThrow().until() - VoidworksConfig.dragonStopTicks());
+                long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
                 passings.add(new Seen(dragon, passing, loading, elapsed, into));
             });
         }
@@ -284,6 +284,11 @@ final class SeenLoadingTests {
         SavedVoidWells.of(helper.getLevel().getServer()).remove(under);
     }
 
+    /** @return how many ticks into its stop a lone item starts to move: to land half a second before the stop ends */
+    private static long loneStart() {
+        return VoidworksConfig.dragonStopTicks() - 10 - Handling.PASS_TICKS;
+    }
+
     private static Optional<Trip.Leg> leg(GameTestHelper helper, UUID id) {
         return PresenceTests.record(helper, id).trip().map(Trip::leg);
     }
@@ -291,7 +296,7 @@ final class SeenLoadingTests {
     /** @return how many ticks into its stop the dragon {@code id} is */
     private static long into(GameTestHelper helper, UUID id) {
         var trip = PresenceTests.record(helper, id).trip().orElseThrow();
-        return helper.getLevel().getServer().overworld().getGameTime() - (trip.until() - VoidworksConfig.dragonStopTicks());
+        return helper.getLevel().getServer().overworld().getGameTime() - trip.began(VoidworksConfig.dragonStopTicks());
     }
 
     private static NameAndId nameOf(ServerPlayer owner) {

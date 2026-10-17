@@ -12,8 +12,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 /**
  * How a Matter-line dragon is seen loading or unloading at a stop, its hatches already emptied or filled
  * as the stop began: once it is up, {@link Showing#EMERGE_TICKS} into the stop, each {@link Passing}
- * moves between its hatch and the dragon's paws in {@link #PASS_TICKS}, their starts spread so the last
- * lands {@link #LANDS_BEFORE_END} before the stop ends, and it holds still over the shaft while they
+ * moves between its hatch and the dragon's paws in {@link #PASS_TICKS}, their starts spread so the last,
+ * or a lone one, lands {@link #LANDS_BEFORE_END} before the stop ends, and it holds still over the shaft while they
  * move. Loading, it hangs its first stack once the first has reached its paws; unloading, it hangs what
  * it hung as the stop began until the last has landed, then the first stack of what it still carries.
  * With nothing passing, what it hangs changes once it is up. Plain logic, tested with no game running.
@@ -23,9 +23,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * @param hung what it hung as the stop began
  */
 public record Handling(boolean loading, List<Passing> passing, Optional<Ware> hung) {
-
-    /** Nothing seen moving, as at a stop that is not a Matter-line dragon's loading or unloading. */
-    public static final Handling NONE = new Handling(true, List.of(), Optional.empty());
 
     /** How long, in ticks, an item takes to move between a hatch and the paws. */
     public static final int PASS_TICKS = 20;
@@ -57,7 +54,7 @@ public record Handling(boolean loading, List<Passing> passing, Optional<Ware> hu
     public long start(int index, int stopTicks) {
         long first = Showing.EMERGE_TICKS;
         long last = Math.max(first, stopTicks - LANDS_BEFORE_END - PASS_TICKS);
-        return passing.size() == 1 ? first : first + index * (last - first) / (passing.size() - 1);
+        return passing.size() == 1 ? last : first + index * (last - first) / (passing.size() - 1);
     }
 
     /** @return how many ticks into a stop of {@code stopTicks} the last item has landed; once it is up, with none */

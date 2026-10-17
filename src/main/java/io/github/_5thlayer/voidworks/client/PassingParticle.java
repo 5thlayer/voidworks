@@ -43,15 +43,18 @@ final class PassingParticle extends Particle {
     /** How much bigger it is drawn than it lies dropped. Tuned in game. */
     private static final float SCALE = 2.0F;
 
-    /** How loud and how high it pops as it lands. */
+    /** How loud it pops as it lands. */
     private static final float POP_VOLUME = 0.15F;
+    /** How high it pops, give or take a little each time, as vanilla's pickup does. */
     private static final float POP_PITCH = 1.6F;
 
     private final EntityRenderState item;
     private final PassingShown shown;
     /** Where the dragon's paws are, followed while it is seen. */
     private Vec3 paws;
+    /** How many ticks it has been on its way, counting those before it was shown. */
     private int ticks;
+    /** Where it is this tick, and where it was the last, between which it is drawn. */
     private Vec3 at;
     private Vec3 was;
 

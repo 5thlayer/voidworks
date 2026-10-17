@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /**
  * How a Matter-line dragon is seen loading or unloading at a stop: once it is up, the first item of each
  * hatch it takes from or puts into moves between that hatch and its paws, their starts spread so the
- * last lands half a second before the stop ends; loading, it hangs its first stack once the first lands,
+ * last, or a lone one, lands half a second before the stop ends; loading, it hangs its first stack once the first lands,
  * and unloading, the stack it hung until the last has landed.
  */
 class HandlingTest {
@@ -31,10 +31,10 @@ class HandlingTest {
     private static final Optional<Ware> DIRT_STACK = Optional.of(Ware.of(DIRT, 64, 64));
 
     @Test
-    void aLonePassingStartsOnceTheDragonIsUpAndLandsASecondLater() {
+    void aLonePassingLandsHalfASecondBeforeTheStopEnds() {
         var handling = Handling.loading(passings(1));
-        assertEquals(40, handling.start(0, STOP));
-        assertEquals(60, handling.landed(STOP));
+        assertEquals(70, handling.start(0, STOP));
+        assertEquals(90, handling.landed(STOP));
     }
 
     @Test
@@ -55,6 +55,9 @@ class HandlingTest {
         var handling = Handling.loading(passings(3));
         assertEquals(Optional.empty(), handling.hangs(59, COBBLE_STACK, STOP));
         assertEquals(COBBLE_STACK, handling.hangs(60, COBBLE_STACK, STOP));
+        var alone = Handling.loading(passings(1));
+        assertEquals(Optional.empty(), alone.hangs(89, COBBLE_STACK, STOP));
+        assertEquals(COBBLE_STACK, alone.hangs(90, COBBLE_STACK, STOP));
     }
 
     @Test

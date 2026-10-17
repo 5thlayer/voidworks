@@ -344,11 +344,10 @@ public final class Routing {
         return laid.on(Optional.of(trip.claimingAtMost(laid.load()).then(Trip.Leg.SETTING_DOWN, now + stopTicks).seen(unloading(stopped, put))));
     }
 
-    /** @return how {@code dragon}, as it stopped, is seen unloading what it {@code put}, if it put anything */
-    private static Handling unloading(VoidDragonRecord dragon, Optional<Cargo.Handled> put) {
-        return put.filter(handled -> !handled.passing().isEmpty() || dragon.load().firstStack().isPresent())
-                .map(handled -> Handling.unloading(handled.passing(), dragon.load().firstStack()))
-                .orElse(Handling.NONE);
+    /** @return how {@code dragon}, as it stopped, is seen unloading what it {@code put}, if it put anything: not at all for motes */
+    private static Optional<Handling> unloading(VoidDragonRecord dragon, Optional<Cargo.Handled> put) {
+        return put.filter(handled -> dragon.load().firstStack().isPresent())
+                .map(handled -> Handling.unloading(handled.passing(), dragon.load().firstStack()));
     }
 
     /** A dragon with nothing to do and nothing carried: a trip to the stop that needs most, from the fullest that can give it something; or none. */
@@ -387,7 +386,7 @@ public final class Routing {
             return stopped.on(Optional.empty());
         }
         return laying(stopped.carrying(loaded), source)
-                .on(Optional.of(trip.claiming(loaded).then(Trip.Leg.LOADING, now + stopTicks).seen(Handling.loading(taken.passing()))));
+                .on(Optional.of(trip.claiming(loaded).then(Trip.Leg.LOADING, now + stopTicks).seen(loaded.firstStack().map(first -> Handling.loading(taken.passing())))));
     }
 
     /**

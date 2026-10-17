@@ -697,10 +697,10 @@ class MatterRoutingTest {
         runFor(1);
         var trip = dragons.get(dragon.id()).orElseThrow().trip().orElseThrow();
         assertEquals(Trip.Leg.LOADING, trip.leg());
-        assertEquals(Handling.loading(List.of(new Passing(END_PROVIDER, stacks(COBBLESTONE, 1)), new Passing(END_OTHER_PROVIDER, stacks(DIRT, 1)))),
+        assertEquals(Optional.of(Handling.loading(List.of(new Passing(END_PROVIDER, stacks(COBBLESTONE, 1)), new Passing(END_OTHER_PROVIDER, stacks(DIRT, 1))))),
                 trip.handling());
         runFor(STOP);
-        assertEquals(Handling.NONE, dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling(), "its dive still shows its loading");
+        assertEquals(Optional.empty(), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling(), "its dive still shows its loading");
     }
 
     @Test
@@ -714,8 +714,8 @@ class MatterRoutingTest {
         while (leg(dragon).filter(Trip.Leg.UNLOADING::equals).isEmpty()) {
             runFor(1);
         }
-        assertEquals(Handling.unloading(List.of(new Passing(NETHER_REQUESTER, stacks(COBBLESTONE, 1)), new Passing(NETHER_OTHER_REQUESTER, stacks(DIRT, 1))),
-                Optional.of(stacks(COBBLESTONE, 1))), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
+        assertEquals(Optional.of(Handling.unloading(List.of(new Passing(NETHER_REQUESTER, stacks(COBBLESTONE, 1)), new Passing(NETHER_OTHER_REQUESTER, stacks(DIRT, 1))),
+                Optional.of(stacks(COBBLESTONE, 1)))), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
     }
 
     @Test
@@ -730,11 +730,11 @@ class MatterRoutingTest {
         var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
         runFor(1);
         assertEquals(Routing.Ride.DIVING, routing.ride(dragons, dragon.id(), OTHER_END_WELL, now));
-        assertEquals(Handling.NONE, dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
+        assertEquals(Optional.empty(), dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
         while (leg(dragon).filter(Trip.Leg.SETTING_DOWN::equals).isEmpty()) {
             runFor(1);
         }
-        assertEquals(Handling.unloading(List.of(new Passing(OTHER_END_REQUESTER, stacks(COBBLESTONE, 1))), Optional.of(stacks(COBBLESTONE, 1))),
+        assertEquals(Optional.of(Handling.unloading(List.of(new Passing(OTHER_END_REQUESTER, stacks(COBBLESTONE, 1))), Optional.of(stacks(COBBLESTONE, 1)))),
                 dragons.get(dragon.id()).orElseThrow().trip().orElseThrow().handling());
     }
 

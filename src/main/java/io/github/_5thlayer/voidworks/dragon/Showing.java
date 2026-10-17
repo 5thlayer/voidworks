@@ -34,7 +34,7 @@ public enum Showing {
         var trip = dragon.trip().get();
         return switch (trip.leg()) {
             case TO_SOURCE, TO_DESTINATION, TO_CALL, TO_PICKED -> DIVING;
-            case LOADING, UNLOADING, WAITING, SETTING_DOWN -> now - (trip.until() - stopTicks) < EMERGE_TICKS ? EMERGING : WORKING;
+            case LOADING, UNLOADING, WAITING, SETTING_DOWN -> now - trip.began(stopTicks) < EMERGE_TICKS ? EMERGING : WORKING;
         };
     }
 }

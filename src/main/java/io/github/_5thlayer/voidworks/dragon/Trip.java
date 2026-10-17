@@ -30,10 +30,10 @@ import net.minecraft.util.StringRepresentable;
  * @param added the Well of a stop added to it, which its owner called it to or its rider picked, while it is on its way there or stopped there
  * @param items of a Matter-line trip, how many of each item's kind its claim is, which counts against the requests it fills and the
  *        offer it loads from; none for the Mote line
- * @param handling at a stop where a Matter-line dragon loads or unloads, how it is seen to; none on any other leg
+ * @param handling at a stop where a Matter-line dragon loads or unloads, how it is seen to; empty on any other leg
  */
 public record Trip(Optional<Place> source, Place destination, long claimed, boolean stow, Leg leg, long until, long countedTo, long toCover,
-                   Optional<Place> added, Map<Identifier, Long> items, Handling handling) {
+                   Optional<Place> added, Map<Identifier, Long> items, Optional<Handling> handling) {
 
     public static final Codec<Trip> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Place.CODEC.optionalFieldOf("source").forGetter(Trip::source),
@@ -47,7 +47,7 @@ public record Trip(Optional<Place> source, Place destination, long claimed, bool
             Codec.LONG.optionalFieldOf("to_cover", 0L).forGetter(Trip::toCover),
             Place.CODEC.optionalFieldOf("added").forGetter(Trip::added),
             Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("items", Map.of()).forGetter(Trip::items),
-            Handling.CODEC.optionalFieldOf("handling", Handling.NONE).forGetter(Trip::handling)
+            Handling.CODEC.optionalFieldOf("handling").forGetter(Trip::handling)
     ).apply(instance, (source, destination, claimed, stow, leg, until, countedTo, toCover, added, items, handling) ->
             new Trip(source, destination, claimed, stow, leg, until, countedTo.orElse(until), toCover, added, items, handling)));
 
@@ -58,7 +58,7 @@ public record Trip(Optional<Place> source, Place destination, long claimed, bool
     /** A trip not seen loading or unloading. */
     public Trip(Optional<Place> source, Place destination, long claimed, boolean stow, Leg leg, long until, long countedTo, long toCover,
                 Optional<Place> added, Map<Identifier, Long> items) {
-        this(source, destination, claimed, stow, leg, until, countedTo, toCover, added, items, Handling.NONE);
+        this(source, destination, claimed, stow, leg, until, countedTo, toCover, added, items, Optional.empty());
     }
 
     /** A trip claiming no items. */
@@ -98,8 +98,13 @@ public record Trip(Optional<Place> source, Place destination, long claimed, bool
     }
 
     /** @return this trip seen loading or unloading at the stop it is on as {@code handling} says */
-    Trip seen(Handling handling) {
+    Trip seen(Optional<Handling> handling) {
         return new Trip(source, destination, claimed, stow, leg, until, countedTo, toCover, added, items, handling);
+    }
+
+    /** @return the game time the stop it is on began, which lasts {@code stopTicks} */
+    public long began(int stopTicks) {
+        return until - stopTicks;
     }
 
     /** @return this trip claiming all of {@code load} */

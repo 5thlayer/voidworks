@@ -42,7 +42,7 @@ final class HangingTests {
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
-        tests.test("hanging_a_matter_line_dragons_presence_hangs_its_first_stack_resting_working_and_diving_and_nothing_when_empty", 1,
+        tests.test("hanging_a_matter_line_dragons_presence_hangs_its_first_stack_resting_working_waiting_and_diving_and_nothing_when_empty", 1,
                 HangingTests::hangsItsFirstStack);
         tests.test("hanging_a_matter_line_dragonling_holds_a_chest_across_a_save_and_a_mote_line_one_nothing", 1, HangingTests::dragonlingsChest);
     }
@@ -69,6 +69,11 @@ final class HangingTests {
         long now = server.overworld().getGameTime();
         int stop = VoidworksConfig.dragonStopTicks();
         DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
+        DragonPresences.show(server);
+        assertHangs(helper, presence, box, Showing.WORKING);
+
+        // Called to a Well, it hangs its load from the moment it stops there: it neither loads nor unloads.
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.WAITING, now + stop - 1)));
         DragonPresences.show(server);
         assertHangs(helper, presence, box, Showing.WORKING);
 

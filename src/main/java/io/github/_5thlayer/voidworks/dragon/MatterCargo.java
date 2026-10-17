@@ -361,12 +361,14 @@ final class MatterCargo implements Cargo {
             this.here = Set.copyOf(here);
         }
 
+        /** {@code ware} went into or out of the hatch at {@code hatch}: seen moving, a stack of it at most, if it is the first there on its Well. */
         void moved(Place hatch, Ware ware) {
             if (ware.count() > 0 && here.contains(hatch)) {
                 first.putIfAbsent(hatch, ware.withCount(Math.min(ware.count(), ware.stackSize())));
             }
         }
 
+        /** @return the first items moved at each hatch on its Well, in the order they moved */
         List<Passing> passing() {
             return first.entrySet().stream().map(moved -> new Passing(moved.getKey(), moved.getValue())).toList();
         }

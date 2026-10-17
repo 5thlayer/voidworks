@@ -240,7 +240,7 @@ public final class VoidDragon extends PathfinderMob {
     private @Nullable Seat seat;
     /** The heading, as a mob's, a presence sits at on its seat, along the core's wall; NaN until it is picked, over the seat. */
     private float seatYaw = Float.NaN;
-    /** The stop a presence's dragon is at, as it is seen loading or unloading there; null while it is at none. */
+    /** The stop a presence's dragon is at, as it is seen loading or unloading there; null while it is at none, or neither loads nor unloads there. */
     private @Nullable StopShown stopShown;
     /** How many of that stop's passings it has shown, or let go by. */
     private int passingsShown;
@@ -646,7 +646,7 @@ public final class VoidDragon extends PathfinderMob {
         entityData.set(DATA_FOLLOWERS, record.load().followers().bits());
         carried = record.load().firstStack();
         var stop = record.trip().filter(trip -> trip.divingTo().isEmpty())
-                .map(trip -> new StopShown(trip.until() - VoidworksConfig.dragonStopTicks(), trip.handling()))
+                .flatMap(trip -> trip.handling().map(handling -> new StopShown(trip.began(VoidworksConfig.dragonStopTicks()), handling)))
                 .orElse(null);
         if (!Objects.equals(stop, stopShown)) {
             stopShown = stop;
