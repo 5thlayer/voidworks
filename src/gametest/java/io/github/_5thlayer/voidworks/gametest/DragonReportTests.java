@@ -71,7 +71,7 @@ final class DragonReportTests {
                 })
                 .thenExecute(() -> {
                     var report = report(helper, presence.get());
-                    helper.assertTrue(report.equals(new DragonReport(DragonReport.Doing.RESTING, Optional.empty(), new TreeMap<>(), Line.MOTE, List.of(), 0,
+                    helper.assertTrue(report.equals(new DragonReport(DragonReport.Doing.RESTING, Optional.empty(), new TreeMap<>(), Line.MOTE, List.of(), 0, 0,
                             VoidDragonRecord.FULL_HEALTH, LifeStage.YOUNG, Optional.of("dragon-owner"))), "the resting dragon shows " + report);
                     helper.assertTrue(DragonReport.of(presence.get(), server).isPresent(), "a presence shows nothing");
                     var load = new TreeMap<Integer, Long>();

@@ -36,6 +36,11 @@ record Stop(List<Wells.Well> wells) {
                 .orElseThrow();
     }
 
+    /** @return the Void Pressure at its Wells' cores, all in one dimension, as its network is */
+    int pressure() {
+        return wells.getFirst().pressure();
+    }
+
     /** @return the motes its network holds, grade to count, which heal a dragon of any Line */
     SortedMap<Integer, Long> motes() {
         return wells.getFirst().motes();

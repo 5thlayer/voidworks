@@ -146,6 +146,17 @@ public final class DragonRouting {
         return new ServerWells(server).of(owner).stream().map(Wells.Well::place).toList();
     }
 
+    /**
+     * @return how many stacks the provider {@code hatch} holds, and for how many of them its network can
+     *         pay the Toll ({@link Routing#payable}); empty for a requester, or while its Well is not whole
+     *         and awake or not its owner's
+     */
+    public static Optional<Payable> payable(MinecraftServer server, WellHatches.Hatch hatch) {
+        return hatch.well().flatMap(well -> SavedVoidWells.of(server).at(well)
+                .filter(entry -> hatch.owner().map(NameAndId::id).filter(entry.owner()::equals).isPresent())
+                .flatMap(entry -> routing(server, new ServerOwners(server, Map.of())).payable(entry.owner(), well, hatch.place())));
+    }
+
     /** @return {@code owner}, in whichever of the server's levels they are */
     private static Optional<Player> player(MinecraftServer server, UUID owner) {
         for (var level : server.getAllLevels()) {
@@ -164,7 +175,8 @@ public final class DragonRouting {
             return level == null ? 1.0 : level.dimensionType().coordinateScale();
         });
         return new Routing(new ServerWells(server), new ServerHatches(server), owners, dive, harm(server), VoidworksConfig.dragonLoad(),
-                VoidworksConfig.dragonMatterLoad(), VoidworksConfig.dragonStopTicks(), VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
+                VoidworksConfig.dragonMatterLoad(), Toll.of(VoidworksBlocks.WELL_HATCH.get().defaultBlockState()), VoidworksConfig.dragonStopTicks(),
+                VoidworksConfig.dragonEggMotes(), VoidworksConfig.lifeStages());
     }
 
     /** A dragon's {@link Harm} on {@code server}: each dimension's pressure, by the {@link VoidPressure} map, against the End's. */
