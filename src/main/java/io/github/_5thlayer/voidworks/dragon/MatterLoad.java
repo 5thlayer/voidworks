@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.resources.Identifier;
@@ -58,6 +59,12 @@ public record MatterLoad(List<Ware> wares) implements Load {
         var items = new LinkedHashMap<Identifier, Long>();
         wares.forEach(ware -> items.merge(ware.item(), ware.count(), Long::sum));
         return items;
+    }
+
+    /** @return a stack of the items it took first, as many of them as a stack holds at most */
+    @Override
+    public Optional<Ware> firstStack() {
+        return wares.stream().findFirst().map(first -> first.withCount(Math.min(first.count(), first.stackSize())));
     }
 
     /** @return this load with {@code ware} added to it */

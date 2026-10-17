@@ -1,0 +1,160 @@
+// SPDX-FileCopyrightText: 2026 5thlayer
+// SPDX-License-Identifier: MIT
+
+package io.github._5thlayer.voidworks.gametest;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import io.github._5thlayer.voidworks.VoidworksConfig;
+import io.github._5thlayer.voidworks.VoidworksEntities;
+import io.github._5thlayer.voidworks.dragon.DragonPresences;
+import io.github._5thlayer.voidworks.dragon.Line;
+import io.github._5thlayer.voidworks.dragon.Load;
+import io.github._5thlayer.voidworks.dragon.MatterLoad;
+import io.github._5thlayer.voidworks.dragon.MoteLoad;
+import io.github._5thlayer.voidworks.dragon.Place;
+import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
+import io.github._5thlayer.voidworks.dragon.Showing;
+import io.github._5thlayer.voidworks.dragon.StackWares;
+import io.github._5thlayer.voidworks.dragon.Trip;
+import io.github._5thlayer.voidworks.dragon.VoidDragon;
+import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
+import io.github._5thlayer.voidworks.dragon.VoidDragons;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+
+/**
+ * A dragon shows its Line by what it carries: a Matter-line dragon's presence hangs its first carried
+ * stack under its body, a filled shulker box with its contents, whatever it is doing, and nothing while
+ * it carries nothing; a Matter-line Dragonling holds a chest, and a Mote-line one nothing. What it
+ * hangs is in its synced data, which reaches every client.
+ */
+final class HangingTests {
+
+    /** Where the dragon rests, on no Well, and the Dragonlings hatch. */
+    private static final BlockPos HERE = new BlockPos(4, 2, 4);
+
+    private HangingTests() {
+    }
+
+    static void register(VoidworksGameTests.Registrar tests) {
+        tests.test("hanging_a_matter_line_dragons_presence_hangs_its_first_stack_resting_working_and_diving_and_nothing_when_empty", 1,
+                HangingTests::hangsItsFirstStack);
+        tests.test("hanging_a_matter_line_dragonling_holds_a_chest_across_a_save_and_a_mote_line_one_nothing", 1, HangingTests::dragonlingsChest);
+    }
+
+    private static void hangsItsFirstStack(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var registries = helper.getLevel().registryAccess();
+        var box = new ItemStack(Items.SHULKER_BOX);
+        box.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.DIAMOND_BLOCK, 64))));
+        var load = new MatterLoad(List.of(StackWares.of(box, registries), StackWares.of(new ItemStack(Items.COBBLESTONE, 64), registries)));
+        var dragons = SavedVoidDragons.of(server);
+        var here = Place.of(helper.getLevel(), helper.absolutePos(HERE));
+        var dragon = dragons.add(UUID.randomUUID(), Line.MATTER, here);
+        var id = dragon.id();
+
+        DragonPresences.show(server);
+        var presence = DragonPresences.presence(server, id).orElseThrow();
+        helper.assertTrue(presence.hung().isEmpty(), "the dragon carrying nothing hangs " + presence.hung());
+
+        carrying(dragons, dragon, load, Optional.empty());
+        DragonPresences.show(server);
+        assertHangs(helper, presence, box, Showing.RESTING);
+
+        long now = server.overworld().getGameTime();
+        int stop = VoidworksConfig.dragonStopTicks();
+        carrying(dragons, dragon, load, Optional.of(trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
+        DragonPresences.show(server);
+        assertHangs(helper, presence, box, Showing.WORKING);
+
+        carrying(dragons, dragon, load, Optional.of(trip(here, load, Trip.Leg.TO_DESTINATION, now + 1_000)));
+        DragonPresences.show(server);
+        assertHangs(helper, presence, box, Showing.DIVING);
+
+        // Taken away, a presence shown anew hangs the load at once.
+        carrying(dragons, dragon, load, Optional.empty());
+        presence.discard();
+        DragonPresences.show(server);
+        DragonPresences.show(server);
+        var anew = DragonPresences.presence(server, id).orElseThrow();
+        helper.assertTrue(anew != presence, "the presence taken away is still shown");
+        assertHangs(helper, anew, box, Showing.RESTING);
+
+        carrying(dragons, dragon, MatterLoad.NONE, Optional.empty());
+        DragonPresences.show(server);
+        helper.assertTrue(anew.hung().isEmpty(), "the dragon having unloaded still hangs " + anew.hung());
+        helper.assertTrue(syncedStacks(anew).isEmpty(), "the empty dragon's synced data holds " + syncedStacks(anew));
+
+        // A Mote-line dragon carrying motes hangs nothing.
+        dragons.update(new VoidDragonRecord(id, dragon.owner(), Line.MOTE, dragon.health(), here, MoteLoad.of(Map.of(4, 100L)), Optional.empty(), 0, 0));
+        DragonPresences.show(server);
+        helper.assertTrue(anew.hung().isEmpty(), "a Mote-line dragon hangs " + anew.hung());
+        dragons.remove(id);
+        DragonPresences.show(server);
+        helper.succeed();
+    }
+
+    private static void dragonlingsChest(GameTestHelper helper) {
+        var matter = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
+        matter.hatchFor(UUID.randomUUID(), Line.MATTER);
+        helper.assertTrue(matter.hung().is(Items.CHEST), "a Matter-line Dragonling holds " + matter.hung());
+        helper.assertTrue(syncedStacks(matter).stream().anyMatch(stack -> stack.is(Items.CHEST)), "the chest is not in the Dragonling's synced data");
+        var mote = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
+        mote.hatchFor(UUID.randomUUID(), Line.MOTE);
+        helper.assertTrue(mote.hung().isEmpty(), "a Mote-line Dragonling holds " + mote.hung());
+        helper.assertTrue(read(helper, saved(helper, matter)).hung().is(Items.CHEST), "a Matter-line Dragonling reloads holding no chest");
+        helper.assertTrue(read(helper, saved(helper, mote)).hung().isEmpty(), "a Mote-line Dragonling reloads holding something");
+        matter.discard();
+        mote.discard();
+        helper.succeed();
+    }
+
+    private static void carrying(VoidDragons dragons, VoidDragonRecord dragon, Load load, Optional<Trip> trip) {
+        dragons.update(new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.line(), dragon.health(), dragon.rest(), load, trip, 0, 0));
+    }
+
+    private static Trip trip(Place here, MatterLoad load, Trip.Leg leg, long until) {
+        return new Trip(Optional.empty(), here, load.amount(), false, leg, until, 0, 0, Optional.empty(), load.items());
+    }
+
+    /** The presence shows {@code showing} and hangs {@code stack}, in its synced data. */
+    private static void assertHangs(GameTestHelper helper, VoidDragon presence, ItemStack stack, Showing showing) {
+        helper.assertTrue(presence.showing() == showing, "the presence shows " + presence.showing() + ", not " + showing);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(presence.hung(), stack),
+                "the presence " + showing + " hangs " + presence.hung() + " holding " + presence.hung().get(DataComponents.CONTAINER) + ", not " + stack);
+        helper.assertTrue(syncedStacks(presence).stream().anyMatch(synced -> ItemStack.isSameItemSameComponents(synced, stack)),
+                "the hung stack is not in the presence's synced data");
+    }
+
+    /** @return the item stacks in {@code dragon}'s synced data that differ from their defaults, as a client joining sees them */
+    private static List<ItemStack> syncedStacks(VoidDragon dragon) {
+        var values = dragon.getEntityData().getNonDefaultValues();
+        return values == null ? List.of()
+                : values.stream().map(value -> value.value()).filter(ItemStack.class::isInstance).map(ItemStack.class::cast).toList();
+    }
+
+    private static CompoundTag saved(GameTestHelper helper, VoidDragon dragonling) {
+        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
+        dragonling.saveWithoutId(output);
+        return output.buildResult();
+    }
+
+    private static VoidDragon read(GameTestHelper helper, CompoundTag saved) {
+        var reloaded = VoidworksEntities.VOID_DRAGON.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
+        reloaded.load(TagValueInput.create(ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), saved));
+        return reloaded;
+    }
+}

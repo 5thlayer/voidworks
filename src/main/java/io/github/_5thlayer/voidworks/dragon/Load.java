@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.dragon;
 
 import java.util.Map;
+import java.util.Optional;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -33,5 +34,10 @@ public sealed interface Load permits MoteLoad, MatterLoad {
     /** @return how many of each item's kind it carries, whatever their components: none for motes */
     default Map<Identifier, Long> items() {
         return Map.of();
+    }
+
+    /** @return the first stack it carries, which its dragon's presence hangs under its body: none for motes */
+    default Optional<Ware> firstStack() {
+        return Optional.empty();
     }
 }

@@ -8,12 +8,15 @@ import com.mojang.math.Axis;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.monster.dragon.EnderDragonModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EnderDragonRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -23,6 +26,7 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -34,7 +38,9 @@ import org.joml.Vector3f;
  * and sitting, landing and taking off as the Ender Dragon does on its portal. Nothing of Mojang's
  * ships in the jar: it wears the vanilla texture, read from the player's game, tinted the void's
  * purple, and has no texture of its own. A grown presence is sized by its dragon's life stage, and
- * dying of old age it shows beams of light as the Ender Dragon does.
+ * dying of old age it shows beams of light as the Ender Dragon does. What it hangs under its body
+ * ({@link VoidDragon#hung()}), a Matter-line dragon's first carried stack or a Matter-line Dragonling's
+ * chest, is drawn there from that stack's own item model.
  */
 final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRenderer.State> {
 
@@ -70,17 +76,33 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     /** How far, in degrees, a sitting presence turns its head from its body toward what it looks at. */
     private static final float MOST_LOOK = 50.0F;
 
-    private final EnderDragonModel model;
+    /**
+     * Where what it hangs is drawn, in the model's units from its body's pivot, the model's down being
+     * positive: under the middle of its body's box, which runs 1 to 25 down and -16 to 48 along it.
+     */
+    private static final float HUNG_Y = 26.0F / 16.0F;
+    private static final float HUNG_Z = 16.0F / 16.0F;
+    /** How big what it hangs is drawn, against its item model's fixed size: a block about as wide as the body. */
+    private static final float HUNG_SIZE = 3.0F;
 
-    /** The Ender Dragon's, and how much smaller this one is drawn. */
+    private final EnderDragonModel model;
+    /** Its model's body, which what it hangs follows. */
+    private final ModelPart body;
+    /** Turns what it hangs into its item model. */
+    private final ItemModelResolver itemModelResolver;
+
+    /** The Ender Dragon's, how much smaller this one is drawn, and what it hangs under its body. */
     static final class State extends EnderDragonRenderState {
 
         float scale = DRAGONLING_SCALE;
+        final ItemStackRenderState hung = new ItemStackRenderState();
     }
 
     VoidDragonRenderer(EntityRendererProvider.Context context) {
         super(context);
         model = new EnderDragonModel(context.bakeLayer(ModelLayers.ENDER_DRAGON));
+        body = model.root().getChild("body");
+        itemModelResolver = context.getItemModelResolver();
     }
 
     @Override
@@ -96,6 +118,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         state.flapTime = Mth.lerp(partialTicks, dragon.oFlapTime, dragon.flapTime);
         state.partialTicks = partialTicks;
         state.flightHistory.copyFrom(dragon.flightHistory);
+        itemModelResolver.updateForNonLiving(state.hung, dragon.hung(), ItemDisplayContext.FIXED, dragon);
         var perch = dragon.perch();
         state.isSitting = perch == VoidDragon.Perch.SITTING;
         state.isLandingOrTakingOff = perch.settling();
@@ -171,6 +194,23 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         });
     }
 
+    /**
+     * What it hangs, under its body as the model poses it, bobbing and banking with it, upright and
+     * turned side on, so a flat item shows its face to a player beside the dragon.
+     */
+    private void submitHung(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
+        model.setupAnim(state);
+        poseStack.pushPose();
+        model.root().translateAndRotate(poseStack);
+        body.translateAndRotate(poseStack);
+        poseStack.translate(0.0F, HUNG_Y + HUNG_SIZE / 4.0F, HUNG_Z);
+        // The model is drawn upside down and mirrored; the item is turned back upright.
+        poseStack.scale(-HUNG_SIZE, -HUNG_SIZE, HUNG_SIZE);
+        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
+        state.hung.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+        poseStack.popPose();
+    }
+
     /** The Ender Dragon's shadow, scaled as the dragon is. */
     @Override
     protected float getShadowRadius(State state) {
@@ -192,6 +232,9 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         submitNodeCollector.submitModel(model, state, poseStack, model.renderType(TEXTURE), state.lightCoords, OverlayTexture.NO_OVERLAY, TINT, null,
                 state.outlineColor, null);
         submitNodeCollector.submitModel(model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+        if (!state.hung.isEmpty()) {
+            submitHung(state, poseStack, submitNodeCollector);
+        }
         if (state.deathTime > 0.0F) {
             poseStack.pushPose();
             poseStack.translate(0.0F, BEAM_ORIGIN_Y, BEAM_ORIGIN_Z);

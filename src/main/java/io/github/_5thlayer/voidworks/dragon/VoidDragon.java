@@ -50,6 +50,8 @@ import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -171,6 +173,8 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<Integer> DATA_DIVE_COLOUR = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
     /** Whether it plays its dragon's death of old age. */
     private static final EntityDataAccessor<Boolean> DATA_DYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
+    /** What it hangs under its body: a Matter-line presence's first carried stack, a Matter-line Dragonling's chest. */
+    private static final EntityDataAccessor<ItemStack> DATA_HUNG = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.ITEM_STACK);
 
     private static final String OWNER_KEY = "owner";
     private static final String LINE_KEY = "line";
@@ -271,6 +275,7 @@ public final class VoidDragon extends PathfinderMob {
         entityData.define(DATA_DIVE_FROM, 0L);
         entityData.define(DATA_DIVE_UNTIL, 0L);
         entityData.define(DATA_DIVE_COLOUR, DiveColour.VOID);
+        entityData.define(DATA_HUNG, ItemStack.EMPTY);
     }
 
     @Override
@@ -292,6 +297,7 @@ public final class VoidDragon extends PathfinderMob {
     public void hatchFor(UUID owner, Line line) {
         this.owner = owner;
         this.line = line;
+        holdForLine();
         setHomeTo(blockPosition(), HOME_RADIUS);
         ticksToGrow = VoidworksConfig.dragonlingGrowTicks();
     }
@@ -304,6 +310,7 @@ public final class VoidDragon extends PathfinderMob {
      */
     void showPresenceOf(VoidDragonRecord record, Showing showing, DragonPresences.Spot spot, LifeStage stage) {
         showStage(stage);
+        showLoad(record.load());
         dragon = record.id();
         owner = record.owner();
         line = record.line();
@@ -590,6 +597,28 @@ public final class VoidDragon extends PathfinderMob {
         if (stage() != stage) {
             entityData.set(DATA_STAGE, (byte) stage.ordinal());
         }
+    }
+
+    /** It hangs the first stack of {@code load} under its body, and nothing for motes or no load. */
+    void showLoad(Load load) {
+        hang(load.firstStack().map(ware -> StackWares.stack(ware, registryAccess())).orElse(ItemStack.EMPTY));
+    }
+
+    /** As a Dragonling, which is all that is ever saved, it holds a chest under its body if it is of the Matter line, and nothing else. */
+    private void holdForLine() {
+        hang(line == Line.MATTER ? new ItemStack(Items.CHEST) : ItemStack.EMPTY);
+    }
+
+    /** It hangs {@code stack}, synced only if it is not what it hangs already. */
+    private void hang(ItemStack stack) {
+        if (!ItemStack.matches(hung(), stack)) {
+            entityData.set(DATA_HUNG, stack);
+        }
+    }
+
+    /** @return what it hangs under its body, synced to every client: its dragon's first carried stack, a Dragonling's chest, or nothing */
+    public ItemStack hung() {
+        return entityData.get(DATA_HUNG);
     }
 
     /** @return whether it plays its dragon's death of old age */
@@ -1009,6 +1038,7 @@ public final class VoidDragon extends PathfinderMob {
         owner = input.read(OWNER_KEY, UUIDUtil.CODEC).orElse(null);
         // One hatched before Lines is of the Mote line.
         line = input.read(LINE_KEY, Line.CODEC).orElse(Line.MOTE);
+        holdForLine();
         // One hatched before Dragonlings grew starts growing now.
         ticksToGrow = input.getLong(TICKS_TO_GROW_KEY).orElseGet(() -> (long) VoidworksConfig.dragonlingGrowTicks());
     }

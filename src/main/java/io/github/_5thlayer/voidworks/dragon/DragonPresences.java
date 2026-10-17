@@ -106,7 +106,10 @@ public final class DragonPresences {
             var showing = Showing.of(dragon, now, VoidworksConfig.dragonStopTicks());
             var shown = presence(server, dragon.id());
             // Its new stage shows from its next stop, as it changes only at one.
-            shown.ifPresent(presence -> presence.showStage(stage));
+            shown.ifPresent(presence -> {
+                presence.showStage(stage);
+                presence.showLoad(dragon.load());
+            });
             if (shown.isPresent() && shown.get().carrying() && showing != Showing.DIVING) {
                 bringOut(server, saved, dragon, shown.get());
                 continue;
