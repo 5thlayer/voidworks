@@ -397,10 +397,12 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
   so neither head nor tail covers the core, in the Ender Dragon's sitting pose, its wings held still
   and down and its head turned to a nearby player, never roaring or breathing at anyone. Where
   blocks fill the room it would sit in, it flies about over the shaft instead, and lands once there
-  is room. As it sets off it takes off, rising over the shaft within its dive's time, then dives
-  into the shaft. Holding a load it has no room for, it rests the same way. At work there, loading,
+  is room. As it sets off from resting it takes off, rising over the shaft within its dive's time, then dives
+  into the shaft; from a stop it dives from the air. Holding a load it has no room for, it rests the same way. At work there, loading,
   unloading, waiting for its owner or setting a rider down, it stays in the air close about the
-  Well. One with nothing to do away from its owner's Wells, whole and awake, such as one just grown or
+  Well, its stop lasting a set time, the first part of it spent emerging from the shaft. A dragon
+  of either Line whose trip loads at the stop it rests at makes no dive there: it takes off, rising
+  over the shaft in that first part of its stop instead of emerging, loads, and dives on. One with nothing to do away from its owner's Wells, whole and awake, such as one just grown or
   one whose Well went Dormant or was broken, dives to the nearest of them and rests there.
 - **Riding.** Its owner uses a dragon stopped at one of their Wells, resting or at work there, and
   mounts it, with no harness; anyone else cannot. It hovers, taking off first if it sat resting
@@ -561,7 +563,22 @@ Factorio's chests.
   hatches at the same price as any other.
 - **Seen.** Its presence hangs its first carried stack under its body, drawn with the item renderer
   from that stack's own item model, a shulker box when it carries one, so the presence syncs that
-  first stack. Jade lists its load with item icons, one line per item, a filled container showing its
+  first stack. It is **seen loading**: the stop's emerging, or its rise where it rested, over, it
+  hovers still over the shaft's middle, along the core's wall, and from each provider hatch on the
+  Well it stopped at that gave it something, the first item taken from that hatch is seen moving,
+  its item model rising from the top of the hatch, arcing over the rim and in to its paws in about
+  a second, landing with a quiet item pickup pop. Their starts are spread over the rest of the stop,
+  so the last lands about half a second before it dives. It hangs its first stack once the first
+  item reaches its paws, or, with no hatch on that Well having given it anything, once it is up.
+  Hatches on the stop's other Wells show nothing, and the hatch itself does not move. Unloading
+  and dropping at a rider's Well are its mirror: each hatch it puts into on the Well it stopped at
+  sees the first item put there move from its paws, over the rim and into the hatch, and once the
+  last has landed it hangs the first stack of what it still carries, or nothing. Only the look
+  waits: the hatches are emptied or filled, and the Toll paid, as the stop begins, and what moves
+  shows what has already gone. Its timing is the stop's, read from the record, so a presence shown
+  partway through a stop joins it there, what has landed already hung, and every player sees the
+  same. A ridden dive's jump, putting its excess into the hatches, shows nothing and dives at once,
+  and a called dragon puts nothing. Jade lists its load with item icons, one line per item, a filled container showing its
   contents, then a line such as `6 of 27 stacks, Toll 3,072 paid`, the Toll this load paid as it
   loaded.
 
