@@ -103,10 +103,7 @@ public final class Routing {
      *         or the hatch is not one of its providers
      */
     public Optional<Payable> payable(UUID owner, Place well, Place hatch) {
-        return stop(owner, well).flatMap(from -> matter.hatches(from).stream()
-                .filter(found -> found.place().equals(hatch) && found.provider())
-                .findFirst()
-                .map(provider -> matter.payable(provider, from, stops(owner))));
+        return stop(owner, well).flatMap(from -> matter.payable(hatch, from, stops(owner)));
     }
 
     /**

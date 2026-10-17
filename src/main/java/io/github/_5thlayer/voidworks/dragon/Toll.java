@@ -48,7 +48,7 @@ public record Toll(long stackPrice) {
     /** The Toll, keyed by the Well hatch's block, where a load is lifted. */
     public static final DataMapType<Block, Toll> DATA_MAP = DataMapType.builder(DATA_MAP_ID, Registries.BLOCK, CODEC).build();
 
-    /** No Toll, with no entry, as an egg with none is free. */
+    /** No Toll: what a load pays with no entry for its hatch's block. */
     public static final Toll FREE = new Toll(0);
 
     public Toll {
@@ -111,9 +111,13 @@ public record Toll(long stackPrice) {
         return low;
     }
 
-    /** @return the base void energy {@code motes}, grade to count, are worth spent at Void Pressure {@code pressure}: what they pay a Toll with */
+    /**
+     * @return the base void energy {@code motes}, grade to count, are worth spent at Void Pressure
+     *         {@code pressure}: what they pay a Toll with, each grade's count as {@link #spend} counts it,
+     *         so a Toll within it is never refused
+     */
     public static long budget(Map<Integer, Long> motes, int pressure) {
-        return VoidEnergy.worth(motes, pressure) / VoidEnergy.BASE;
+        return VoidEnergy.worth(counted(motes), pressure) / VoidEnergy.BASE;
     }
 
     /**
@@ -123,9 +127,14 @@ public record Toll(long stackPrice) {
      * @return what to take, or empty when they are not worth it
      */
     public static Optional<VoidEnergy.Spend> spend(Map<Integer, Long> motes, int pressure, long toll) {
+        return VoidEnergy.plan(counted(motes), pressure, LongMath.saturatedMultiply(toll, VoidEnergy.BASE));
+    }
+
+    /** @return {@code motes} counted as a spend counts them, each grade's count at most {@link Integer#MAX_VALUE} */
+    private static Map<Integer, Integer> counted(Map<Integer, Long> motes) {
         var counts = new TreeMap<Integer, Integer>();
         motes.forEach((grade, count) -> counts.put(grade, Ints.saturatedCast(count)));
-        return VoidEnergy.plan(counts, pressure, LongMath.saturatedMultiply(toll, VoidEnergy.BASE));
+        return counts;
     }
 
     /** @return {@code count} items, {@code stackSize} to a stack, as a share of {@code perStack}, rounded up */

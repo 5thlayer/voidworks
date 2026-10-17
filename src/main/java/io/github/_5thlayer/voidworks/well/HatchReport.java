@@ -20,9 +20,8 @@ import net.minecraft.server.MinecraftServer;
  * What a Well hatch shows a player looking at it, beside what it holds, which Jade shows from its item
  * face: what a requester asks for, and how much of what a provider holds its network can pay the Toll to
  * lift. Whether it is a provider or a requester its name says, the item it is picked as. Read on the
- * server, where the hatch is, and sent to the
- * client, which words it with {@link #lines} and draws a request after them as its item with the stacks
- * asked for on it.
+ * server, where the hatch is, and sent to the client, which words it with {@link #lines} and draws a
+ * request after them as its item with the stacks asked for on it.
  *
  * @param mode    whether it is a provider or a requester
  * @param request what a requester asks for; empty for a provider, and a requester asking for nothing
