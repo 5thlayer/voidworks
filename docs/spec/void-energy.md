@@ -553,8 +553,9 @@ Factorio's chests.
   more and gets nothing back. The Mote line pays no Toll.
 - **Riding and calling** are the Mote line's, in stacks: a rider's Well is a stop that takes what its
   requesters are short of, a ridden dive's load shrinks by stacks, and what it holds beyond that as
-  the rider jumps goes into the Well's hatches as on arrival, the dragon not diving if they have no
-  room for it.
+  the rider jumps goes into the hatches of the Well's network as on arrival, requesters asking for it
+  first, the dragon keeping the items it took first, in whole stacks; it does not dive, and puts
+  nothing, if they have no room for all of it.
 - **Life**, in stacks unloaded: each life stage lasts 1,728 stacks (64 young loads), and an adult
   lays a Matter Dragon Egg each 216 (8 young loads), so 8 in its life, as the Mote line lays. Its egg
   hatches at the same price as any other.

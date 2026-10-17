@@ -105,6 +105,34 @@ public record MatterLoad(List<Ware> wares, long toll) implements Load {
         return new MatterLoad(wares, toll);
     }
 
+    /** @return the items it took first, as many as fill {@code most} stacks: whole stacks of the one it cuts through */
+    MatterLoad upTo(long most) {
+        var kept = new ArrayList<Ware>();
+        long left = most;
+        for (var ware : wares) {
+            long count = ware.within(left);
+            kept.add(ware.withCount(count));
+            left -= Ware.stacks(count, ware.stackSize());
+        }
+        return new MatterLoad(kept);
+    }
+
+    /** @return this load and {@code other} together */
+    MatterLoad plus(MatterLoad other) {
+        var both = new ArrayList<>(wares);
+        both.addAll(other.wares);
+        return new MatterLoad(both);
+    }
+
+    /** @return this load with {@code other} taken out of it, as much of each of its items as it carries */
+    MatterLoad less(MatterLoad other) {
+        var left = this;
+        for (var ware : other.wares) {
+            left = left.less(ware);
+        }
+        return left;
+    }
+
     /** @return how many more of {@code ware} it takes without filling more than {@code most} stacks */
     long room(Ware ware, long most) {
         long others = wares.stream().filter(carried -> !carried.alike(ware)).mapToLong(Ware::stacks).sum();

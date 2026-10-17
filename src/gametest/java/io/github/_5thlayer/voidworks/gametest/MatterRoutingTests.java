@@ -145,6 +145,7 @@ final class MatterRoutingTests {
         }
     }
 
+    /** @return how many of {@code item} {@code hatch} holds */
     static long count(WellHatches.Hatch hatch, Item item) {
         return hatch.contents().copyToList().stream().filter(stack -> stack.is(item)).mapToLong(ItemStack::getCount).sum();
     }

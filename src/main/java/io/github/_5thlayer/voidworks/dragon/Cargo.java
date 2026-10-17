@@ -5,6 +5,7 @@ package io.github._5thlayer.voidworks.dragon;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * What a Line's dragons carry, as {@link Routing} sees it: how much a stop is short of, offers and has
@@ -25,16 +26,8 @@ interface Cargo {
     /** @return how much {@code stop} is short of, less what is on its way to it on {@code bound} */
     long shortfall(Stop stop, List<Trip> bound);
 
-    /**
-     * @return how much more {@code stop} takes of a load it may not want, before any claim on it, once a
-     *         dragon healing there has taken {@code healing} motes out of its network
-     */
-    long room(Stop stop, long healing);
-
-    /** @return how much {@code stop} takes, before any claim on it */
-    default long room(Stop stop) {
-        return room(stop, 0);
-    }
+    /** @return how much more {@code stop} takes of a load it may not want, before any claim on it */
+    long room(Stop stop);
 
     /** @return how much {@code from} offers that {@code to} wants, less what other dragons are on their way to load there on {@code loading} */
     long offer(Stop from, Stop to, List<Trip> loading, List<Trip> bound);
@@ -59,6 +52,13 @@ interface Cargo {
      */
     Load put(Load load, Place place, Stop to, long most, boolean stow);
 
-    /** Puts {@code most} of {@code load} back into the Well at {@code place}, as a ridden dive sheds it, what is worth least first. @return what is left of {@code load} */
-    Load putBack(Load load, Place place, long most);
+    /**
+     * Puts what {@code load} holds beyond {@code keep} into {@code at}, the stop it is at, at its Well at
+     * {@code place}, as a ridden dive sheds it, once a dragon healing there has taken {@code healing}
+     * motes out of its network.
+     *
+     * @return what is left of {@code load}, no more than {@code keep}; empty, with nothing put, when
+     *         {@code at} has no room for all the rest
+     */
+    Optional<Load> shed(Load load, Place place, Stop at, long keep, long healing);
 }
