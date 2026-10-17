@@ -160,12 +160,6 @@ public final class VoidDragon extends PathfinderMob {
     /** How fast, in blocks a tick, a presence goes to where it holds still over the shaft while items move to or from its paws. */
     private static final double HOLD_SPEED = 0.25;
 
-    /**
-     * Where what a presence hangs is, its paws, in blocks from where it stands, at a grown presence's
-     * size before its stage scales it, until it is first drawn: just under its body.
-     */
-    private static final Vec3 PAWS = new Vec3(0.0, 0.6, 0.0);
-
     private static final EntityDataAccessor<Boolean> DATA_GROWN = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
     /** Whether a presence carries its rider through its dragon's dive, which it holds them in until it sets them down: synced, so every client seats them down the shaft. */
     private static final EntityDataAccessor<Boolean> DATA_CARRYING = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BOOLEAN);
@@ -247,8 +241,6 @@ public final class VoidDragon extends PathfinderMob {
     private Optional<Ware> carried = Optional.empty();
     /** Whether a presence holds still over the shaft while items move to or from its paws. */
     private boolean holdingStill;
-    /** On a client, where its paws were last drawn, from where it stood; null until it is drawn. */
-    private @Nullable Vec3 pawsDrawn;
     /** Whether a presence emerging brings up the rider its dragon carried through its dive, to set them down once out. */
     private boolean bringing;
     /** The Well its rider has picked to dive to, by strafing; null until they pick one. */
@@ -704,19 +696,6 @@ public final class VoidDragon extends PathfinderMob {
     /** @return the middle of the mouth of the shaft it emerges from and dives into: the first open air over its Well's rim */
     Vec3 mouth() {
         return Vec3.atBottomCenterOf(spot.emerges());
-    }
-
-    /**
-     * @return where its paws are now, where what it hangs is, and where items it loads or unloads come and
-     *         go: on a client, where it last drew them, as its model posed them
-     */
-    public Vec3 paws() {
-        return position().add(pawsDrawn != null ? pawsDrawn : PAWS.scale(size(stage())));
-    }
-
-    /** On a client, it has drawn its paws at {@code offset} from where it stands. */
-    public void drawPawsAt(Vec3 offset) {
-        pawsDrawn = offset;
     }
 
     /** @return how it shows each item seen moving to or from its paws */

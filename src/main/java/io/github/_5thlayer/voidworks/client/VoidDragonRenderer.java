@@ -29,8 +29,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -151,17 +149,11 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
             lookFromTheSeat(state, Mth.rotLerp(partialTicks, dragon.yHeadRotO, dragon.yHeadRot));
         }
         if (dragon.grown()) {
-            dragon.drawPawsAt(hungAt(state));
+            var poseStack = new PoseStack();
+            pose(state, poseStack);
+            poseHung(state, poseStack);
+            HungPoses.drawn(dragon, poseStack.last().pose());
         }
-    }
-
-    /** @return where what it hangs is drawn, from where it stands, as {@code state} poses it: where items it loads or unloads come and go */
-    private Vec3 hungAt(State state) {
-        var poseStack = new PoseStack();
-        pose(state, poseStack);
-        poseHung(state, poseStack);
-        var at = poseStack.last().pose().transformPosition(new Vector3f());
-        return new Vec3(at.x(), at.y(), at.z());
     }
 
     /** Poses its model as the Ender Dragon's renderer does, scaled down to its own size. */
@@ -176,12 +168,18 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         poseStack.translate(0.0F, -1.501F, 0.0F);
     }
 
-    /** From its model's pose, to the middle of what it hangs, under its body as the model poses it. */
+    /**
+     * From its model's pose, to what it hangs, under its body as the model poses it, bobbing and banking
+     * with it, upright and turned side on, so a flat item shows its face to a player beside the dragon.
+     */
     private void poseHung(State state, PoseStack poseStack) {
         model.setupAnim(state);
         model.root().translateAndRotate(poseStack);
         body.translateAndRotate(poseStack);
         poseStack.translate(0.0F, HUNG_Y + HUNG_SIZE / 4.0F, HUNG_Z);
+        // The model is drawn upside down and mirrored; the item is turned back upright.
+        poseStack.scale(-HUNG_SIZE, -HUNG_SIZE, HUNG_SIZE);
+        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
     }
 
     /** Tints {@code state} as a dragon of {@code line} is: its body over the vanilla texture, and its eyes, a Mote-line one's untinted. */
@@ -262,16 +260,10 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         });
     }
 
-    /**
-     * What it hangs, under its body as the model poses it, bobbing and banking with it, upright and
-     * turned side on, so a flat item shows its face to a player beside the dragon.
-     */
+    /** What it hangs ({@link #poseHung}). */
     private void submitHung(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
         poseStack.pushPose();
         poseHung(state, poseStack);
-        // The model is drawn upside down and mirrored; the item is turned back upright.
-        poseStack.scale(-HUNG_SIZE, -HUNG_SIZE, HUNG_SIZE);
-        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
         state.hung.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
         poseStack.popPose();
     }

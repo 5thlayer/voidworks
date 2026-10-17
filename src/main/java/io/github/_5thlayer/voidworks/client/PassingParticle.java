@@ -18,54 +18,57 @@ import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 
 /**
  * An item seen moving between a Well hatch and a Matter-line dragon's paws ({@link PassingShown}): one of
- * it, drawn as it lies dropped, bigger, never bobbing, its middle where it is, it rises from the top of the hatch, arcs over the Well's rim
- * and comes in to the paws, following the dragon, in {@link Handling#PASS_TICKS}, or goes the other way,
- * and lands with a quiet item pickup pop. Vanilla's item pickup is a straight line of three ticks, so it
- * has a particle group of its own.
+ * it, drawn as the dragon draws what it hangs, as big and turned the same way, with no shadow, its
+ * middle where it is. It rises from the top of the hatch, arcs over the Well's rim and comes in to where
+ * the dragon hangs its stack, following it, in {@link Handling#PASS_TICKS}, or goes the other way, and
+ * lands with a quiet item pickup pop. Vanilla's item pickup is a straight line of three ticks, so it has a
+ * particle group of its own.
  */
 final class PassingParticle extends Particle {
 
     /** The group its particles are drawn in. */
     static final ParticleRenderType GROUP = new ParticleRenderType("VOIDWORKS_PASSING");
 
-    /** How much bigger it is drawn than it lies dropped. Tuned in game. */
-    private static final float SCALE = 2.0F;
-
     /** How loud it pops as it lands. */
     private static final float POP_VOLUME = 0.15F;
     /** How high it pops, give or take a little each time, as vanilla's pickup does. */
     private static final float POP_PITCH = 1.6F;
 
-    private final EntityRenderState item;
-    /** How far above where it lies dropped the middle of its model is drawn, at its own size. */
-    private final float middle;
+    /** How it is drawn, before its dragon has drawn what it hangs: as big as its item model is, upright. */
+    private static final Matrix4fc UNPOSED = new Matrix4f();
+
+    private final ItemStackRenderState item = new ItemStackRenderState();
     private final PassingShown shown;
-    /** Where the dragon's paws are, followed while it is seen. */
+    /** Where the dragon's paws are, where it hangs its stack, followed while it is seen. */
     private Vec3 paws;
+    /** How big and turned which way it is drawn, as its dragon draws what it hangs, with no move. */
+    private Matrix4fc turned;
     /** How many ticks it has been on its way, counting those before it was shown. */
     private int ticks;
     /** Where it is this tick, and where it was the last, between which it is drawn. */
     private Vec3 at;
     private Vec3 was;
 
-    private PassingParticle(ClientLevel level, PassingShown shown, EntityRenderState item, Vec3 paws) {
+    private PassingParticle(ClientLevel level, PassingShown shown, VoidDragon dragon) {
         super(level, shown.hatch().x, shown.hatch().y, shown.hatch().z);
         this.shown = shown;
-        this.item = item;
-        this.middle = item instanceof ItemEntityRenderState lying ? middleOf(lying) : 0.0F;
-        this.paws = paws;
+        Minecraft.getInstance().getItemModelResolver().updateForNonLiving(item, shown.stack().copyWithCount(1), ItemDisplayContext.FIXED, dragon);
+        follow(dragon);
         this.ticks = Math.min(shown.elapsed(), Handling.PASS_TICKS);
         lifetime = Handling.PASS_TICKS;
         at = along(ticks);
@@ -74,28 +77,23 @@ final class PassingParticle extends Particle {
 
     /** Shows {@code shown}, from where it is on its way, unless its dragon is not here to be seen. */
     static void show(ClientLevel level, PassingShown shown, ParticleEngine engine) {
-        if (!(level.getEntity(shown.dragon()) instanceof VoidDragon dragon) || shown.stack().isEmpty()) {
-            return;
+        if (level.getEntity(shown.dragon()) instanceof VoidDragon dragon && !shown.stack().isEmpty()) {
+            engine.add(new PassingParticle(level, shown, dragon));
         }
-        var minecraft = Minecraft.getInstance();
-        var dropped = new ItemEntity(level, shown.hatch().x, shown.hatch().y, shown.hatch().z, shown.stack().copyWithCount(1));
-        var item = minecraft.getEntityRenderDispatcher().extractEntity(dropped, 1.0F);
-        if (item instanceof ItemEntityRenderState lying) {
-            lying.shouldBob = false;
-        }
-        engine.add(new PassingParticle(level, shown, item, dragon.paws()));
     }
 
-    /** @return how far above where it lies a dropped item's model has its middle, as vanilla lifts it off the ground */
-    private static float middleOf(ItemEntityRenderState lying) {
-        var box = lying.item.getModelBoundingBox();
-        return (float) (-box.minY + 0.0625 + box.getYsize() / 2);
+    /** It goes to where {@code dragon} last drew what it hangs, drawn as that was. */
+    private void follow(VoidDragon dragon) {
+        var pose = HungPoses.of(dragon);
+        var offset = pose.map(drawn -> drawn.getTranslation(new Vector3f())).orElseGet(() -> new Vector3f(0.0F, dragon.getBbHeight() / 3, 0.0F));
+        paws = dragon.position().add(offset.x(), offset.y(), offset.z());
+        turned = pose.<Matrix4fc>map(drawn -> new Matrix4f(drawn).setTranslation(0.0F, 0.0F, 0.0F)).orElse(UNPOSED);
     }
 
     @Override
     public void tick() {
         if (level.getEntity(shown.dragon()) instanceof VoidDragon dragon) {
-            paws = dragon.paws();
+            follow(dragon);
         }
         was = at;
         ticks++;
@@ -123,7 +121,7 @@ final class PassingParticle extends Particle {
         return GROUP;
     }
 
-    /** Its particles, each drawn as its item lies dropped, where it is between ticks. */
+    /** Its particles, each drawn as its dragon draws what it hangs, where it is between ticks. */
     static final class Group extends ParticleGroup<PassingParticle> {
 
         Group(ParticleEngine engine) {
@@ -133,14 +131,14 @@ final class PassingParticle extends Particle {
         @Override
         public ParticleGroupRenderState extractRenderState(Frustum frustum, Camera camera, float partialTickTime) {
             var camAt = camera.position();
-            return new State(particles.stream().map(particle -> {
-                var at = particle.was.lerp(particle.at, partialTickTime).subtract(camAt);
-                return new Instance(particle.item, at.subtract(0.0, particle.middle * SCALE, 0.0));
-            }).toList());
+            return new State(particles.stream()
+                    .map(particle -> new Instance(particle.item, particle.was.lerp(particle.at, partialTickTime).subtract(camAt), particle.turned,
+                            particle.getLightCoords(partialTickTime)))
+                    .toList());
         }
     }
 
-    private record Instance(EntityRenderState item, Vec3 offset) {
+    private record Instance(ItemStackRenderState item, Vec3 offset, Matrix4fc turned, int light) {
     }
 
     private record State(List<Instance> instances) implements ParticleGroupRenderState {
@@ -148,12 +146,11 @@ final class PassingParticle extends Particle {
         @Override
         public void submit(SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
             var poseStack = new PoseStack();
-            var dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
             for (var instance : instances) {
                 poseStack.pushPose();
                 poseStack.translate(instance.offset().x, instance.offset().y, instance.offset().z);
-                poseStack.scale(SCALE, SCALE, SCALE);
-                dispatcher.submit(instance.item(), camera, 0.0, 0.0, 0.0, poseStack, submitNodeCollector);
+                poseStack.mulPose(instance.turned());
+                instance.item().submit(poseStack, submitNodeCollector, instance.light(), OverlayTexture.NO_OVERLAY, 0);
                 poseStack.popPose();
             }
         }
