@@ -204,7 +204,7 @@ final class ButterflyParticle extends SingleQuadParticle {
     /** Keeps its place about the dragon it follows; gone with the dragon, out of sight with it, or left behind by a leap. */
     private void follow(Follow follow) {
         var dragon = level.getEntity(follow.dragon());
-        if (dragon == null || dragon.isRemoved() || dragon.isInvisible()) {
+        if (dragon == null || dragon.isInvisible()) {
             remove();
             return;
         }
@@ -247,7 +247,7 @@ final class ButterflyParticle extends SingleQuadParticle {
         double distance = toTarget.length();
         var wanted = distance > 0 ? toTarget.scale(Math.min(speed, distance) / distance) : Vec3.ZERO;
         xd += (wanted.x - xd) * 0.25 * pull;
-        yd += (wanted.y - yd) * 0.25 * pull + Math.sin((age + phase) * 0.9) * 0.02;
+        yd += (wanted.y - yd) * 0.25 * pull + Math.sin((age + phase) * FLUTTER_RATE) * 0.02;
         zd += (wanted.z - zd) * 0.25 * pull;
         move(xd, yd, zd);
         setSprite(frame());

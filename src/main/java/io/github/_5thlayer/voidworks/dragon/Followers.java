@@ -4,37 +4,42 @@
 package io.github._5thlayer.voidworks.dragon;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 
 /**
  * The butterflies following a Mote-line dragon's presence, of each grade it carries, tinted as every
- * mote's are ({@link Load#trail()}); a Matter-line load and nothing carried trail none.
- * Its presence syncs only which grades they are, as a bit per grade, never their counts.
+ * mote's are ({@link Load#followers()}); a Matter-line load and nothing carried have none. Its
+ * presence syncs only which grades they are, as a bit per grade, never their counts.
  *
- * @param bits a bit per grade carried, grade {@code g} at bit {@code g}
+ * @param bits a bit per grade, grade {@code g} at bit {@code g}; any other bit is dropped
  */
-public record Trail(int bits) {
+public record Followers(int bits) {
 
-    /** No trail. */
-    public static final Trail NONE = new Trail(0);
+    /** A bit at each grade a mote can have. */
+    private static final int GRADE_BITS = (1 << VoidEnergy.MAX_GRADE + 1) - (1 << VoidEnergy.MIN_GRADE);
 
-    /** @return a trail of each of {@code grades}, leaving out any no mote has */
-    public static Trail of(Collection<Integer> grades) {
+    /** No followers. */
+    public static final Followers NONE = new Followers(0);
+
+    public Followers {
+        bits &= GRADE_BITS;
+    }
+
+    /** @return followers of each of {@code grades}, leaving out any number that is no grade */
+    public static Followers of(Collection<Integer> grades) {
         int bits = 0;
         for (int grade : grades) {
             if (VoidEnergy.isGrade(grade)) {
                 bits |= 1 << grade;
             }
         }
-        return new Trail(bits);
+        return new Followers(bits);
     }
 
-    /** @return the grades it trails, lowest first */
+    /** @return the grades of its butterflies, lowest first */
     public SortedSet<Integer> grades() {
         var grades = new TreeSet<Integer>();
         for (int grade = VoidEnergy.MIN_GRADE; grade <= VoidEnergy.MAX_GRADE; grade++) {
@@ -45,12 +50,7 @@ public record Trail(int bits) {
         return grades;
     }
 
-    /** @return the RGB of each grade's butterflies, lowest grade first */
-    public List<Integer> colours() {
-        return grades().stream().map(GradeColor::of).toList();
-    }
-
-    /** @return whether it trails nothing */
+    /** @return whether it is no butterflies */
     public boolean isEmpty() {
         return bits == 0;
     }
