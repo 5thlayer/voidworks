@@ -240,7 +240,7 @@ founds the Mote line; the Matter line is founded by upgrading a Mote-line egg to
 by Mutation, never the other way. Each Line has its own tint, a dragon or Dragonling of the Mote line
 the void's purple and of the Matter line a pale amber, and a grown dragon shows its
 Line too by what it carries: a Matter-line one hangs its first stack under its body, a Mote-line one
-trails sparks in its grades' colours.
+is followed by mote butterflies of its grades.
 _Avoid_: breed, strain, class
 
 ### Mutation

@@ -27,22 +27,22 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 
 /**
- * A Mote-line dragon shows its Line by trailing sparks in the colours of the grades it carries, the
+ * A Mote-line dragon shows its Line by trailing motes in the colours of the grades it carries, the
  * butterflies' colours, whatever it is doing, and none while it carries nothing; which grades they are is in its presence's
  * synced data, which reaches every client, and their counts are not. A Matter-line dragon and a
  * Dragonling trail none.
  */
-final class SparkTests {
+final class TrailTests {
 
     /** Where the dragon rests, on no Well, and the Dragonling hatches. */
     private static final BlockPos HERE = new BlockPos(4, 2, 4);
 
-    private SparkTests() {
+    private TrailTests() {
     }
 
     static void register(VoidworksGameTests.Registrar tests) {
-        tests.test("sparks_a_mote_line_dragon_carrying_grades_3_and_4_trails_both_colours_resting_working_and_diving_and_an_empty_or_matter_line_one_none", 1, SparkTests::trailsItsGrades);
-        tests.test("sparks_a_mote_line_dragonling_trails_none", 1, SparkTests::dragonlingTrailsNone);
+        tests.test("trail_a_mote_line_dragon_carrying_grades_3_and_4_trails_both_colours_resting_working_and_diving_and_an_empty_or_matter_line_one_none", 1, TrailTests::trailsItsGrades);
+        tests.test("trail_a_mote_line_dragonling_trails_none", 1, TrailTests::dragonlingTrailsNone);
     }
 
     private static void trailsItsGrades(GameTestHelper helper) {
@@ -61,7 +61,7 @@ final class SparkTests {
         carrying(dragons, dragon, Line.MOTE, load, Optional.empty());
         DragonPresences.show(server);
         assertTrails(helper, presence, Showing.RESTING, both, "resting");
-        int loaded = presence.sparks().bits();
+        int loaded = presence.trail().bits();
         helper.assertTrue(synced(presence).contains(loaded), "the grades it trails are not in its synced data");
 
         long now = server.overworld().getGameTime();
@@ -98,7 +98,7 @@ final class SparkTests {
     private static void dragonlingTrailsNone(GameTestHelper helper) {
         var dragonling = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
         dragonling.hatchFor(UUID.randomUUID(), Line.MOTE);
-        helper.assertTrue(dragonling.sparks().isEmpty(), "a Mote-line Dragonling trails grades " + dragonling.sparks().grades());
+        helper.assertTrue(dragonling.trail().isEmpty(), "a Mote-line Dragonling trails grades " + dragonling.trail().grades());
         dragonling.discard();
         helper.succeed();
     }
@@ -111,11 +111,11 @@ final class SparkTests {
         return new Trip(Optional.empty(), here, load.amount(), false, leg, until, 0, 0, Optional.empty(), load.items());
     }
 
-    /** The presence shows {@code showing} and trails sparks of {@code colours}. */
+    /** The presence shows {@code showing} and trails motes of {@code colours}. */
     private static void assertTrails(GameTestHelper helper, VoidDragon presence, Showing showing, List<Integer> colours, String doing) {
         helper.assertTrue(presence.showing() == showing, "the presence " + doing + " shows " + presence.showing() + ", not " + showing);
-        var sparks = presence.sparks();
-        helper.assertTrue(sparks.colours().equals(colours), "the presence " + doing + " trails " + sparks.colours() + ", not " + colours);
+        var trail = presence.trail();
+        helper.assertTrue(trail.colours().equals(colours), "the presence " + doing + " trails " + trail.colours() + ", not " + colours);
     }
 
     /** @return the whole numbers in {@code dragon}'s synced data that differ from their defaults, as a client joining sees them */

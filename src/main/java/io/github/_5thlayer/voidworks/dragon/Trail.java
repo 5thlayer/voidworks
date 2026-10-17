@@ -12,26 +12,26 @@ import io.github._5thlayer.voidworks.butterfly.GradeColor;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 
 /**
- * The sparks a Mote-line dragon's presence trails, one colour for each grade it carries, in the colours
- * its butterflies take ({@link Load#sparks()}); a Matter-line load and nothing carried trail none. Its
- * presence syncs only which grades they are, as a bit per grade, never their counts.
+ * The motes following a Mote-line dragon's presence, butterflies of each grade it carries
+ * tinted as every mote's are ({@link Load#trail()}); a Matter-line load and nothing carried trail none.
+ * Its presence syncs only which grades they are, as a bit per grade, never their counts.
  *
  * @param bits a bit per grade carried, grade {@code g} at bit {@code g}
  */
-public record Sparks(int bits) {
+public record Trail(int bits) {
 
-    /** No sparks. */
-    public static final Sparks NONE = new Sparks(0);
+    /** No trail. */
+    public static final Trail NONE = new Trail(0);
 
-    /** @return a spark of each of {@code grades}, leaving out any no mote has */
-    public static Sparks of(Collection<Integer> grades) {
+    /** @return a trail of each of {@code grades}, leaving out any no mote has */
+    public static Trail of(Collection<Integer> grades) {
         int bits = 0;
         for (int grade : grades) {
             if (VoidEnergy.isGrade(grade)) {
                 bits |= 1 << grade;
             }
         }
-        return new Sparks(bits);
+        return new Trail(bits);
     }
 
     /** @return the grades it trails, lowest first */
@@ -45,7 +45,7 @@ public record Sparks(int bits) {
         return grades;
     }
 
-    /** @return the RGB of each grade's sparks, lowest grade first */
+    /** @return the RGB of each grade's motes, lowest grade first */
     public List<Integer> colours() {
         return grades().stream().map(GradeColor::of).toList();
     }

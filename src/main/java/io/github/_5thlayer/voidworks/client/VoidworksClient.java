@@ -10,6 +10,7 @@ import io.github._5thlayer.voidworks.butterfly.MoteCrawl;
 import io.github._5thlayer.voidworks.butterfly.MoteFlight;
 import io.github._5thlayer.voidworks.butterfly.VoidworksButterflies;
 import io.github._5thlayer.voidworks.dragon.CallPayload;
+import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import io.github._5thlayer.voidworks.energy.VoidEnergy;
 import io.github._5thlayer.voidworks.mutation.BreakdownsPayload;
 import io.github._5thlayer.voidworks.mutation.KnownBreakdowns;
@@ -18,6 +19,7 @@ import io.github._5thlayer.voidworks.pressure.PressurePayload;
 import io.github._5thlayer.voidworks.taking.VoidTaking;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -61,6 +63,11 @@ public final class VoidworksClient {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "call"), CallOverlay::render));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> DiveSound.tickClient());
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
+        VoidDragon.onTrail((dragon, grade, offset) -> {
+            if (sprites != null && dragon.level() instanceof ClientLevel level) {
+                Minecraft.getInstance().particleEngine.add(ButterflyParticle.follow(level, dragon, offset, grade, sprites));
+            }
+        });
         VoidWellBlockEntity.onWatcherTick(well -> {
             if (sprites != null) {
                 ShaftButterflies.tick(well, sprites);

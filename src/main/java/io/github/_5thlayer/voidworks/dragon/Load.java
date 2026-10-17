@@ -41,8 +41,8 @@ public sealed interface Load permits MoteLoad, MatterLoad {
         return Optional.empty();
     }
 
-    /** @return the sparks its dragon's presence trails, of each grade it carries: none for matter */
-    default Sparks sparks() {
-        return Sparks.NONE;
+    /** @return the motes its dragon's presence trails, of each grade it carries: none for matter */
+    default Trail trail() {
+        return Trail.NONE;
     }
 }
