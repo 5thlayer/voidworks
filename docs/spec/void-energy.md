@@ -694,8 +694,8 @@ builds on its own.
   diving into one shaft and emerging from the other.
 - **The Matter Link**: two of the runner's Void Wells laid as the Void Dragon scene's, each with a
   Well hatch on its south wall beside its core. The west Well's provider holds four stacks of gold
-  blocks, its network filled through a Voidstone beside it with the Void Dragon scene's motes, which
-  pay the Toll for many loads; the east Well's requester asks for three. A grown Matter-line dragon
+  blocks, and the west Well's network is filled through a Voidstone beside it with the Void Dragon
+  scene's motes, which pay the Toll for many loads; the east Well's requester asks for three. A grown Matter-line dragon
   rests at the west Well and carries the gold across, diving into one shaft and emerging from the
   other. The scene breaks its hatches before it clears its plot, so their records go with them.
 - **Commands** make what the dragon scenes need, all for operators:
@@ -715,7 +715,7 @@ builds on its own.
   runs `gallery/clear` on each plot afterwards: the pack is offered and off; every gallery function
   loads; `build`, run by an operator player, runs every command without failing, a failure naming the
   command; and each scene's key block, the dragon scene's two Well cores, stands where the scene
-  puts it. A test of its own checks that building the dragon scene again leaves one dragon. What a
+  puts it. A test of its own checks that building the Void Dragon scene again leaves one dragon. What a
   scene's features do is their own game tests' to check, never the Gallery's.
 
 ## Loops
