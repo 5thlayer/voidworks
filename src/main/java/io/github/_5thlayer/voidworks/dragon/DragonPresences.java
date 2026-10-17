@@ -100,9 +100,8 @@ public final class DragonPresences {
             presence.discard();
             return true;
         });
-        var stages = VoidworksConfig.lifeStages();
         for (var dragon : dragons.all()) {
-            var stage = stages.of(dragon.cargo());
+            var stage = VoidworksConfig.lifeStages(dragon.line()).of(dragon.cargo());
             var showing = Showing.of(dragon, now, VoidworksConfig.dragonStopTicks());
             var shown = presence(server, dragon.id());
             // Its new stage shows from its next stop, as it changes only at one.
@@ -163,7 +162,7 @@ public final class DragonPresences {
             return;
         }
         var spot = spot(level, dragon.rest().pos());
-        presence.showPresenceOf(dragon, Showing.EMERGING, spot, VoidworksConfig.lifeStages().of(dragon.cargo()));
+        presence.showPresenceOf(dragon, Showing.EMERGING, spot, VoidworksConfig.lifeStages(dragon.line()).of(dragon.cargo()));
         level.addFreshEntity(presence);
         saved.presences.put(dragon.id(), presence);
         DragonRiding.handOver(carried, presence, level, spot.emerges());

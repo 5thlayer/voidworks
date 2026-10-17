@@ -264,7 +264,7 @@ public final class VoidworksCommands {
         var dragons = SavedVoidDragons.of(server);
         var record = lookedAtDragon(player).flatMap(VoidDragon::dragonId).flatMap(dragons::get)
                 .orElseThrow(NOT_LOOKING_AT_A_DRAGON::create);
-        dragons.update(record.agedTo(VoidworksConfig.lifeStages().start(stage)));
+        dragons.update(record.agedTo(VoidworksConfig.lifeStages(record.line()).start(stage)));
         DragonPresences.show(server);
         context.getSource().sendSuccess(() -> Component.translatable("commands.voidworks.dragon.age", name), false);
         return 1;
