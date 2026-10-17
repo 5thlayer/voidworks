@@ -162,8 +162,7 @@ public final class VoidDragon extends PathfinderMob {
 
     /**
      * Where what a presence hangs is, its paws, in blocks from where it stands, at a grown presence's
-     * size before its stage scales it: just under its body, where items it loads or unloads come and go.
-     * Tuned in game.
+     * size before its stage scales it, until it is first drawn: just under its body.
      */
     private static final Vec3 PAWS = new Vec3(0.0, 0.6, 0.0);
 
@@ -248,6 +247,8 @@ public final class VoidDragon extends PathfinderMob {
     private Optional<Ware> carried = Optional.empty();
     /** Whether a presence holds still over the shaft while items move to or from its paws. */
     private boolean holdingStill;
+    /** On a client, where its paws were last drawn, from where it stood; null until it is drawn. */
+    private @Nullable Vec3 pawsDrawn;
     /** Whether a presence emerging brings up the rider its dragon carried through its dive, to set them down once out. */
     private boolean bringing;
     /** The Well its rider has picked to dive to, by strafing; null until they pick one. */
@@ -705,9 +706,17 @@ public final class VoidDragon extends PathfinderMob {
         return Vec3.atBottomCenterOf(spot.emerges());
     }
 
-    /** @return where its paws are now, where what it hangs is, and where items it loads or unloads come and go */
+    /**
+     * @return where its paws are now, where what it hangs is, and where items it loads or unloads come and
+     *         go: on a client, where it last drew them, as its model posed them
+     */
     public Vec3 paws() {
-        return position().add(PAWS.scale(size(stage())));
+        return position().add(pawsDrawn != null ? pawsDrawn : PAWS.scale(size(stage())));
+    }
+
+    /** On a client, it has drawn its paws at {@code offset} from where it stands. */
+    public void drawPawsAt(Vec3 offset) {
+        pawsDrawn = offset;
     }
 
     /** @return how it shows each item seen moving to or from its paws */

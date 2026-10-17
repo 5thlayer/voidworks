@@ -47,7 +47,8 @@ public record PassingShown(Vec3 hatch, Vec3 over, int dragon, ItemStack stack, b
         var hatch = Vec3.atBottomCenterOf(passing.hatch().pos().above());
         var mouth = dragon.mouth();
         var over = new Vec3((hatch.x + mouth.x) / 2, mouth.y + OVER_THE_RIM, (hatch.z + mouth.z) / 2);
-        var stack = StackWares.stack(passing.ware(), dragon.registryAccess());
+        // One of it is seen moving, however many went in or out.
+        var stack = StackWares.stack(passing.ware().withCount(1), dragon.registryAccess());
         PacketDistributor.sendToPlayersTrackingEntity(dragon, new PassingShown(hatch, over, dragon.getId(), stack, loading, elapsed));
     }
 

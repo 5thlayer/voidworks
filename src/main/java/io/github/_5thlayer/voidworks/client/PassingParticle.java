@@ -29,8 +29,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * An item seen moving between a Well hatch and a Matter-line dragon's paws ({@link PassingShown}): drawn
- * as it lies dropped, bigger, never bobbing, it rises from the top of the hatch, arcs over the Well's rim
+ * An item seen moving between a Well hatch and a Matter-line dragon's paws ({@link PassingShown}): one of
+ * it, drawn as it lies dropped, bigger, never bobbing, its middle where it is, it rises from the top of the hatch, arcs over the Well's rim
  * and comes in to the paws, following the dragon, in {@link Handling#PASS_TICKS}, or goes the other way,
  * and lands with a quiet item pickup pop. Vanilla's item pickup is a straight line of three ticks, so it
  * has a particle group of its own.
@@ -49,6 +49,8 @@ final class PassingParticle extends Particle {
     private static final float POP_PITCH = 1.6F;
 
     private final EntityRenderState item;
+    /** How far above where it lies dropped the middle of its model is drawn, at its own size. */
+    private final float middle;
     private final PassingShown shown;
     /** Where the dragon's paws are, followed while it is seen. */
     private Vec3 paws;
@@ -62,6 +64,7 @@ final class PassingParticle extends Particle {
         super(level, shown.hatch().x, shown.hatch().y, shown.hatch().z);
         this.shown = shown;
         this.item = item;
+        this.middle = item instanceof ItemEntityRenderState lying ? middleOf(lying) : 0.0F;
         this.paws = paws;
         this.ticks = Math.min(shown.elapsed(), Handling.PASS_TICKS);
         lifetime = Handling.PASS_TICKS;
@@ -75,12 +78,18 @@ final class PassingParticle extends Particle {
             return;
         }
         var minecraft = Minecraft.getInstance();
-        var dropped = new ItemEntity(level, shown.hatch().x, shown.hatch().y, shown.hatch().z, shown.stack().copy());
+        var dropped = new ItemEntity(level, shown.hatch().x, shown.hatch().y, shown.hatch().z, shown.stack().copyWithCount(1));
         var item = minecraft.getEntityRenderDispatcher().extractEntity(dropped, 1.0F);
         if (item instanceof ItemEntityRenderState lying) {
             lying.shouldBob = false;
         }
         engine.add(new PassingParticle(level, shown, item, dragon.paws()));
+    }
+
+    /** @return how far above where it lies a dropped item's model has its middle, as vanilla lifts it off the ground */
+    private static float middleOf(ItemEntityRenderState lying) {
+        var box = lying.item.getModelBoundingBox();
+        return (float) (-box.minY + 0.0625 + box.getYsize() / 2);
     }
 
     @Override
@@ -126,7 +135,7 @@ final class PassingParticle extends Particle {
             var camAt = camera.position();
             return new State(particles.stream().map(particle -> {
                 var at = particle.was.lerp(particle.at, partialTickTime).subtract(camAt);
-                return new Instance(particle.item, at);
+                return new Instance(particle.item, at.subtract(0.0, particle.middle * SCALE, 0.0));
             }).toList());
         }
     }

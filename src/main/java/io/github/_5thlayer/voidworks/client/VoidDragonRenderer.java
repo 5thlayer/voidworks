@@ -29,6 +29,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.boss.enderdragon.DragonFlightHistory;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -148,6 +150,38 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         if (state.isSitting) {
             lookFromTheSeat(state, Mth.rotLerp(partialTicks, dragon.yHeadRotO, dragon.yHeadRot));
         }
+        if (dragon.grown()) {
+            dragon.drawPawsAt(hungAt(state));
+        }
+    }
+
+    /** @return where what it hangs is drawn, from where it stands, as {@code state} poses it: where items it loads or unloads come and go */
+    private Vec3 hungAt(State state) {
+        var poseStack = new PoseStack();
+        pose(state, poseStack);
+        poseHung(state, poseStack);
+        var at = poseStack.last().pose().transformPosition(new Vector3f());
+        return new Vec3(at.x(), at.y(), at.z());
+    }
+
+    /** Poses its model as the Ender Dragon's renderer does, scaled down to its own size. */
+    private static void pose(State state, PoseStack poseStack) {
+        poseStack.scale(state.scale, state.scale, state.scale);
+        float yRot = state.getHistoricalPos(7).yRot();
+        float climb = (float) (state.getHistoricalPos(5).y() - state.getHistoricalPos(10).y());
+        poseStack.mulPose(Axis.YP.rotationDegrees(-yRot));
+        poseStack.mulPose(Axis.XP.rotationDegrees(climb * 10.0F));
+        poseStack.translate(0.0F, 0.0F, 1.0F);
+        poseStack.scale(-1.0F, -1.0F, 1.0F);
+        poseStack.translate(0.0F, -1.501F, 0.0F);
+    }
+
+    /** From its model's pose, to the middle of what it hangs, under its body as the model poses it. */
+    private void poseHung(State state, PoseStack poseStack) {
+        model.setupAnim(state);
+        model.root().translateAndRotate(poseStack);
+        body.translateAndRotate(poseStack);
+        poseStack.translate(0.0F, HUNG_Y + HUNG_SIZE / 4.0F, HUNG_Z);
     }
 
     /** Tints {@code state} as a dragon of {@code line} is: its body over the vanilla texture, and its eyes, a Mote-line one's untinted. */
@@ -233,11 +267,8 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
      * turned side on, so a flat item shows its face to a player beside the dragon.
      */
     private void submitHung(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
-        model.setupAnim(state);
         poseStack.pushPose();
-        model.root().translateAndRotate(poseStack);
-        body.translateAndRotate(poseStack);
-        poseStack.translate(0.0F, HUNG_Y + HUNG_SIZE / 4.0F, HUNG_Z);
+        poseHung(state, poseStack);
         // The model is drawn upside down and mirrored; the item is turned back upright.
         poseStack.scale(-HUNG_SIZE, -HUNG_SIZE, HUNG_SIZE);
         poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
@@ -255,14 +286,7 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     @Override
     public void submit(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
         poseStack.pushPose();
-        poseStack.scale(state.scale, state.scale, state.scale);
-        float yRot = state.getHistoricalPos(7).yRot();
-        float climb = (float) (state.getHistoricalPos(5).y() - state.getHistoricalPos(10).y());
-        poseStack.mulPose(Axis.YP.rotationDegrees(-yRot));
-        poseStack.mulPose(Axis.XP.rotationDegrees(climb * 10.0F));
-        poseStack.translate(0.0F, 0.0F, 1.0F);
-        poseStack.scale(-1.0F, -1.0F, 1.0F);
-        poseStack.translate(0.0F, -1.501F, 0.0F);
+        pose(state, poseStack);
         submitNodeCollector.submitModel(model, state, poseStack, model.renderType(TEXTURE), state.lightCoords, OverlayTexture.NO_OVERLAY, state.tint, null,
                 state.outlineColor, null);
         submitNodeCollector.submitModel(model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.eyesTint, null,
