@@ -4,6 +4,8 @@
 package io.github._5thlayer.voidworks.gametest;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import com.mojang.serialization.MapCodec;
@@ -30,6 +32,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * what it needs itself, so the setup is in the diff. It lives in the {@code gametest} source set, which
  * only the Module's own runs load, and hooks itself in, so the {@code @Mod} class names no game-test
  * code and nothing gates it (libworks ADR 0011).
+ *
+ * <p>A test that needs a pack developer's datapack runs in a batch of its own {@linkplain WithTestPack
+ * with that pack switched on}.
  */
 @EventBusSubscriber(modid = Voidworks.MOD_ID)
 public final class VoidworksGameTests {
@@ -39,8 +44,12 @@ public final class VoidworksGameTests {
     private static final DeferredRegister<MapCodec<? extends GameTestInstance>> TEST_TYPES =
             DeferredRegister.create(Registries.TEST_INSTANCE_TYPE, Voidworks.MOD_ID);
 
+    private static final DeferredRegister<MapCodec<? extends TestEnvironmentDefinition<?>>> ENVIRONMENT_TYPES =
+            DeferredRegister.create(Registries.TEST_ENVIRONMENT_DEFINITION_TYPE, Voidworks.MOD_ID);
+
     static {
         TEST_TYPES.register("code", () -> CodeGameTest.CODEC);
+        ENVIRONMENT_TYPES.register("with_test_pack", () -> WithTestPack.CODEC);
     }
 
     private VoidworksGameTests() {
@@ -53,6 +62,8 @@ public final class VoidworksGameTests {
 
     public static void register(IEventBus modBus) {
         TEST_TYPES.register(modBus);
+        ENVIRONMENT_TYPES.register(modBus);
+        modBus.addListener(WithTestPack::addPackFinders);
         // Posted only when game tests are enabled, which a production game never is.
         modBus.addListener(VoidworksGameTests::registerTests);
         // A vanilla block stands in for a void machine, so the Module's own runs give it voidworks:motes.
@@ -70,7 +81,7 @@ public final class VoidworksGameTests {
         var environment = event.registerEnvironment(id("default"), new TestEnvironmentDefinition.AllOf(List.of()));
         // A batch runs its tests together and the next batch only after, so a test in this one runs with no other.
         var alone = event.registerEnvironment(id("alone"), new TestEnvironmentDefinition.AllOf(List.of()));
-        var tests = new Registrar(event, environment, alone);
+        var tests = new Registrar(event, environment, alone, new ConcurrentHashMap<>());
         ButterflyTests.register(tests);
         CommandTests.register(tests);
         ConductionTests.register(tests);
@@ -103,6 +114,7 @@ public final class VoidworksGameTests {
         RoutingTests.register(tests);
         SiphonTests.register(tests);
         SpendTests.register(tests);
+        TollTests.register(tests);
         UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
@@ -116,7 +128,8 @@ public final class VoidworksGameTests {
     }
 
     /** What a test class is handed: a name, a tick budget and a body per test. */
-    record Registrar(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment, Holder<TestEnvironmentDefinition<?>> alone) {
+    record Registrar(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment, Holder<TestEnvironmentDefinition<?>> alone,
+                     Map<String, Holder<TestEnvironmentDefinition<?>>> packEnvironments) {
 
         void test(String name, int maxTicks, Consumer<GameTestHelper> body) {
             register(name, maxTicks, body, environment);
@@ -136,6 +149,15 @@ public final class VoidworksGameTests {
          */
         void testOnItsOwn(String name, int maxTicks, Consumer<GameTestHelper> body) {
             register(name, maxTicks, body, event.registerEnvironment(id("on_its_own/" + name), new TestEnvironmentDefinition.AllOf(List.of())));
+        }
+
+        /**
+         * A test that runs in a batch of its own with one of the tests' datapacks, under {@code
+         * gametest_packs/}, switched on; the tests that ask for one pack share its batch.
+         */
+        void testWithPack(String pack, String name, int maxTicks, Consumer<GameTestHelper> body) {
+            register(name, maxTicks, body, packEnvironments.computeIfAbsent(pack,
+                    named -> event.registerEnvironment(id("with_" + named), new WithTestPack(named))));
         }
 
         private void register(String name, int maxTicks, Consumer<GameTestHelper> body, Holder<TestEnvironmentDefinition<?>> batch) {

@@ -9,22 +9,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
 /**
  * The items a Matter-line dragon carries, counted in stacks, each full by its item's stack size: a
  * filled container, such as a shulker box, stacks by one, so it takes a stack. Items alike are kept
- * together, in the order it first took them.
+ * together, in the order it first took them. It keeps the Toll it paid as it loaded ({@link Toll}),
+ * which nothing it does with it afterwards changes.
  *
  * @param wares what it carries, no two alike and none of them nothing
+ * @param toll the base void energy it paid as it loaded; none once it carries nothing
  */
-public record MatterLoad(List<Ware> wares) implements Load {
+public record MatterLoad(List<Ware> wares, long toll) implements Load {
 
     /** No items. */
     public static final MatterLoad NONE = new MatterLoad(List.of());
 
-    static final Codec<MatterLoad> CODEC = Ware.CODEC.listOf().xmap(MatterLoad::new, MatterLoad::wares);
+    private static final Codec<MatterLoad> RECORD_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Ware.CODEC.listOf().fieldOf("wares").forGetter(MatterLoad::wares),
+            Codec.LONG.optionalFieldOf("toll", 0L).forGetter(MatterLoad::toll)
+    ).apply(instance, MatterLoad::new));
+
+    /** Saved with its Toll, and read too as it was saved before it had one, a list of its wares. */
+    static final Codec<MatterLoad> CODEC = Codec.either(RECORD_CODEC, Ware.CODEC.listOf())
+            .xmap(either -> either.map(load -> load, MatterLoad::new), Either::left);
+
+    /** Items that paid no Toll. */
+    public MatterLoad(List<Ware> wares) {
+        this(wares, 0);
+    }
 
     public MatterLoad {
         var merged = new ArrayList<Ware>();
@@ -40,6 +56,7 @@ public record MatterLoad(List<Ware> wares) implements Load {
             }
         }
         wares = List.copyOf(merged);
+        toll = wares.isEmpty() ? 0 : toll;
     }
 
     /** @return how many stacks it fills, each item's part stack counting as one */
@@ -71,7 +88,7 @@ public record MatterLoad(List<Ware> wares) implements Load {
     MatterLoad adding(Ware ware) {
         var added = new ArrayList<>(wares);
         added.add(ware);
-        return new MatterLoad(added);
+        return new MatterLoad(added, toll);
     }
 
     /** @return this load with {@code ware} taken out of it, as much of it as it carries */
@@ -80,7 +97,12 @@ public record MatterLoad(List<Ware> wares) implements Load {
         for (var carried : wares) {
             left.add(carried.alike(ware) ? carried.withCount(Math.max(0, carried.count() - ware.count())) : carried);
         }
-        return new MatterLoad(left);
+        return new MatterLoad(left, toll);
+    }
+
+    /** @return these items, having paid {@code toll} as they loaded */
+    MatterLoad paid(long toll) {
+        return new MatterLoad(wares, toll);
     }
 
     /** @return how many more of {@code ware} it takes without filling more than {@code most} stacks */

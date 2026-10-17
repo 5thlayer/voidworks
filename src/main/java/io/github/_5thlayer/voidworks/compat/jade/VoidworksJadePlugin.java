@@ -136,7 +136,7 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
     }
 
     private static @Nullable HatchReport hatch(WellHatchBlockEntity hatch) {
-        return hatch.hatch().map(HatchReport::of).orElse(null);
+        return hatch.getLevel() instanceof ServerLevel level ? hatch.hatch().map(found -> HatchReport.of(found, level.getServer())).orElse(null) : null;
     }
 
     private static @Nullable DragonReport dragon(VoidDragon presence) {

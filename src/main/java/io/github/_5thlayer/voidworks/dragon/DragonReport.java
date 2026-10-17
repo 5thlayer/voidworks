@@ -43,7 +43,7 @@ import net.minecraft.server.players.NameAndId;
  * @param stage its life stage
  * @param owner the name of the player who owns it, empty when the server has none for them
  */
-public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Integer, Long> load, Line line, List<Ware> items, long most, int health,
+public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Integer, Long> load, Line line, List<Ware> items, long most, long toll, int health,
                            LifeStage stage, Optional<String> owner) {
 
     private static final StreamCodec<ByteBuf, Doing> DOING_CODEC = ByteBufCodecs.idMapper(ordinal -> Doing.values()[ordinal], Doing::ordinal);
@@ -58,6 +58,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
             LINE_CODEC, DragonReport::line,
             ByteBufCodecs.fromCodec(Ware.CODEC).apply(ByteBufCodecs.list()), DragonReport::items,
             ByteBufCodecs.VAR_LONG, DragonReport::most,
+            ByteBufCodecs.VAR_LONG, DragonReport::toll,
             ByteBufCodecs.VAR_INT, DragonReport::health,
             STAGE_CODEC, DragonReport::stage,
             ByteBufCodecs.optional(ByteBufCodecs.STRING_UTF8), DragonReport::owner,
@@ -89,8 +90,9 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
             case MoteLoad load -> List.<Ware>of();
             case MatterLoad load -> load.wares();
         };
+        long toll = dragon.load() instanceof MatterLoad load ? load.toll() : 0;
         long most = dragon.line() == Line.MATTER ? stages.load(matterLoad, dragon.cargo()) : 0;
-        return new DragonReport(doing, bound, motes, dragon.line(), items, most, dragon.health(), stages.of(dragon.cargo()), owner);
+        return new DragonReport(doing, bound, motes, dragon.line(), items, most, toll, dragon.health(), stages.of(dragon.cargo()), owner);
     }
 
     /** @return what the dragon whose presence {@code presence} is shows, empty for a Dragonling or a presence whose dragon is gone */
@@ -145,7 +147,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
 
     /**
      * @return how much it carries, a Mote-line dragon's motes in total and a Matter-line one's stacks of
-     *         its load, or that it carries nothing; its life stage; and whose it is
+     *         its load with the Toll it paid as it loaded, or that it carries nothing; its life stage; and whose it is
      */
     public List<Component> tail() {
         var lines = new ArrayList<Component>();
@@ -153,7 +155,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
             lines.add(Component.translatable("voidworks.jade.dragon.carrying_nothing"));
         } else {
             lines.add(line == Line.MATTER
-                    ? Component.translatable("voidworks.jade.dragon.stacks", stacks(), most)
+                    ? Component.translatable("voidworks.jade.dragon.stacks", stacks(), most, toll)
                     : Component.translatable("voidworks.jade.dragon.carrying", carried()));
         }
         lines.add(Component.translatable(stageKey(stage)));

@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "description": "Voidworks game tests: doubles the Toll a Matter-line load pays, as a pack overriding voidworks:toll would",
+    "min_format": [101, 1],
+    "max_format": [101, 1]
+  }
+}

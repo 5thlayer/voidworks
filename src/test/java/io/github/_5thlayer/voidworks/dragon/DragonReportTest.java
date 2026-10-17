@@ -52,11 +52,11 @@ class DragonReportTest {
     }
 
     @Test
-    void aMatterLineDragonsItemsAreNoLinesButItsStacksOfItsLoadAre() {
+    void aMatterLineDragonsItemsAreNoLinesButItsStacksOfItsLoadAndTheTollItPaidAre() {
         var cobblestone = Ware.of(Identifier.withDefaultNamespace("cobblestone"), 64, 5 * 64 + 1);
         var box = Ware.of(Identifier.withDefaultNamespace("shulker_box"), 1, 1);
         var adult = new VoidDragonRecord(UUID.randomUUID(), UUID.randomUUID(), Line.MATTER, VoidDragonRecord.FULL_HEALTH, HERE,
-                new MatterLoad(List.of(cobblestone, box)), trip(Trip.Leg.TO_DESTINATION), 0, STAGES.start(LifeStage.ADULT));
+                new MatterLoad(List.of(cobblestone, box), 3_072), trip(Trip.Leg.TO_DESTINATION), 0, STAGES.start(LifeStage.ADULT));
         var report = report(adult, Optional.of("Alex"));
 
         assertEquals(List.of(cobblestone, box), report.items());
@@ -65,7 +65,7 @@ class DragonReportTest {
         assertEquals(5, lines.size());
         assertLine(lines.get(0), "voidworks.jade.dragon.diving");
         assertLine(lines.get(1), "voidworks.jade.dragon.bound", THERE_NAME);
-        assertLine(lines.get(2), "voidworks.jade.dragon.stacks", 7L, 54L);
+        assertLine(lines.get(2), "voidworks.jade.dragon.stacks", 7L, 54L, 3_072L);
         assertLine(lines.get(3), "voidworks.jade.dragon.adult");
         assertEquals(report.lines().subList(0, 2), report.head());
     }

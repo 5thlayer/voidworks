@@ -17,13 +17,17 @@ import net.minecraft.resources.Identifier;
  */
 public sealed interface Load permits MoteLoad, MatterLoad {
 
-    /** Saved as its kind saves it: a Mote-line load as the load was before Lines, a map, and a Matter-line one as a list. */
-    Codec<Load> CODEC = Codec.either(MoteLoad.CODEC, MatterLoad.CODEC).xmap(
-            either -> either.map(motes -> (Load) motes, matter -> matter),
+    /**
+     * Saved as its kind saves it: a Mote-line load as the load was before Lines, a map of grades, and a
+     * Matter-line one as its wares and Toll, read first, since a map of grades has no wares. Made when
+     * first used, since a load's class may be initialising this one.
+     */
+    Codec<Load> CODEC = Codec.lazyInitialized(() -> Codec.either(MatterLoad.CODEC, MoteLoad.CODEC).xmap(
+            either -> either.map(matter -> (Load) matter, motes -> motes),
             load -> switch (load) {
-                case MoteLoad motes -> Either.left(motes);
-                case MatterLoad matter -> Either.right(matter);
-            });
+                case MatterLoad matter -> Either.left(matter);
+                case MoteLoad motes -> Either.right(motes);
+            }));
 
     /** @return how much it is, in its Line's unit: motes for the Mote line, stacks for the Matter line */
     long amount();
