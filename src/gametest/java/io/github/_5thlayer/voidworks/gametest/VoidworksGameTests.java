@@ -86,6 +86,7 @@ public final class VoidworksGameTests {
         FeChargingTests.register(tests);
         GalleryTests.register(tests);
         HangingTests.register(tests);
+        LineSyncTests.register(tests);
         LoadTests.register(tests);
         MatterLineTests.register(tests);
         MatterRoutingTests.register(tests);
