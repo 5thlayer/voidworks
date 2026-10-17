@@ -190,6 +190,9 @@ public final class VoidDragon extends PathfinderMob {
     /** Its wingbeat, a full beat a unit, last tick and now. */
     public float oFlapTime;
     public float flapTime;
+    /** How far it has settled onto its seat ({@link Settling}), last tick and now; unknown before its first tick. */
+    private float oSettled = Float.NaN;
+    private float settled = Float.NaN;
     /** The heading and height its flight history follows, eased toward its own, so its model banks and bends gently. */
     private float flightYaw = Float.NaN;
     private double flightY;
@@ -400,6 +403,11 @@ public final class VoidDragon extends PathfinderMob {
     /** @return where it lands and sits, while it lands, sits or takes off */
     public Optional<BlockPos> seatPos() {
         return entityData.get(DATA_SEAT);
+    }
+
+    /** @return how far, in blocks, {@code at} is from where it lands and sits, or infinitely far while it has no seat */
+    public double fromSeat(Vec3 at) {
+        return seatPos().map(seat -> Vec3.atBottomCenterOf(seat).distanceTo(at)).orElse(Double.POSITIVE_INFINITY);
     }
 
     private void setPerch(Perch perch) {
@@ -627,6 +635,15 @@ public final class VoidDragon extends PathfinderMob {
         return entityData.get(DATA_DYING);
     }
 
+    /**
+     * @return how far it has settled onto its seat, {@code partialTicks} on, 0 on the wing and 1 sitting,
+     *         easing as it lands or takes off; before its first tick, as far as where it is says, so one
+     *         seen first sitting is wholly settled
+     */
+    public float settled(float partialTicks) {
+        return Float.isNaN(settled) ? Settling.toward(perch(), fromSeat(position())) : Mth.lerp(partialTicks, oSettled, settled);
+    }
+
     /** @return how many ticks it has been dying, {@code partialTicks} on; 0 while it is not */
     public float deathTime(float partialTicks) {
         return dying() ? deathTicks + partialTicks : 0.0F;
@@ -792,6 +809,8 @@ public final class VoidDragon extends PathfinderMob {
         super.aiStep();
         oFlapTime = flapTime;
         flapTime = flap(flapTime, perch() == Perch.SITTING);
+        oSettled = settled(1.0F);
+        settled = Settling.settle(oSettled, perch(), fromSeat(position()));
         recordFlight();
         if (dying()) {
             dieOn();

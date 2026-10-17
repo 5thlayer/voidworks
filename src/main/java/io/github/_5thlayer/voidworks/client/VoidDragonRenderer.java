@@ -87,6 +87,9 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     /** How far, in degrees, a sitting presence turns its head from its body toward what it looks at. */
     private static final float MOST_LOOK = 50.0F;
 
+    /** How wide a sitting presence's shadow is, as a share of its flying one's, its wings folded on the Well. */
+    private static final float SITTING_SHADOW = 0.5F;
+
     /**
      * Where what it hangs is drawn, in the model's units from its body's pivot, the model's down being
      * positive: under the middle of its body's box, which runs 1 to 25 down and -16 to 48 along it.
@@ -102,13 +105,14 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
     /** Turns what it hangs into its item model. */
     private final ItemModelResolver itemModelResolver;
 
-    /** The Ender Dragon's, how much smaller this one is drawn, how its body and eyes are tinted by its Line, and what it hangs under its body. */
+    /** The Ender Dragon's, how much smaller this one is drawn, how its body and eyes are tinted by its Line, what it hangs under its body and how far it has settled onto its seat. */
     static final class State extends EnderDragonRenderState {
 
         float scale = DRAGONLING_SCALE;
         int tint = MOTE_TINT;
         int eyesTint = UNTINTED;
         final ItemStackRenderState hung = new ItemStackRenderState();
+        float settled;
     }
 
     VoidDragonRenderer(EntityRendererProvider.Context context) {
@@ -136,9 +140,11 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         var perch = dragon.perch();
         state.isSitting = perch == VoidDragon.Perch.SITTING;
         state.isLandingOrTakingOff = perch.settling();
+        state.settled = dragon.settled(partialTicks);
         // How far it is from its seat, as the Ender Dragon's from its portal, at the Ender Dragon's size, which its neck eases by.
         var at = dragon.getPosition(partialTicks);
-        state.distanceToEgg = dragon.seatPos().map(seat -> Vec3.atBottomCenterOf(seat).distanceToSqr(at)).orElse(0.0) / (state.scale * state.scale);
+        double fromSeat = dragon.fromSeat(at);
+        state.distanceToEgg = fromSeat * fromSeat / (state.scale * state.scale);
         if (state.isSitting) {
             lookFromTheSeat(state, Mth.rotLerp(partialTicks, dragon.yHeadRotO, dragon.yHeadRot));
         }
@@ -239,10 +245,10 @@ final class VoidDragonRenderer extends EntityRenderer<VoidDragon, VoidDragonRend
         poseStack.popPose();
     }
 
-    /** The Ender Dragon's shadow, scaled as the dragon is. */
+    /** The Ender Dragon's shadow, scaled as the dragon is, and narrower as it settles onto its seat, its wings folded. */
     @Override
     protected float getShadowRadius(State state) {
-        return 8.0F * state.scale;
+        return 8.0F * state.scale * Mth.lerp(state.settled, 1.0F, SITTING_SHADOW);
     }
 
     /** As the Ender Dragon's renderer poses its model, scaled down to its own size. */
