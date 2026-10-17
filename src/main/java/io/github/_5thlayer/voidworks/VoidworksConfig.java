@@ -182,7 +182,8 @@ public final class VoidworksConfig {
                 .defineInRange("dragonEggMotes", 65_536L, 1L, Long.MAX_VALUE);
         LIFE_STAGE_MOTES = builder
                 .comment("Motes a grown Mote-line Void Dragon unloads at Void Wells over each of its four life stages, young, adult,",
-                        "senior and old; once its old stage runs out, it dies at that stop. Only an adult lays Drained Dragon Eggs.")
+                        "senior and old; once its old stage runs out, it dies at the end of a stop at a loaded Well with nothing aboard.",
+                        "Only an adult lays Drained Dragon Eggs.")
                 .defineInRange("lifeStageMotes", 524_288L, 1L, Long.MAX_VALUE);
         DRAGON_EGG_STACKS = builder
                 .comment("Stacks a grown Matter-line Void Dragon carries, counted as it unloads them at Void Wells, for each Matter",
@@ -190,8 +191,8 @@ public final class VoidworksConfig {
                 .defineInRange("dragonEggStacks", 216L, 1L, Long.MAX_VALUE);
         LIFE_STAGE_STACKS = builder
                 .comment("Stacks a grown Matter-line Void Dragon unloads at Void Wells over each of its four life stages, young,",
-                        "adult, senior and old; once its old stage runs out, it dies at its next stop with nothing aboard. Only an",
-                        "adult lays Matter Dragon Eggs.")
+                        "adult, senior and old; once its old stage runs out, it dies at the end of a stop at a loaded Well with nothing",
+                        "aboard. Only an adult lays Matter Dragon Eggs.")
                 .defineInRange("lifeStageStacks", 1_728L, 1L, Long.MAX_VALUE);
         LIFE_STAGE_SPEEDS = builder
                 .comment("What each life stage, young, adult, senior and old, multiplies a Void Dragon's speed by, stacked on its",
@@ -360,12 +361,12 @@ public final class VoidworksConfig {
     public static Life life(Line line) {
         var read = lives;
         if (read == null) {
-            var stages = new EnumMap<Line, Life>(Line.class);
-            stages.put(Line.MOTE, new Life(LifeStages.of(LIFE_STAGE_MOTES.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
+            var byLine = new EnumMap<Line, Life>(Line.class);
+            byLine.put(Line.MOTE, new Life(LifeStages.of(LIFE_STAGE_MOTES.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
                     DRAGON_EGG_MOTES.getAsLong()));
-            stages.put(Line.MATTER, new Life(LifeStages.of(LIFE_STAGE_STACKS.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
+            byLine.put(Line.MATTER, new Life(LifeStages.of(LIFE_STAGE_STACKS.getAsLong(), LIFE_STAGE_SPEEDS.get(), LIFE_STAGE_LOADS.get()),
                     DRAGON_EGG_STACKS.getAsLong()));
-            read = stages;
+            read = byLine;
             lives = read;
         }
         return read.get(line);

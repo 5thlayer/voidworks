@@ -8,13 +8,13 @@ package io.github._5thlayer.voidworks.dragon;
  * how they age, and how much an adult carries for each egg of its Line it lays.
  *
  * @param stages how it ages, each stage lasting so much unloaded
- * @param egg how much it carries as an adult for each egg it lays
+ * @param perEgg how much it carries as an adult for each egg it lays
  */
-public record Life(LifeStages stages, long egg) {
+public record Life(LifeStages stages, long perEgg) {
 
     public Life {
-        if (egg < 1) {
-            throw new IllegalArgumentException("an egg takes at least one carried: " + egg);
+        if (perEgg < 1) {
+            throw new IllegalArgumentException("an egg takes at least one carried: " + perEgg);
         }
     }
 }

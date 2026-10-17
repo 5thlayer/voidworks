@@ -99,7 +99,7 @@ final class MatterLifeTests {
                     var grown = dragons.add(owner.getUUID(), Line.MATTER, under);
                     // An adult, a stack short of its next egg.
                     dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(),
-                            life.egg() - 1, life.stages().length()));
+                            life.perEgg() - 1, life.stages().length()));
                     dragonId.set(grown.id());
                 })
                 .thenWaitUntil(() -> {

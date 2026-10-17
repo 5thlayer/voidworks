@@ -370,6 +370,31 @@ class MatterRoutingTest {
     }
 
     @Test
+    void aMatterLineDragonCountsTowardItsEggsOnlyTheStacksItUnloadsAsAnAdult() {
+        routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), 27));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 27));
+        hatches.provider(hatchOf(END_WELL, 2), END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, Line.MATTER, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 20, 90));
+        runFor(A_WHILE);
+        // Of its 54 stacks, the 18 unloaded before it turned senior at 108 count: 38, an egg and 11 over.
+        assertEquals(144, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(11, dragons.get(dragon.id()).orElseThrow().towardEgg());
+        // Senior, nothing more it unloads counts toward an egg.
+        hatches.provider(hatchOf(END_WELL, 3), END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(hatchOf(NETHER_WELL, 2), NETHER_WELL, COBBLESTONE, 64, 27);
+        runFor(A_WHILE);
+        assertEquals(171, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(11, dragons.get(dragon.id()).orElseThrow().towardEgg());
+    }
+
+    @Test
     void aMatterLineDragonThatHasOutlivedItsStagesDiesOnlyAtAStopWithNothingAboard() {
         routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), EGG));
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());

@@ -112,7 +112,7 @@ public final class Routing {
             for (int legs = 0; legs < MOST_LEGS; legs++) {
                 if (endsItsLastStop(dragon, now)) {
                     var laid = laying(dragon, dragon.rest());
-                    if (laid.towardEgg() < life(laid).egg()) {
+                    if (laid.towardEgg() < life(laid).perEgg()) {
                         dragons.remove(laid.id());
                         died.add(laid);
                         break;
@@ -393,16 +393,16 @@ public final class Routing {
 
     /**
      * @return {@code dragon}, stopping at its owner's Well at {@code place}, having laid there an egg of
-     *         its Line for every {@link Life#egg} it has carried toward them, as many as the Well lays; it
+     *         its Line for every {@link Life#perEgg} it has carried toward them, as many as the Well lays; it
      *         owes the rest
      */
     private VoidDragonRecord laying(VoidDragonRecord dragon, Place place) {
-        long egg = life(dragon).egg();
+        long perEgg = life(dragon).perEgg();
         long eggs = 0;
-        while (eggs < dragon.towardEgg() / egg && wells.lay(place, dragon.line())) {
+        while (eggs < dragon.towardEgg() / perEgg && wells.lay(place, dragon.line())) {
             eggs++;
         }
-        return dragon.laid(eggs * egg);
+        return dragon.laid(eggs * perEgg);
     }
 
     /**
