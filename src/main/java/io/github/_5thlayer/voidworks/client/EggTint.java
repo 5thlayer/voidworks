@@ -29,7 +29,7 @@ import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
  */
 final class EggTint {
 
-    /** The amber, as {@code items/matter_dragon_egg.json} writes it too, which tints a Matter-line dragon as well. */
+    /** The amber, as {@code items/matter_dragon_egg.json} writes it too. */
     static final int AMBER = 0xFFFFB02E;
 
     private EggTint() {

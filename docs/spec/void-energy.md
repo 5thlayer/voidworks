@@ -454,8 +454,9 @@ says how a dragon carries motes; a Matter-line dragon does everything else here 
   dragon sitting astride it, or under one hovering at work, and is not moved. Nothing collides with
   it. A Dragonling pushes and is pushed as any mob does.
 - **Look.** The vanilla Ender Dragon, its model and its texture read from the player's own game at
-  runtime and tinted by its Line, the void's purple for the Mote line and the Matter Dragon Egg's
-  amber for the Matter line, a Dragonling as its grown dragon, its eyes untinted: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
+  runtime and tinted by its Line, the void's purple for the Mote line and a pale amber for the
+  Matter line, whose magenta eyes are tinted amber too where a Mote-line one's are untinted, a Dragonling as
+  its grown dragon: the Void Dragon about half the Ender Dragon's size, scaled by its stage (young 0.8, adult 1, senior
   1.1, old 1.2), the
   Dragonling about a fifth. Nothing of Mojang's ships in the jar, and the dragon has no texture of its
   own. A dragon shows its Line by its tint, carrying or not, and by what it carries: a Mote-line one trails `DUST` sparks in the

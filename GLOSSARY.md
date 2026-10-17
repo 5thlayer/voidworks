@@ -238,7 +238,7 @@ A Void Dragon's inherited kind, fixed in its egg, which says what it carries: th
 motes, the Matter line items, and never both. A dragon lays eggs of its own Line. The vanilla egg
 founds the Mote line; the Matter line is founded by upgrading a Mote-line egg to a Matter Dragon Egg
 by Mutation, never the other way. Each Line has its own tint, a dragon or Dragonling of the Mote line
-the void's purple and of the Matter line the Matter Dragon Egg's amber, and a grown dragon shows its
+the void's purple and of the Matter line a pale amber, and a grown dragon shows its
 Line too by what it carries: a Matter-line one hangs its first stack under its body, a Mote-line one
 trails sparks in its grades' colours.
 _Avoid_: breed, strain, class
