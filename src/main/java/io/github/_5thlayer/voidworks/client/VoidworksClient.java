@@ -39,7 +39,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * The Module's client entry point: it draws the butterflies a {@link MoteFlight} or a {@link MoteCrawl} shows and the
  * result floating over a Void Crucible ({@link VoidCrucibleRenderer}), a Void Well's fill in its shaft
  * ({@link VoidWellRenderer}, {@link ShaftButterflies}), the item on a Well hatch's front ({@link WellHatchRenderer}), the Void Dragon
- * ({@link VoidDragonRenderer}), the void taking a block ({@link VoidTakings}) and a Matter Dragon Egg's amber
+ * ({@link VoidDragonRenderer}), the butterflies following a Mote-line one ({@link ButterflyParticle#follow}), the void taking a block ({@link VoidTakings}) and a Matter Dragon Egg's amber
  * ({@link EggTint}), and keeps the Void Pressure
  * entry the server sends ({@link KnownPressure}).
  */
@@ -63,7 +63,7 @@ public final class VoidworksClient {
                 Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "call"), CallOverlay::render));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> DiveSound.tickClient());
         KnownPressure.setViewer(() -> Minecraft.getInstance().player);
-        VoidDragon.onTrail((dragon, grade, offset) -> {
+        VoidDragon.onFollower((dragon, grade, offset) -> {
             if (sprites != null && dragon.level() instanceof ClientLevel level) {
                 Minecraft.getInstance().particleEngine.add(ButterflyParticle.follow(level, dragon, offset, grade, sprites));
             }

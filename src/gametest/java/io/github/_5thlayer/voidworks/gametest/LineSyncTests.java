@@ -13,7 +13,6 @@ import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.world.entity.EntitySpawnReason;
 
 /**
  * A dragon's Line is in its synced data, so a client, which tints it by its Line, knows it: a
@@ -62,11 +61,7 @@ final class LineSyncTests {
     /** {@code dragon}'s Line is {@code line}, and a client given its synced data, as one joining is, sees it so. */
     private static void assertSynced(GameTestHelper helper, VoidDragon dragon, Line line, String what) {
         helper.assertTrue(dragon.line() == line, "the " + line + " " + what + " is of the " + dragon.line() + " line");
-        var client = VoidworksEntities.VOID_DRAGON.get().create(helper.getLevel(), EntitySpawnReason.LOAD);
-        var values = dragon.getEntityData().getNonDefaultValues();
-        if (values != null) {
-            client.getEntityData().assignValues(values);
-        }
+        var client = DragonClients.seen(helper, dragon);
         helper.assertTrue(client.line() == line, "a client sees the " + line + " " + what + " of the " + client.line() + " line");
     }
 

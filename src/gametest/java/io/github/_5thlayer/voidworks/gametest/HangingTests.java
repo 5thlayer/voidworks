@@ -12,7 +12,6 @@ import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.Line;
-import io.github._5thlayer.voidworks.dragon.Load;
 import io.github._5thlayer.voidworks.dragon.MatterLoad;
 import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
@@ -21,8 +20,6 @@ import io.github._5thlayer.voidworks.dragon.Showing;
 import io.github._5thlayer.voidworks.dragon.StackWares;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
-import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
-import io.github._5thlayer.voidworks.dragon.VoidDragons;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -34,7 +31,7 @@ import net.minecraft.world.item.component.ItemContainerContents;
  * A dragon shows its Line by what it carries: a Matter-line dragon's presence hangs its first carried
  * stack under its body, a filled shulker box with its contents, whatever it is doing, and nothing while
  * it carries nothing; a Matter-line Dragonling holds a chest, and a Mote-line one nothing. What it
- * hangs is in its synced data, which reaches every client.
+ * hangs is in its synced data, so a client sees it too.
  */
 final class HangingTests {
 
@@ -65,22 +62,22 @@ final class HangingTests {
         var presence = DragonPresences.presence(server, id).orElseThrow();
         helper.assertTrue(presence.hung().isEmpty(), "the dragon carrying nothing hangs " + presence.hung());
 
-        carrying(dragons, dragon, load, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.empty());
         DragonPresences.show(server);
         assertHangs(helper, presence, box, Showing.RESTING);
 
         long now = server.overworld().getGameTime();
         int stop = VoidworksConfig.dragonStopTicks();
-        carrying(dragons, dragon, load, Optional.of(trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.LOADING, now + stop - Showing.EMERGE_TICKS - 1)));
         DragonPresences.show(server);
         assertHangs(helper, presence, box, Showing.WORKING);
 
-        carrying(dragons, dragon, load, Optional.of(trip(here, load, Trip.Leg.TO_DESTINATION, now + 1_000)));
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.of(DragonLoads.trip(here, load, Trip.Leg.TO_DESTINATION, now + 1_000)));
         DragonPresences.show(server);
         assertHangs(helper, presence, box, Showing.DIVING);
 
         // Taken away, a presence shown anew hangs the load at once.
-        carrying(dragons, dragon, load, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, load, Optional.empty());
         presence.discard();
         DragonPresences.show(server);
         DragonPresences.show(server);
@@ -88,13 +85,14 @@ final class HangingTests {
         helper.assertTrue(anew != presence, "the presence taken away is still shown");
         assertHangs(helper, anew, box, Showing.RESTING);
 
-        carrying(dragons, dragon, MatterLoad.NONE, Optional.empty());
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, MatterLoad.NONE, Optional.empty());
         DragonPresences.show(server);
         helper.assertTrue(anew.hung().isEmpty(), "the dragon having unloaded still hangs " + anew.hung());
-        helper.assertTrue(syncedStacks(anew).isEmpty(), "the empty dragon's synced data holds " + syncedStacks(anew));
+        var seen = DragonClients.seen(helper, anew).hung();
+        helper.assertTrue(seen.isEmpty(), "a client sees the empty dragon hang " + seen);
 
         // A Mote-line dragon carrying motes hangs nothing.
-        dragons.update(new VoidDragonRecord(id, dragon.owner(), Line.MOTE, dragon.health(), here, MoteLoad.of(Map.of(4, 100L)), Optional.empty(), 0, 0));
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, MoteLoad.of(Map.of(4, 100L)), Optional.empty());
         DragonPresences.show(server);
         helper.assertTrue(anew.hung().isEmpty(), "a Mote-line dragon hangs " + anew.hung());
         dragons.remove(id);
@@ -106,7 +104,7 @@ final class HangingTests {
         var matter = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
         matter.hatchFor(UUID.randomUUID(), Line.MATTER);
         helper.assertTrue(matter.hung().is(Items.CHEST), "a Matter-line Dragonling holds " + matter.hung());
-        helper.assertTrue(syncedStacks(matter).stream().anyMatch(stack -> stack.is(Items.CHEST)), "the chest is not in the Dragonling's synced data");
+        helper.assertTrue(DragonClients.seen(helper, matter).hung().is(Items.CHEST), "a client sees the Matter-line Dragonling hold no chest");
         var mote = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
         mote.hatchFor(UUID.randomUUID(), Line.MOTE);
         helper.assertTrue(mote.hung().isEmpty(), "a Mote-line Dragonling holds " + mote.hung());
@@ -117,29 +115,12 @@ final class HangingTests {
         helper.succeed();
     }
 
-    private static void carrying(VoidDragons dragons, VoidDragonRecord dragon, Load load, Optional<Trip> trip) {
-        dragons.update(new VoidDragonRecord(dragon.id(), dragon.owner(), dragon.line(), dragon.health(), dragon.rest(), load, trip, 0, 0));
-    }
-
-    private static Trip trip(Place here, MatterLoad load, Trip.Leg leg, long until) {
-        return new Trip(Optional.empty(), here, load.amount(), false, leg, until, 0, 0, Optional.empty(), load.items());
-    }
-
-    /** The presence shows {@code showing} and hangs {@code stack}, in its synced data. */
+    /** The presence shows {@code showing} and hangs {@code stack}, and a client given its synced data sees it so. */
     private static void assertHangs(GameTestHelper helper, VoidDragon presence, ItemStack stack, Showing showing) {
         helper.assertTrue(presence.showing() == showing, "the presence shows " + presence.showing() + ", not " + showing);
         helper.assertTrue(ItemStack.isSameItemSameComponents(presence.hung(), stack),
                 "the presence " + showing + " hangs " + presence.hung() + " holding " + presence.hung().get(DataComponents.CONTAINER) + ", not " + stack);
-        helper.assertTrue(syncedStacks(presence).stream().anyMatch(synced -> ItemStack.isSameItemSameComponents(synced, stack)),
-                "the hung stack is not in the presence's synced data");
+        var seen = DragonClients.seen(helper, presence).hung();
+        helper.assertTrue(ItemStack.isSameItemSameComponents(seen, stack), "a client sees the presence " + showing + " hang " + seen + ", not " + stack);
     }
-
-    /** @return the item stacks in {@code dragon}'s synced data that differ from their defaults, as a client joining sees them */
-    private static List<ItemStack> syncedStacks(VoidDragon dragon) {
-        var values = dragon.getEntityData().getNonDefaultValues();
-        return values == null ? List.of()
-                : values.stream().map(value -> value.value()).filter(ItemStack.class::isInstance).map(ItemStack.class::cast).toList();
-    }
-
-
 }

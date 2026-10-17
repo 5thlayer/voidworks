@@ -84,6 +84,7 @@ public final class VoidworksGameTests {
         EndDisplacerTests.register(tests);
         FamilyTests.register(tests);
         FeChargingTests.register(tests);
+        FollowerTests.register(tests);
         GalleryTests.register(tests);
         HangingTests.register(tests);
         LineSyncTests.register(tests);
@@ -102,7 +103,6 @@ public final class VoidworksGameTests {
         RoutingTests.register(tests);
         SiphonTests.register(tests);
         SpendTests.register(tests);
-        TrailTests.register(tests);
         UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
         VoidstoneTests.register(tests);
