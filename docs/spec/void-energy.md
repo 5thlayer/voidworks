@@ -692,12 +692,23 @@ builds on its own.
   something wherever it is built; the east Well's target is full, and it holds nothing. A grown
   dragon rests at the reservoir and carries between them, about eight trips at the default numbers,
   diving into one shaft and emerging from the other.
-- **Commands** make what the dragon scene needs, all for operators:
+- **The Matter Link**: two of the runner's Void Wells laid as the Void Dragon scene's, each with a
+  Well hatch on its south wall beside its core. The west Well's provider holds four stacks of gold
+  blocks, its network filled through a Voidstone beside it with the Void Dragon scene's motes, which
+  pay the Toll for many loads; the east Well's requester asks for three. A grown Matter-line dragon
+  rests at the west Well and carries the gold across, diving into one shaft and emerging from the
+  other. The scene breaks its hatches before it clears its plot, so their records go with them.
+- **Commands** make what the dragon scenes need, all for operators:
   - `/voidworks well <pos> <target>` readies the Well core at `pos` for whoever runs it: theirs, with
     that fill target, and its Dormant cost paid, so once the well around it is whole it is in its
     network at once.
-  - `/voidworks dragon <pos>` adds a grown Void Dragon owned by whoever runs it, resting at the
-    Well core at `pos`. It is not hatched: it doubles no egg price.
+  - `/voidworks dragon <pos> [mote|matter]` adds a grown Void Dragon of that Line, the Mote line by
+    default, owned by whoever runs it, resting at the Well core at `pos`. It is not hatched: it
+    doubles no egg price.
+  - `/voidworks hatch <pos> (provider|requester) <item> <stacks>` readies the Well hatch at `pos`
+    for whoever runs it: joined to the Well it stands against, theirs, and a provider holding so many
+    full stacks of the item or a requester asking for so many. It refuses a hatch on another
+    player's Well.
   - `/voidworks dragon remove <from> <to>` removes every dragon, whoever's, resting in the box, in
     the runner's dimension, or on a trip to or from a place in it, and its presence with it.
 - **Tested** by the Module's game tests through libworks' `GalleryCheck`, in its pack frame, which
