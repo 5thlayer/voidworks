@@ -20,7 +20,6 @@ import io.github._5thlayer.voidworks.dragon.Showing;
 import io.github._5thlayer.voidworks.dragon.StackWares;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
-import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -93,7 +92,7 @@ final class HangingTests {
         helper.assertTrue(seen.isEmpty(), "a client sees the empty dragon hang " + seen);
 
         // A Mote-line dragon carrying motes hangs nothing.
-        dragons.update(new VoidDragonRecord(id, dragon.owner(), Line.MOTE, dragon.health(), here, MoteLoad.of(Map.of(4, 100L)), Optional.empty(), 0, 0));
+        DragonLoads.carrying(dragons, dragon, Line.MOTE, MoteLoad.of(Map.of(4, 100L)), Optional.empty());
         DragonPresences.show(server);
         helper.assertTrue(anew.hung().isEmpty(), "a Mote-line dragon hangs " + anew.hung());
         dragons.remove(id);

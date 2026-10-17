@@ -3,6 +3,7 @@
 
 package io.github._5thlayer.voidworks.gametest;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -17,10 +18,13 @@ import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Showing;
+import io.github._5thlayer.voidworks.dragon.StackWares;
 import io.github._5thlayer.voidworks.dragon.Trip;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
  * A Mote-line dragon shows its Line by the butterflies following it, of the grades it carries, in
@@ -81,7 +85,8 @@ final class FollowerTests {
         DragonPresences.show(server);
         assertFollowed(helper, anew, Showing.RESTING, Set.of(), "having unloaded");
 
-        DragonLoads.carrying(dragons, dragon, Line.MATTER, MatterLoad.NONE, Optional.empty());
+        var cobblestone = StackWares.of(new ItemStack(Items.COBBLESTONE, 64), helper.getLevel().registryAccess());
+        DragonLoads.carrying(dragons, dragon, Line.MATTER, new MatterLoad(List.of(cobblestone)), Optional.empty());
         DragonPresences.show(server);
         assertFollowed(helper, anew, Showing.RESTING, Set.of(), "of the Matter line");
         dragons.remove(id);
@@ -92,7 +97,8 @@ final class FollowerTests {
     private static void dragonlingHasNone(GameTestHelper helper) {
         var dragonling = helper.spawn(VoidworksEntities.VOID_DRAGON.get(), HERE);
         dragonling.hatchFor(UUID.randomUUID(), Line.MOTE);
-        helper.assertTrue(dragonling.followers().isEmpty(), "a Mote-line Dragonling is followed by grades " + dragonling.followers().grades());
+        var followers = dragonling.followers();
+        helper.assertTrue(followers.isEmpty(), "a Mote-line Dragonling is followed by grades " + followers.grades());
         dragonling.discard();
         helper.succeed();
     }
@@ -105,5 +111,4 @@ final class FollowerTests {
         var seen = DragonClients.seen(helper, presence).followers().grades();
         helper.assertTrue(seen.equals(grades), "a client sees the presence " + doing + " followed by grades " + seen + ", not " + grades);
     }
-
 }
