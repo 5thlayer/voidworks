@@ -15,6 +15,7 @@ import io.github._5thlayer.voidworks.VoidworksBlocks;
 import io.github._5thlayer.voidworks.VoidworksConfig;
 import io.github._5thlayer.voidworks.VoidworksEntities;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedVoidDragons;
 import io.github._5thlayer.voidworks.dragon.Showing;
@@ -268,7 +269,7 @@ final class PresenceTests {
                     var dragons = SavedVoidDragons.of(server);
                     var grown = dragons.add(owner.getUUID(), under);
                     dragons.update(new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(),
-                            VoidworksConfig.dragonEggMotes() - 1, VoidworksConfig.lifeStageMotes()));
+                            VoidworksConfig.life(Line.MOTE).perEgg() - 1, VoidworksConfig.lifeStages(Line.MOTE).length()));
                     dragonId.set(grown.id());
                 })
                 .thenWaitUntil(() -> {

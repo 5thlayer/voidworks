@@ -98,7 +98,7 @@ public record DragonReport(Doing doing, Optional<Component> bound, SortedMap<Int
     /** @return what the dragon whose presence {@code presence} is shows, empty for a Dragonling or a presence whose dragon is gone */
     public static Optional<DragonReport> of(VoidDragon presence, MinecraftServer server) {
         return presence.dragonId().flatMap(SavedVoidDragons.of(server)::get)
-                .map(dragon -> of(dragon, place -> DragonRiding.label(server, place), nameOf(server, dragon.owner()), VoidworksConfig.lifeStages(),
+                .map(dragon -> of(dragon, place -> DragonRiding.label(server, place), nameOf(server, dragon.owner()), VoidworksConfig.lifeStages(dragon.line()),
                         VoidworksConfig.dragonMatterLoad()));
     }
 

@@ -101,6 +101,7 @@ public final class VoidworksGameTests {
         LineSyncTests.register(tests);
         LoadTests.register(tests);
         MatterLineTests.register(tests);
+        MatterLifeTests.register(tests);
         MatterRoutingTests.register(tests);
         MoteTests.register(tests);
         MutationChamberTests.register(tests);

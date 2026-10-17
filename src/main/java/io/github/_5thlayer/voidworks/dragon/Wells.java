@@ -35,12 +35,13 @@ public interface Wells {
     boolean loaded(Place place);
 
     /**
-     * Lays a Drained Dragon Egg in the shaft of the Well at {@code place}, as an item, while its chunk is
-     * loaded; a dragon owes an egg it could not lay to its next stop.
+     * Lays an egg of {@code line}'s, a Drained Dragon Egg or a Matter Dragon Egg, in the shaft of the Well
+     * at {@code place}, as an item, while its chunk is loaded; a dragon owes an egg it could not lay to its
+     * next stop.
      *
      * @return whether it laid it
      */
-    boolean lay(Place place);
+    boolean lay(Place place, Line line);
 
     /**
      * A Void Well as it is now.

@@ -21,6 +21,7 @@ import io.github._5thlayer.voidworks.dragon.DiveColour;
 import io.github._5thlayer.voidworks.dragon.DragonPresences;
 import io.github._5thlayer.voidworks.dragon.DragonRiding;
 import io.github._5thlayer.voidworks.dragon.LifeStage;
+import io.github._5thlayer.voidworks.dragon.Line;
 import io.github._5thlayer.voidworks.dragon.MoteLoad;
 import io.github._5thlayer.voidworks.dragon.Place;
 import io.github._5thlayer.voidworks.dragon.SavedHatchery;
@@ -257,7 +258,7 @@ final class RideTests {
         var dragons = SavedVoidDragons.of(helper.getLevel().getServer());
         var grown = dragons.add(owner.getUUID(), rest);
         var old = new VoidDragonRecord(grown.id(), grown.owner(), grown.line(), grown.health(), grown.rest(), grown.load(), grown.trip(), 0,
-                LifeStage.values().length * VoidworksConfig.lifeStageMotes() - 1);
+                LifeStage.values().length * VoidworksConfig.lifeStages(Line.MOTE).length() - 1);
         dragons.update(old);
         return old;
     }

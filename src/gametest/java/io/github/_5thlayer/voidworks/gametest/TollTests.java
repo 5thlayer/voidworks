@@ -95,7 +95,7 @@ final class TollTests {
                     helper.assertTrue(load.amount() == 3 && load.toll() == 3 * 512, "the dragon loaded " + load + ", not three stacks for a Toll of 1,536");
                     helper.assertTrue(link.motes().equals(Map.of(2, 2_000L - 3 * 512)),
                             "the departure network holds " + link.motes() + " after paying the Toll");
-                    var report = DragonReport.of(loaded, place -> Component.empty(), Optional.empty(), VoidworksConfig.lifeStages(),
+                    var report = DragonReport.of(loaded, place -> Component.empty(), Optional.empty(), VoidworksConfig.lifeStages(Line.MATTER),
                             VoidworksConfig.dragonMatterLoad());
                     var line = Component.translatable("voidworks.jade.dragon.stacks", 3L, (long) VoidworksConfig.dragonMatterLoad(), 3L * 512);
                     helper.assertTrue(report.tail().getFirst().equals(line), "the dragon shows " + report.tail().getFirst() + ", not " + line);

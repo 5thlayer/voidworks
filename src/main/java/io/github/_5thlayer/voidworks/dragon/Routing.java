@@ -38,11 +38,12 @@ import java.util.function.Predicate;
  * distance, which it covers at the speed its health gives it, so it slows as it weakens. Before it
  * dives from a Well it heals from that Well's motes, its network's, as far as they go.
  *
- * <p>It ages by the motes it unloads ({@link LifeStages}), which multiplies its speed and load, and
- * once it has outlived its old stage dies at the end of a stop at a loaded Well. Each time it has carried a set number of motes
- * as an adult since its last egg, counted as it unloads them, it
- * owes a Drained Dragon Egg, which it lays at the next Well it stops at, to load or unload, whose chunk
- * is loaded, with every other egg it owes; what it carried beyond them counts toward the next.
+ * <p>It ages by what it unloads, in its Line's unit, motes or stacks ({@link Life}), which multiplies
+ * its speed and load, and once it has outlived its old stage dies at the end of a stop at a loaded Well
+ * with nothing aboard. Each time it has carried a set amount as an adult since its last egg, counted as
+ * it unloads it, it owes an egg of its Line, a Drained Dragon Egg or a Matter Dragon Egg, which it lays
+ * at the next Well it stops at, to load or unload, whose chunk is loaded, with every other egg it owes;
+ * what it carried beyond them counts toward the next.
  *
  * <p>Its owner riding it at a stop holds it there, whatever it is doing, until they get off or pick
  * another Well of theirs ({@link #ride}): it dives there at once, carrying them, a stop added to its
@@ -63,8 +64,8 @@ public final class Routing {
     private final Dive dive;
     private final Harm harm;
     private final int stopTicks;
-    private final long eggMotes;
-    private final LifeStages stages;
+    /** How each Line's dragons age and lay. */
+    private final Map<Line, Life> lives = new EnumMap<>(Line.class);
     /** What each Line's dragons carry. */
     private final Map<Line, Cargo> cargoes = new EnumMap<>(Line.class);
     private final MatterCargo matter;
@@ -74,26 +75,29 @@ public final class Routing {
      * @param matterLoad the most stacks a young Matter-line dragon carries
      * @param toll what a Matter-line load pays as it loads
      * @param stopTicks how long a dragon stops at a Well to load or unload
-     * @param eggMotes how many motes a dragon carries as an adult for each egg it lays
-     * @param stages how it ages, which multiplies its speed and load
+     * @param moteLife how a Mote-line dragon ages and lays, in motes unloaded
+     * @param matterLife how a Matter-line dragon ages and lays, in stacks unloaded
      */
     public Routing(Wells wells, Hatches hatches, Owners owners, Dive dive, Harm harm, long load, long matterLoad, Toll toll, int stopTicks,
-            long eggMotes, LifeStages stages) {
+            Life moteLife, Life matterLife) {
         this.wells = wells;
         this.owners = owners;
         this.dive = dive;
         this.harm = harm;
         this.stopTicks = stopTicks;
-        this.eggMotes = eggMotes;
-        this.stages = stages;
+        lives.put(Line.MOTE, moteLife);
+        lives.put(Line.MATTER, matterLife);
         cargoes.put(Line.MOTE, new MoteCargo(wells, load));
         matter = new MatterCargo(hatches, wells, matterLoad, toll);
         cargoes.put(Line.MATTER, matter);
     }
 
-    /** A routing with no Well hatches, so its Matter-line dragons, which find nothing to carry, carry a stack at most. */
+    /**
+     * A routing with no Well hatches, so its Matter-line dragons, which find nothing to carry, carry a
+     * stack at most; every Line ages by {@code stages} and lays an egg each {@code eggMotes} carried.
+     */
     public Routing(Wells wells, Owners owners, Dive dive, Harm harm, long load, int stopTicks, long eggMotes, LifeStages stages) {
-        this(wells, Hatches.NONE, owners, dive, harm, load, 1, Toll.FREE, stopTicks, eggMotes, stages);
+        this(wells, Hatches.NONE, owners, dive, harm, load, 1, Toll.FREE, stopTicks, new Life(stages, eggMotes), new Life(stages, eggMotes));
     }
 
     /**
@@ -121,7 +125,7 @@ public final class Routing {
             for (int legs = 0; legs < MOST_LEGS; legs++) {
                 if (endsItsLastStop(dragon, now)) {
                     var laid = laying(dragon, dragon.rest());
-                    if (laid.towardEgg() < eggMotes) {
+                    if (laid.towardEgg() < life(laid).perEgg()) {
                         dragons.remove(laid.id());
                         died.add(laid);
                         break;
@@ -147,7 +151,7 @@ public final class Routing {
      *         chunk is loaded, carrying nothing: where it dies, once it has laid what it owes
      */
     private boolean endsItsLastStop(VoidDragonRecord dragon, long now) {
-        return stages.outlived(dragon.cargo()) && dragon.carried() == 0
+        return stages(dragon).outlived(dragon.cargo()) && dragon.carried() == 0
                 && dragon.trip().filter(trip -> trip.divingTo().isEmpty() && trip.until() <= now).isPresent()
                 && wells.loaded(dragon.rest());
     }
@@ -238,7 +242,7 @@ public final class Routing {
     private Optional<VoidDragonRecord> diveAsRidden(VoidDragonRecord dragon, Optional<Stop> at, Trip trip, long now) {
         // Timed at the speed it will dive at, healed as it leaves, which frees the room its healing takes.
         int healing = at.map(stop -> healing(dragon, stop)).orElse(0);
-        int speed = stages.speed(dragon.healed(healing));
+        int speed = stages(dragon).speed(dragon.healed(healing));
         long unridden = Math.ceilDiv(dive.ticks(dragon.rest(), trip.added().orElseThrow()) * VoidDragonRecord.WHOLE_SPEED, speed);
         long ridden = dive.ridden(unridden);
         long excess = ridden == unridden ? 0 : dragon.carried() - loadOf(dragon) * ridden / unridden;
@@ -247,7 +251,8 @@ public final class Routing {
         }
         var lightened = excess > 0 ? dragon.carrying(cargo(dragon).putBack(dragon.load(), dragon.rest(), excess)) : dragon;
         var healed = healed(lightened);
-        return Optional.of(healed.on(Optional.of(trip.claimingAtMost(healed.load()).diving(now, ridden * stages.speed(healed), stages.speed(healed)))));
+        int healedSpeed = stages(healed).speed(healed);
+        return Optional.of(healed.on(Optional.of(trip.claimingAtMost(healed.load()).diving(now, ridden * healedSpeed, healedSpeed))));
     }
 
     /** What came of a rider's pick. */
@@ -389,26 +394,28 @@ public final class Routing {
         return laying(unloaded(after, put), trip.destination()).on(Optional.of(trip.claimingNothing().then(Trip.Leg.UNLOADING, now + stopTicks)));
     }
 
-    /** @return {@code dragon} having unloaded {@code motes}, which it has carried over its life, and as an adult toward its eggs */
-    private VoidDragonRecord unloaded(VoidDragonRecord dragon, long motes) {
-        return dragon.unloaded(motes, stages.towardEggs(dragon.cargo(), motes));
+    /** @return {@code dragon} having unloaded {@code amount}, in its Line's unit, which it has carried over its life, and as an adult toward its eggs */
+    private VoidDragonRecord unloaded(VoidDragonRecord dragon, long amount) {
+        return dragon.unloaded(amount, stages(dragon).towardEggs(dragon.cargo(), amount));
     }
 
     /** @return the most {@code dragon} loads now: its Line's base load times its stage's factor */
     private long loadOf(VoidDragonRecord dragon) {
-        return stages.load(cargo(dragon).load(), dragon.cargo());
+        return stages(dragon).load(cargo(dragon).load(), dragon.cargo());
     }
 
     /**
-     * @return {@code dragon}, stopping at its owner's Well at {@code place}, having laid there an egg for
-     *         every {@link #eggMotes} it has carried toward them, as many as the Well lays; it owes the rest
+     * @return {@code dragon}, stopping at its owner's Well at {@code place}, having laid there an egg of
+     *         its Line for every {@link Life#perEgg} it has carried toward them, as many as the Well lays; it
+     *         owes the rest
      */
     private VoidDragonRecord laying(VoidDragonRecord dragon, Place place) {
+        long perEgg = life(dragon).perEgg();
         long eggs = 0;
-        while (eggs < dragon.towardEgg() / eggMotes && wells.lay(place)) {
+        while (eggs < dragon.towardEgg() / perEgg && wells.lay(place, dragon.line())) {
             eggs++;
         }
-        return dragon.laid(eggs * eggMotes);
+        return dragon.laid(eggs * perEgg);
     }
 
     /**
@@ -446,7 +453,7 @@ public final class Routing {
     private VoidDragonRecord setOff(VoidDragonRecord dragon, Trip trip, long now) {
         var to = trip.divingTo().orElseThrow();
         var healed = to.equals(dragon.rest()) ? dragon : healed(dragon);
-        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, stages.speed(healed))));
+        return healed.on(Optional.of(trip.diving(now, dive.ticks(dragon.rest(), to) * VoidDragonRecord.WHOLE_SPEED, stages(healed).speed(healed))));
     }
 
     /**
@@ -455,6 +462,7 @@ public final class Routing {
      *         it lost on the way
      */
     private VoidDragonRecord dived(VoidDragonRecord dragon, Trip trip, Place to, long now) {
+        var stages = stages(dragon);
         long divedTo = trip.divedTo(now, stages.speed(dragon));
         var weakened = dragon.weakened(harm.weakening(dragon.rest().dimension(), to.dimension(), trip.countedTo(), divedTo));
         return weakened.on(Optional.of(trip.covered(divedTo, stages.speed(dragon), stages.speed(weakened))));
@@ -498,6 +506,16 @@ public final class Routing {
     /** @return {@code owner}'s stop that takes in their Well at {@code place}, if it is still one of theirs, whole and awake */
     private Optional<Stop> stop(UUID owner, Place place) {
         return stops(owner).stream().filter(stop -> stop.has(place)).findFirst();
+    }
+
+    /** @return how {@code dragon}'s Line ages and lays */
+    private Life life(VoidDragonRecord dragon) {
+        return lives.get(dragon.line());
+    }
+
+    /** @return how {@code dragon}'s Line ages */
+    private LifeStages stages(VoidDragonRecord dragon) {
+        return life(dragon).stages();
     }
 
     /** @return what {@code dragon}'s Line carries */

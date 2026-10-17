@@ -45,6 +45,7 @@ class MatterRoutingTest {
     private static final int STOP = 100;
     private static final long EGG = 1_000_000;
     private static final LifeStages AGELESS = LifeStages.of(1_000_000_000L, List.of(1.0, 1.0, 1.0, 1.0), List.of(1.0, 1.0, 1.0, 1.0));
+    private static final Life AGELESS_LIFE = new Life(AGELESS, EGG);
     private static final Dive DIVE = new Dive(200, 64, dimension -> dimension.equals(NETHER) ? 8.0 : 1.0);
     private static final Harm HARMLESS = new Harm(dimension -> 0, 50, 16);
     /** Long enough for any trip here to end. */
@@ -67,7 +68,7 @@ class MatterRoutingTest {
     private final VoidDragons dragons = new VoidDragons();
     /** Free, so routing alone is tested, but where a test prices it. */
     private Toll toll = Toll.FREE;
-    private Routing routing = routing(LOAD, AGELESS);
+    private Routing routing = routing(LOAD, AGELESS_LIFE);
     private long now;
 
     @Test
@@ -84,7 +85,7 @@ class MatterRoutingTest {
 
     @Test
     void itLoadsUpToItsLoadInStacksAndClaimsWhatItLoads() {
-        routing = routing(2, AGELESS);
+        routing = routing(2, AGELESS_LIFE);
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5));
@@ -99,7 +100,7 @@ class MatterRoutingTest {
 
     @Test
     void twoDragonsServingOneRequestNeverOvershootIt() {
-        routing = routing(2, AGELESS);
+        routing = routing(2, AGELESS_LIFE);
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 10));
@@ -116,7 +117,7 @@ class MatterRoutingTest {
 
     @Test
     void claimsCountByItemSoASecondDragonCarriesWhatTheFirstLeftShort() {
-        routing = routing(2, AGELESS);
+        routing = routing(2, AGELESS_LIFE);
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 5), stacks(DIRT, 5));
@@ -173,7 +174,7 @@ class MatterRoutingTest {
 
     @Test
     void aLoadCountsInStacksByItsStage() {
-        routing = routing(LOAD, new LifeStages(1_000, LifeStages.DEFAULTS));
+        routing = routing(LOAD, new Life(new LifeStages(1_000, LifeStages.DEFAULTS), EGG));
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         var pearls = Ware.of(PEARL, 16, 27 * 16);
@@ -205,7 +206,7 @@ class MatterRoutingTest {
 
     @Test
     void aShulkerBoxTakesOneStackOfALoad() {
-        routing = routing(2, AGELESS);
+        routing = routing(2, AGELESS_LIFE);
         wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
         wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
         var filled = new Ware(SHULKER_BOX, Optional.of(contents("diamond_block")), 1, 1);
@@ -453,11 +454,113 @@ class MatterRoutingTest {
     /** Prices the Toll as the shipped data does. */
     private void priced() {
         toll = new Toll(256);
-        routing = routing(LOAD, AGELESS);
+        routing = routing(LOAD, AGELESS_LIFE);
     }
 
-    private Routing routing(long load, LifeStages stages) {
-        return new Routing(wells, hatches, owners, DIVE, HARMLESS, MOTE_LOAD, load, toll, STOP, EGG, stages);
+    @Test
+    void aMatterLineDragonAgesByTheStacksItUnloadsAtItsOwnLinesStageLength() {
+        // Stages of 54 stacks for the Matter line, while a Mote-line stage lasts far longer.
+        routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), EGG));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        for (int index = 0; index < 3; index++) {
+            hatches.provider(hatchOf(END_WELL, index), END_WELL, stacks(COBBLESTONE, 27));
+            hatches.requester(hatchOf(NETHER_WELL, index), NETHER_WELL, COBBLESTONE, 64, 27);
+        }
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL).agedTo(40);
+        dragons.update(dragon);
+        // Young, it loads 27 stacks; unloading them, 67 in its life, it is an adult, and loads twice that.
+        assertEquals(27, nextLoad(dragon));
+        assertEquals(67, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(54, nextLoad(dragon));
+        assertEquals(121, dragons.get(dragon.id()).orElseThrow().cargo());
+    }
+
+    @Test
+    void anAdultMatterLineDragonLaysAMatterDragonEggEachEggOfStacksOwingThemAtAnUnloadedWell() {
+        routing = routing(LOAD, new Life(new LifeStages(1_000, LifeStages.DEFAULTS), 27));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        wells.add(ALICE, OVERWORLD_WELL, OptionalLong.empty(), 2, Map.of());
+        wells.unseen.add(NETHER_WELL);
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 27));
+        hatches.provider(hatchOf(END_WELL, 2), END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL).agedTo(1_000);
+        dragons.update(dragon);
+        runFor(A_WHILE);
+        // An adult's 54 stacks unloaded at a Well whose chunk is not loaded: two eggs owed, none laid.
+        assertEquals(2 * 27 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE) + hatches.holds(NETHER_OTHER_REQUESTER, COBBLESTONE));
+        assertEquals(List.of(), wells.laid);
+        assertEquals(54, dragons.get(dragon.id()).orElseThrow().towardEgg());
+        // Its next stop is at the End's, loaded, where it lays them both, Matter Dragon Eggs.
+        hatches.requester(OVERWORLD_REQUESTER, OVERWORLD_WELL, COBBLESTONE, 64, 1);
+        hatches.provider(hatchOf(END_WELL, 3), END_WELL, stacks(COBBLESTONE, 1));
+        runFor(A_WHILE);
+        assertEquals(List.of(END_WELL, END_WELL), wells.laid);
+        assertEquals(List.of(Line.MATTER, Line.MATTER), wells.laidOf);
+        assertEquals(1, dragons.get(dragon.id()).orElseThrow().towardEgg());
+    }
+
+    @Test
+    void aMatterLineDragonCountsTowardItsEggsOnlyTheStacksItUnloadsAsAnAdult() {
+        routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), 27));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.provider(END_PROVIDER, END_WELL, stacks(COBBLESTONE, 27));
+        hatches.provider(hatchOf(END_WELL, 2), END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        hatches.requester(NETHER_OTHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 27);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL);
+        dragons.update(new VoidDragonRecord(dragon.id(), ALICE, Line.MATTER, dragon.health(), dragon.rest(), dragon.load(), dragon.trip(), 20, 90));
+        runFor(A_WHILE);
+        // Of its 54 stacks, the 18 unloaded before it turned senior at 108 count: 38, an egg and 11 over.
+        assertEquals(144, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(11, dragons.get(dragon.id()).orElseThrow().towardEgg());
+        // Senior, nothing more it unloads counts toward an egg.
+        hatches.provider(hatchOf(END_WELL, 3), END_WELL, stacks(COBBLESTONE, 27));
+        hatches.requester(hatchOf(NETHER_WELL, 2), NETHER_WELL, COBBLESTONE, 64, 27);
+        runFor(A_WHILE);
+        assertEquals(171, dragons.get(dragon.id()).orElseThrow().cargo());
+        assertEquals(List.of(NETHER_WELL), wells.laid);
+        assertEquals(11, dragons.get(dragon.id()).orElseThrow().towardEgg());
+    }
+
+    @Test
+    void aMatterLineDragonThatHasOutlivedItsStagesDiesOnlyAtAStopWithNothingAboard() {
+        routing = routing(LOAD, new Life(new LifeStages(54, LifeStages.DEFAULTS), EGG));
+        wells.add(ALICE, END_WELL, OptionalLong.empty(), 3, Map.of());
+        wells.add(ALICE, NETHER_WELL, OptionalLong.empty(), 1, Map.of());
+        hatches.requester(NETHER_REQUESTER, NETHER_WELL, COBBLESTONE, 64, 3);
+        var dragon = dragons.add(ALICE, Line.MATTER, END_WELL).agedTo(4 * 54).carrying(new MatterLoad(List.of(stacks(COBBLESTONE, 5))));
+        dragons.update(dragon);
+        runFor(A_WHILE);
+        // It unloads the 3 stacks asked for and, with nowhere to put the other 2, holds them, alive.
+        assertEquals(3 * 64, hatches.holds(NETHER_REQUESTER, COBBLESTONE));
+        assertEquals(2, dragons.get(dragon.id()).orElseThrow().carried());
+        hatches.provider(END_PROVIDER, END_WELL);
+        runFor(A_WHILE);
+        // Stowed at the End's provider, it carries nothing, and dies there.
+        assertEquals(2 * 64, hatches.holds(END_PROVIDER, COBBLESTONE));
+        assertEquals(Optional.empty(), dragons.get(dragon.id()));
+    }
+
+    /** @return how many stacks {@code dragon} carries as it next loads, run on until it has unloaded them all */
+    private long nextLoad(VoidDragonRecord dragon) {
+        while (dragons.get(dragon.id()).orElseThrow().carried() == 0) {
+            runFor(1);
+        }
+        long loaded = dragons.get(dragon.id()).orElseThrow().carried();
+        while (dragons.get(dragon.id()).orElseThrow().carried() > 0) {
+            runFor(1);
+        }
+        return loaded;
+    }
+
+    private Routing routing(long load, Life matter) {
+        return new Routing(wells, hatches, owners, DIVE, HARMLESS, MOTE_LOAD, load, toll, STOP, AGELESS_LIFE, matter);
     }
 
     /** @return {@code stacks} full stacks of {@code item}, 64 to a stack */
