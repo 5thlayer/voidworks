@@ -43,4 +43,10 @@ public record MoteLoad(SortedMap<Integer, Long> motes) implements Load {
     public boolean isEmpty() {
         return motes.isEmpty();
     }
+
+    /** @return a spark of each grade it holds motes of */
+    @Override
+    public Sparks sparks() {
+        return Sparks.of(motes.entrySet().stream().filter(grade -> grade.getValue() > 0).map(Map.Entry::getKey).toList());
+    }
 }

@@ -15,6 +15,7 @@ import io.github._5thlayer.voidworks.siphon.SiphonMode;
 import io.github._5thlayer.voidworks.siphon.VoidSiphonItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -132,6 +133,12 @@ public final class VoidDragon extends PathfinderMob {
     /** How far through a wingbeat its model's wings hang lowest, the tips bent down too: where a sitting presence holds them. */
     private static final float WINGS_DOWN = 0.75F;
 
+    /** How likely a loaded Mote-line presence is to leave a spark of each grade it carries in a tick. */
+    private static final float SPARK_CHANCE = 0.5F;
+
+    /** How big its sparks are, as a redstone dust particle is 1. */
+    private static final float SPARK_SCALE = 1.0F;
+
     /** How far, in degrees, the heading its model follows turns in a tick, as gently as the Ender Dragon turns. */
     private static final float MAX_TURN = 3.0F;
 
@@ -177,6 +184,8 @@ public final class VoidDragon extends PathfinderMob {
     private static final EntityDataAccessor<ItemStack> DATA_HUNG = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.ITEM_STACK);
     /** Its Line: a Dragonling's, which its egg fixed, or a presence's dragon's; synced, so every client tints it by its Line. */
     private static final EntityDataAccessor<Byte> DATA_LINE = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.BYTE);
+    /** The grades a Mote-line presence trails sparks of ({@link Sparks#bits()}): which it carries, not how many. */
+    private static final EntityDataAccessor<Integer> DATA_SPARKS = SynchedEntityData.defineId(VoidDragon.class, EntityDataSerializers.INT);
 
     private static final String OWNER_KEY = "owner";
     private static final String LINE_KEY = "line";
@@ -280,6 +289,7 @@ public final class VoidDragon extends PathfinderMob {
         entityData.define(DATA_DIVE_COLOUR, DiveColour.VOID);
         entityData.define(DATA_HUNG, ItemStack.EMPTY);
         entityData.define(DATA_LINE, (byte) Line.MOTE.ordinal());
+        entityData.define(DATA_SPARKS, Sparks.NONE.bits());
     }
 
     @Override
@@ -608,9 +618,32 @@ public final class VoidDragon extends PathfinderMob {
         }
     }
 
-    /** It hangs the first stack of {@code load} under its body, and nothing for motes or no load. */
+    /**
+     * It hangs the first stack of {@code load} under its body, and nothing for motes or no load, and
+     * trails sparks of the grades of the motes in it.
+     */
     void showLoad(Load load) {
         hang(load.firstStack().map(ware -> StackWares.stack(ware, registryAccess())).orElse(ItemStack.EMPTY));
+        entityData.set(DATA_SPARKS, load.sparks().bits());
+    }
+
+    /** @return the sparks it trails, synced to every client: of each grade its dragon carries, or none */
+    public Sparks sparks() {
+        return new Sparks(entityData.get(DATA_SPARKS));
+    }
+
+    /** On a client, it leaves a spark of each grade it carries about its body now and then, while it is seen. */
+    private void trailSparks() {
+        if (isInvisible()) {
+            return;
+        }
+        var box = getBoundingBox();
+        for (int colour : sparks().colours()) {
+            if (random.nextFloat() < SPARK_CHANCE) {
+                level().addParticle(new DustParticleOptions(colour, SPARK_SCALE), box.minX + random.nextDouble() * box.getXsize(),
+                        box.minY + random.nextDouble() * box.getYsize(), box.minZ + random.nextDouble() * box.getZsize(), 0.0, 0.0, 0.0);
+            }
+        }
     }
 
     /** As a Dragonling, which is all that is ever saved, it holds a chest under its body if it is of the Matter line, and nothing else. */
@@ -812,6 +845,9 @@ public final class VoidDragon extends PathfinderMob {
         oSettled = settled(1.0F);
         settled = Settling.settle(oSettled, perch(), fromSeat(position()));
         recordFlight();
+        if (level().isClientSide()) {
+            trailSparks();
+        }
         if (dying()) {
             dieOn();
             return;

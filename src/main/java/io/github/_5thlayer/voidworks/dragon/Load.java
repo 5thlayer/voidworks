@@ -40,4 +40,9 @@ public sealed interface Load permits MoteLoad, MatterLoad {
     default Optional<Ware> firstStack() {
         return Optional.empty();
     }
+
+    /** @return the sparks its dragon's presence trails, of each grade it carries: none for matter */
+    default Sparks sparks() {
+        return Sparks.NONE;
+    }
 }

@@ -100,6 +100,7 @@ public final class VoidworksGameTests {
         RideTests.register(tests);
         RoutingTests.register(tests);
         SiphonTests.register(tests);
+        SparkTests.register(tests);
         SpendTests.register(tests);
         UnmakingChamberTests.register(tests);
         VoidCrucibleTests.register(tests);
