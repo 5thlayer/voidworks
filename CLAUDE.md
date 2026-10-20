@@ -8,7 +8,7 @@ Commit on the current branch; open a feature branch only when the user asks for 
 
 Pull requests are squash-merged, the PR title becoming the conventional commit on `main`. Work after a merge starts on a new branch from `main`, never on the merged one.
 
-Anything that changes the Module's behaviour gets a `/code-review`. That is the project skill in `.claude/skills/code-review`, from mattpocock/skills; never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, and tooling or CI config.
+Anything that changes the Module's behaviour gets a `/code-review`: the project skill in `.claude/skills/code-review`, from mattpocock/skills, never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, submodule bumps, and tooling or CI config.
 
 ## Commits
 
@@ -16,11 +16,32 @@ Conventional commits: `<type>(<optional scope>): <summary>`, with the summary in
 
 ## Testing
 
-`sh ./gradlew build` runs the JUnit tests, on a plain JVM with no game running: Minecraft is on their classpath only for the game types the rules they test name. `sh ./gradlew runGameTestServer` runs the game tests headless, a real player on a real server, and names each one it ran; it fails if it ran none. The `skillworks:gametest-loop` skill runs a subset, `--tests 'voidworks:<glob>' 1`, one glob a run, so a ticket's new game tests share a name prefix that selects them all. Game-test code and test-only resources live in the `gametest` source set and never ship (libworks ADR 0011): `VoidworksGameTests` hooks itself in from `FMLConstructModEvent`, and `src/main` never names game-test code. Where shipped code must report to a test, `main` holds a hook with no test vocabulary that the game-test side fills. A new game test class is registered by a line in `VoidworksGameTests.registerTests`, and its tests stand on the `gametest/platform` structure that `sh ./gradlew buildGametestStructures` writes into `src/gametest/resources`. CI (`.github/workflows/ci.yml`) runs both on every push through libworks' shared `module-ci.yml`, at the tag of the plugin `build.gradle` applies, and never publishes. Data only the Module's own runs load lives in `src/gametest/resources`, which never ships (libworks ADR 0004): `DevPacks` switches on `gametest_pack/` in the game tests and `dev_pack/` in the dev client, the datapacks that stand in for what a Consumer fills. Packs a test switches on itself, such as one per batch, go under `gametest_packs/<name>/`.
+### Running the tests
 
-Vanilla's code, with NeoForge's patches, is in `build/moddev/artifacts/minecraft-patched-*-sources.jar`; NeoForge's own classes (`net/neoforged/...`) are in `~/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/<version>/*/neoforge-<version>-sources.jar`, `<version>` being `neoforge_version` in `gradle.properties` (the cache keeps older ones). Read either with `unzip -p <jar> <path>/X.java`, and check a claim about vanilla or NeoForge behaviour there before stating it.
+- `sh ./gradlew build` runs the JUnit tests, on a plain JVM with no game running: Minecraft is on their classpath only for the game types the rules they test name.
+- `sh ./gradlew runGameTestServer` runs the game tests headless, a real player on a real server, and names each one it ran; it fails if it ran none.
+- The `skillworks:gametest-loop` skill runs a subset, `--tests 'voidworks:<glob>' 1`, one glob a run, so a ticket's new game tests share a name prefix that selects them all.
+- CI (`.github/workflows/ci.yml`) runs both through libworks' `module-ci.yml`, at the tag of the plugin `build.gradle` applies, on every push and never publishes.
 
-The `skillworks:quicklaunch` skill opens the dev client into the most recent save in `run/saves`, one client per checkout.
+### Game-test code
+
+- Everything that exists only for the Module's own runs lives in the `gametest` source set, which never ships (libworks ADRs 0004 and 0011): its game-test code, its test-only resources and its packs.
+- `VoidworksGameTests` hooks itself in from `FMLConstructModEvent`, and `src/main` never names game-test code.
+- Where shipped code must report to a test, `main` holds a hook with no test vocabulary that the game-test side fills.
+- A new game test class is registered by a line in `VoidworksGameTests.registerTests`, and its tests stand on the `gametest/platform` structure that the plugin's `buildGametestStructures` task writes into `src/gametest/resources`.
+- `DevPacks` switches on `gametest_pack/` in the game tests and `dev_pack/` in the dev client, the datapacks that stand in for what a Consumer fills.
+- Packs a test switches on itself, such as one per batch, go under `gametest_packs/<name>/`.
+
+### The dev client
+
+- Neither run loads a client, so a change to a screen, a model or a texture isn't done when the tests pass: list it for the user to check in the dev client.
+- The `skillworks:quicklaunch` skill opens the dev client into the most recent save in `run/saves`, one client per checkout.
+
+### Vanilla and NeoForge sources
+
+- Vanilla's code, with NeoForge's patches, is in `build/moddev/artifacts/minecraft-patched-*-sources.jar`.
+- NeoForge's own classes (`net/neoforged/...`) are in `~/.gradle/caches/modules-2/files-2.1/net.neoforged/neoforge/<version>/*/neoforge-<version>-sources.jar`, `<version>` being `neoforge_version` in `gradle.properties` (the cache keeps older ones).
+- Read either with `unzip -p <jar> <path>/X.java`, and check a claim about vanilla or NeoForge behaviour there before stating it.
 
 ## Releases
 
