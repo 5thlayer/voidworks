@@ -47,7 +47,7 @@ The design is [docs/spec/void-energy.md](docs/spec/void-energy.md), and the term
 
 ## Dependencies
 
-None beyond NeoForge. Voidworks nests libworks-runtime, so there is nothing more to install. Jade is optional.
+None beyond NeoForge. Voidworks nests libworks-runtime, so there is nothing more to install. Jade and EMI are optional.
 
 ## License
 
