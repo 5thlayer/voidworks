@@ -3,7 +3,7 @@
 // libworks convention plugin (libworks ADR 0003). Voidworks requires no other Module, so it
 // declares no upstreams, and its tags are the plugin's default, voidworks-v<version>.
 plugins {
-    id 'io.github.5thlayer.libworks.module' version '0.4.2'
+    id 'io.github.5thlayer.libworks.module' version '0.4.4'
 }
 
 libworks {
