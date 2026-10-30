@@ -94,6 +94,9 @@ final class GalleryTests {
                 GalleryTests::dragonRebuiltLeavesOne);
         tests.testOnItsOwn("the_gallery_scenes_sign_clicked_builds_the_scene_again", TICKS,
                 GalleryTests::signReplays);
+        // Its plots stand on smooth stone, which no Displacer harvests.
+        tests.testOnItsOwn("the_gallery_clear_empties_its_plot", TICKS,
+                helper -> GalleryCheck.clears(helper, Voidworks.MOD_ID, ORIGIN, ROWS, Blocks.SMOOTH_STONE));
     }
 
     /**

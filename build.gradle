@@ -9,7 +9,7 @@ plugins {
 libworks {
     // Nested by jar-in-jar, so players install nothing more; FML loads the newest nested copy in range,
     // which runs to the next minor. Its machine view shows a Displacer in Jade (#37).
-    runtime = '0.1.11'
+    runtime = '0.1.13'
 }
 
 repositories {
