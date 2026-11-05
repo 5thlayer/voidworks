@@ -8,10 +8,14 @@ import java.util.Set;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
+import io.github._5thlayer.voidworks.Voidworks;
 import io.github._5thlayer.voidworks.mutation.Families;
 import io.github._5thlayer.voidworks.mutation.Family;
 import io.github._5thlayer.voidworks.mutation.Upgrade;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -33,6 +37,7 @@ final class FamilyTests {
     static void register(VoidworksGameTests.Registrar tests) {
         tests.test("family_shipped_metal_rungs_upgrade", 1, FamilyTests::shippedMetalRungsUpgrade);
         tests.test("family_shipped_steep_rungs_lead_to_gate_items", 1, FamilyTests::shippedSteepRungsLeadToGateItems);
+        tests.test("family_c_tagged_echo_shard_joins_the_echo_shard_rung", 1, FamilyTests::cTaggedEchoShardJoinsItsRung);
         tests.test("family_top_rung_and_no_family_have_no_upgrade", 1, FamilyTests::topRungAndNoFamilyHaveNoUpgrade);
         tests.test("family_datapack_adds_an_item_to_a_rung_by_tag", 1, FamilyTests::datapackAddsAnItemToARung);
         tests.test("family_datapack_adds_a_family", 1, FamilyTests::datapackAddsAFamily);
@@ -52,9 +57,13 @@ final class FamilyTests {
         helper.succeed();
     }
 
-    /** A gate item is reached only by a steep Rung: count 8, eight times the cost, half the chance. */
+    /**
+     * A gate item is reached only by a steep Rung: count 8, eight times the cost, half the chance. The
+     * echo shard's is steep by its cost and chance alone, one netherite scrap being already dear (#135).
+     */
     private static void shippedSteepRungsLeadToGateItems(GameTestHelper helper) {
         expect(helper, Items.DIAMOND, new Upgrade<>(Items.NETHERITE_SCRAP, 8, 4000, 0.5));
+        expect(helper, Items.NETHERITE_SCRAP, new Upgrade<>(Items.ECHO_SHARD, 1, 4000, 0.5));
         expect(helper, Items.GLOWSTONE_DUST, new Upgrade<>(Items.BLAZE_POWDER, 8, 1600, 0.5));
         expect(helper, Items.MAGMA_CREAM, new Upgrade<>(Items.BLAZE_ROD, 8, 7200, 0.5));
         expect(helper, Items.BLAZE_ROD, new Upgrade<>(Items.GHAST_TEAR, 8, 8000, 0.5));
@@ -63,9 +72,18 @@ final class FamilyTests {
         helper.succeed();
     }
 
+    /** The game-test pack tags a music disc fragment {@code c:gems/echo_shard}, as a mod's shard would be. */
+    private static void cTaggedEchoShardJoinsItsRung(GameTestHelper helper) {
+        var rung = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "rung/gems/echo_shard"));
+        helper.assertTrue(new ItemStack(Items.DISC_FRAGMENT_5).is(rung),
+                "an item tagged c:gems/echo_shard is not on the echo shard's Rung");
+        helper.succeed();
+    }
+
     private static void topRungAndNoFamilyHaveNoUpgrade(GameTestHelper helper) {
         expectNone(helper, Items.GOLD_INGOT);
         expectNone(helper, Items.SHULKER_SHELL);
+        expectNone(helper, Items.ECHO_SHARD);
         expectNone(helper, Items.STICK);
         expectNone(helper, Items.IRON_ORE);
         if (Families.next(ItemStack.EMPTY).isPresent()) {

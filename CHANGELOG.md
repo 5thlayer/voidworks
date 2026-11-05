@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+- The `gems` Family gains a steep top Rung, netherite scrap ⇒ echo shard, one scrap for one for 4,000 void energy and a 0.5 chance, so a pack with no ancient cities, a skyblock say, can still smith the Resonant Void Siphon. Its tag, `voidworks:rung/gems/echo_shard`, takes `minecraft:echo_shard` and `#c:gems/echo_shard`. (#135)
+
 ## 0.2.0
 
 - A Matter-line Void Dragon is seen loading and unloading its cargo. Once it is up out of the shaft at its stop, or up off its seat where it rested, it holds still over the shaft, and the first item taken from each provider hatch on the Well it stopped at rises from the top of the hatch, arcs over the rim and comes in to its paws in a second, landing with a quiet item pickup pop, their starts spread so the last lands half a second before it dives; it hangs its first stack only once the first has reached its paws. Unloading and dropping at a rider's Well are the mirror, from its paws into each hatch it puts into, and it hangs the stack it carried until the last leaves its paws. Only the look waits: the hatches are emptied or filled, and the Toll paid, as the stop begins, as before. A presence shown partway through a stop joins it there. `Trip` gains `handling`, how its stop is seen (`Handling`, of `Passing`s); `VoidDragon.onPassing` is how each is shown, by a `PassingShown` sent to the players watching the dragon. (#133)

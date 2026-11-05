@@ -33,6 +33,12 @@
       "count": 8,
       "cost": 4000,
       "chance": 0.5
+    },
+    {
+      "items": "#voidworks:rung/gems/echo_shard",
+      "result": "minecraft:echo_shard",
+      "cost": 4000,
+      "chance": 0.5
     }
   ]
 }

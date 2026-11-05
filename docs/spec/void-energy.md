@@ -222,7 +222,7 @@ template, keeping its motes and its toggle, as netherite keeps a tool's enchantm
 | Tier | Climbs with | Capacity | Rate |
 |---|---|---|---|
 | Void Siphon | (crafted) | 256 | 8 |
-| Resonant Void Siphon | an echo shard, from the deep dark | 1024 | 16 |
+| Resonant Void Siphon | an echo shard, from the deep dark, or a steep Rung from netherite scrap | 1024 | 16 |
 | Draconic Void Siphon | dragon's breath, after the dragon | 4096 | 32 |
 
 The capacities and rates are provisional, a list per tier in the server config. The Siphon has no
@@ -653,7 +653,7 @@ What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, 
 - **Metals**: five Families (`metal_ingots`, `metal_nuggets`, `metal_blocks`, `raw_metals`,
   `raw_metal_blocks`), each copper → iron → gold. Ores
   are left out, since Fortune makes an ore worth more than its ingot and Displacers swap ores.
-- **Gems**: lapis → amethyst shard → quartz → emerald → diamond ⇒ netherite scrap.
+- **Gems**: lapis → amethyst shard → quartz → emerald → diamond ⇒ netherite scrap ⇒ echo shard.
   Gem blocks are left out: amethyst and quartz blocks hold four, the others nine.
 - **Dusts**: redstone → glowstone dust ⇒ blaze powder.
 - **Dragon eggs**: Drained Dragon Egg ⇒ Matter Dragon Egg, one egg for one, which founds the Matter
@@ -671,10 +671,11 @@ What Voidworks ships, ⇒ marking a steep Rung, each ladder one Family (`gems`, 
 The shipped Families keep three rules, which a pack may break on purpose:
 
 - **Gates are paid through, never barred.** A **gate item** (the Siphon's ghast tear and blaze rod,
-  blaze powder for the eye of ender, netherite, shulker shells) is reached only by a steep Rung, a
-  high count and cost; ratios multiply up a ladder, so reaching a Nether drop from Overworld ones
-  costs every border crossed. Crying obsidian has no ladder and stays out: ruined portals and
-  piglin barter are its sources.
+  blaze powder for the eye of ender, netherite, shulker shells, the Resonant Siphon's echo shard) is
+  reached only by a steep Rung, a high cost and, unless the item below is dear already, a high count
+  (the echo shard takes one netherite scrap); ratios multiply up a ladder, so reaching a Nether drop
+  from Overworld ones costs every border crossed. Crying obsidian has no ladder and
+  stays out: ruined portals and piglin barter are its sources.
 - **No Rung beats vanilla.** Where a vanilla recipe turns one item into another, a Rung between them
   is no better a rate: leather sits below rabbit hide, which crafts four to one into it.
 - **No food.** Meats, eggs and crops are trivially farmed and feed their own cooking.

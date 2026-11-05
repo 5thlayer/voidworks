@@ -284,12 +284,13 @@ result changes only on purpose.
 _Avoid_: tier, level
 
 **Steep Rung**:
-A Rung whose count and cost are set high on purpose: the toll before a Gate item or across a
-dimension border. It is a description of the numbers, not a kind of Rung.
+A Rung whose cost, and its count unless the item below is dear already, are set high on purpose: the
+toll before a Gate item or across a dimension border. It is a description of the numbers, not a kind of Rung.
 _Avoid_: hard Rung, gated Rung
 
 **Gate item**:
 An item the progression uses as a toll before the step that earns it: the Void Siphon's ghast tear
-and blaze rod, crying obsidian, netherite, blaze powder (the eye of ender), shulker shells. A Family
-may reach one, but only by a steep Rung, so a gate is paid through, never barred.
+and blaze rod, crying obsidian, netherite, blaze powder (the eye of ender), shulker shells, the echo
+shard (the Resonant Void Siphon). A Family may reach one, but only by a steep Rung, so a gate is
+paid through, never barred.
 _Avoid_: key item, progression item

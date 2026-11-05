@@ -1,0 +1,9 @@
+{
+  "values": [
+    "minecraft:echo_shard",
+    {
+      "id": "#c:gems/echo_shard",
+      "required": false
+    }
+  ]
+}
