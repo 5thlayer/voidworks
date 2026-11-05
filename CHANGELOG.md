@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+## 0.2.1
+
 - The `gems` Family gains a steep top Rung, netherite scrap ⇒ echo shard, one scrap for one for 4,000 void energy and a 0.5 chance, so a pack with no ancient cities, a skyblock say, can still smith the Resonant Void Siphon. Its tag, `voidworks:rung/gems/echo_shard`, takes `minecraft:echo_shard` and `#c:gems/echo_shard`. (#135)
 
 ## 0.2.0
