@@ -2,7 +2,7 @@
 
 A release reaches Consumers through the local maven repository (`~/.m2`) at a version of its own. Consumers read the Module from there by version, and a Consumer that pins the jar pins its sha256. That only works if the jar published at a version is the one jar that version ever names.
 
-A Module that names its Modrinth and CurseForge projects in `gradle.properties` also uploads a released version there, from the maintainer's machine (below); one that names none, as Voidworks does, publishes nowhere else. CI builds and tests on every push but never publishes.
+A Module that names its Modrinth and CurseForge projects in `gradle.properties`, as Voidworks does, also uploads a released version there, from the maintainer's machine (below); one that names none publishes nowhere else. CI builds and tests on every push but never publishes.
 
 ## The changelog
 
