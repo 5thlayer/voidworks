@@ -77,6 +77,7 @@ final class FamilyTests {
         var rung = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Voidworks.MOD_ID, "rung/gems/echo_shard"));
         helper.assertTrue(new ItemStack(Items.DISC_FRAGMENT_5).is(rung),
                 "an item tagged c:gems/echo_shard is not on the echo shard's Rung");
+        expectNone(helper, Items.DISC_FRAGMENT_5);
         helper.succeed();
     }
 

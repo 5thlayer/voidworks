@@ -747,8 +747,8 @@ ends as Voidstone. The Void Siphon alone must never close a profitable loop.
 - **Numbers** — prices are datapack data and the rest server config
   ([ADR 0009](../adr/0009-prices-are-datapack-data-and-physics-is-server-config.md)): the pressures and grades beyond the provisional bands above, the Density curve,
   each Dormant machine's cost, how much a Voidstone holds, each Rung's count, cost and chance (provisional: metal, gem
-  and dust Rungs count 1, drop Rungs 2, steep Rungs 8 but the egg Rung 1; a Rung's cost is 100 void energy times its place up
-  the ladder, eight times that when steep; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
+  and dust Rungs count 1, drop Rungs 2, steep Rungs 8 but the egg and echo shard Rungs 1; a Rung's cost is 100 void energy times its place up
+  the ladder, eight times that when steep, but the echo shard's 4,000, as netherite scrap's; chance 0.8, 0.5 when steep), breakdown yield against motes (provisional: 25% rising toward 75%, each 25,600 void energy spent
   closing half the gap), the Void Crucible's speed and how near Crucibles share it, mote speed, Void Well capacity,
   the Void Siphon's capacity per tier, the FE a void energy charges (provisional: 10, tuned against
   Gearworks' Gear, whose battery upgrade holds 100,000; a server config value), and the network pressure cap, and the Void Dragon's (provisional:

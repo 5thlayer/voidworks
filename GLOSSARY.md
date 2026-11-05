@@ -284,8 +284,9 @@ result changes only on purpose.
 _Avoid_: tier, level
 
 **Steep Rung**:
-A Rung whose cost, and its count unless the item below is dear already, are set high on purpose: the
-toll before a Gate item or across a dimension border. It is a description of the numbers, not a kind of Rung.
+A Rung whose cost, and its count unless the item below is dear already (netherite scrap below the
+echo shard, the Drained Dragon Egg), are set high on purpose: the toll before a Gate item or across
+a dimension border. It is a description of the numbers, not a kind of Rung.
 _Avoid_: hard Rung, gated Rung
 
 **Gate item**:
