@@ -5,6 +5,8 @@ package io.github._5thlayer.voidworks.compat.jade;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import io.github._5thlayer.libworks.machine.jade.MachineReport;
 import io.github._5thlayer.voidworks.Voidworks;
@@ -68,7 +70,10 @@ import snownee.jade.api.ui.JadeUI;
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
  *
- * <p>Found by Jade's annotation scan and named nowhere else, so Jade stays a soft dependency.
+ * <p>Found by Jade's annotation scan and named nowhere else, so Jade stays a soft dependency. A
+ * dedicated server loads it too, to register the server data, and has none of the client's classes,
+ * so how the reports are drawn lives in its {@link Client}: this class names none of Jade's
+ * tooltip types (#137).
  */
 @WailaPlugin
 public final class VoidworksJadePlugin implements IWailaPlugin {
@@ -147,23 +152,6 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return !dragonling.grown() && dragonling.level() instanceof ServerLevel level ? DragonlingReport.of(dragonling, level.getServer()) : null;
     }
 
-    /**
-     * A dragon's report, a Matter-line dragon's items between its head and tail: one line per item, its
-     * icon and name and how many, a filled container followed by the icons of what it holds. Client-only.
-     */
-    private static void showDragon(DragonReport report, ITooltip tooltip, EntityAccessor accessor) {
-        report.head().forEach(tooltip::add);
-        var registries = accessor.getLevel().registryAccess();
-        for (var ware : report.items()) {
-            var stack = StackWares.stack(ware, registries);
-            tooltip.add(JadeUI.item(stack.copyWithCount(1)));
-            tooltip.append(JadeUI.text(Component.translatable("voidworks.jade.dragon.item", stack.getHoverName(), ware.count())).alignSelfCenter());
-            var held = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
-            held.forEach(inside -> tooltip.append(JadeUI.item(inside, 0.75F)));
-        }
-        report.tail().forEach(tooltip::add);
-    }
-
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
@@ -181,25 +169,56 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidstoneBlock.class);
-        registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidWellBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(DORMANT, (lines, tooltip) -> lines.forEach(tooltip::add)), Block.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(DISPLACER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                DisplacerBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(CHAMBER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                MutationChamberBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(UNMAKING, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                UnmakingChamberBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(CRUCIBLE, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                VoidCrucibleBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                VoidWellBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> {
-            report.lines().forEach(line -> tooltip.add(JadeUI.text(line).alignSelfCenter()));
-            report.request().ifPresent(asked -> tooltip.append(JadeUI.item(new ItemStack(asked.item()), 1, Integer.toString(asked.stacks()))));
-        }), WellHatchBlock.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, VoidworksJadePlugin::showDragon,
-                report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
+        Client.register(registration);
+    }
+
+    /**
+     * The client half: how each report is drawn in Jade's tooltip. Client-only, and nested, so a
+     * dedicated server, which loads the plugin, never loads it.
+     */
+    static final class Client {
+
+        private Client() {
+        }
+
+        static void register(IWailaClientRegistration registration) {
+            registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidstoneBlock.class);
+            registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidWellBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(DORMANT, lines(Function.identity())), Block.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(DISPLACER, lines(DisplacerReport::lines)), DisplacerBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(CHAMBER, lines(ChamberReport::lines)), MutationChamberBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(UNMAKING, lines(UnmakingReport::lines)), UnmakingChamberBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(CRUCIBLE, lines(CrucibleReport::lines)), VoidCrucibleBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(WELL, lines(WellReport::lines)), VoidWellBlock.class);
+            registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> {
+                report.lines().forEach(line -> tooltip.add(JadeUI.text(line).alignSelfCenter()));
+                report.request().ifPresent(asked -> tooltip.append(JadeUI.item(new ItemStack(asked.item()), 1, Integer.toString(asked.stacks()))));
+            }), WellHatchBlock.class);
+            registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, Client::showDragon,
+                    report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
+            registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
+        }
+
+        /**
+         * A dragon's report, a Matter-line dragon's items between its head and tail: one line per item, its
+         * icon and name and how many, a filled container followed by the icons of what it holds.
+         */
+        private static void showDragon(DragonReport report, ITooltip tooltip, EntityAccessor accessor) {
+            report.head().forEach(tooltip::add);
+            var registries = accessor.getLevel().registryAccess();
+            for (var ware : report.items()) {
+                var stack = StackWares.stack(ware, registries);
+                tooltip.add(JadeUI.item(stack.copyWithCount(1)));
+                tooltip.append(JadeUI.text(Component.translatable("voidworks.jade.dragon.item", stack.getHoverName(), ware.count())).alignSelfCenter());
+                var held = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
+                held.forEach(inside -> tooltip.append(JadeUI.item(inside, 0.75F)));
+            }
+            report.tail().forEach(tooltip::add);
+        }
+
+        /** Adds the lines {@code lines} reads from a report, one under another. */
+        private static <D> BiConsumer<D, ITooltip> lines(Function<D, List<Component>> lines) {
+            return (report, tooltip) -> lines.apply(report).forEach(tooltip::add);
+        }
     }
 }

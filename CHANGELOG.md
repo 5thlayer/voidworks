@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+- Jade shows the Module's lines to players on a dedicated server: the Voidstone network, a Dormant machine's payment, the Displacer, the Chambers, the Crucible, the Well, the Well hatch and the Void Dragons' reports. Jade had dropped the plugin there, as it could not load without the client's classes, so no server sent the data the lines show. (#137)
+
 ## 0.2.1
 
 - The `gems` Family gains a steep top Rung, netherite scrap ⇒ echo shard, one scrap for one for 4,000 void energy and a 0.5 chance, so a pack with no ancient cities, a skyblock say, can still smith the Resonant Void Siphon. Its tag, `voidworks:rung/gems/echo_shard`, takes `minecraft:echo_shard` and `#c:gems/echo_shard`. (#135)

@@ -4,8 +4,10 @@
 package io.github._5thlayer.voidworks.gametest;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -43,6 +45,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A Matter-line dragon seen loading and unloading, on a real server (spec § Moving matter, Seen): at
@@ -245,29 +248,63 @@ final class SeenLoadingTests {
                 .thenSucceed();
     }
 
-    /** What each presence is seen to move, as the hook main sends it through hears it, sent on as ever. */
+    /**
+     * What each presence is seen to move, as the hook main sends it through hears it, sent on as ever.
+     * Tests side by side share the one hook: it is set once, while any of them listens, and hands each
+     * passing to the one listening for its dragon, so none stops another hearing whatever order they
+     * start and end in.
+     */
     private static final class Shown {
 
-        final List<Seen> passings = new ArrayList<>();
-        private VoidDragon.Passer sending;
+        /** Who listens for each dragon, while any does; only the server thread touches it. */
+        private static final Map<UUID, Shown> LISTENING = new HashMap<>();
+        /**
+         * The hook as it was before the first of them listened: sent each passing on, and set back once
+         * the last stops. A test that fails before it stops leaves {@code Shown::hear} in place for the
+         * rest of the run, still sending each passing on to it.
+         */
+        private static VoidDragon.@Nullable Passer sending;
 
-        /** Hears what the presences of the dragon {@code id} are seen to move. */
+        final List<Seen> passings = new ArrayList<>();
+        private @Nullable UUID id;
+
+        /** Hears what the presences of the dragon {@code id} are seen to move: once, and alone for that dragon. */
         void listen(UUID id) {
-            sending = VoidDragon.passer();
-            VoidDragon.onPassing((dragon, passing, loading, elapsed) -> {
-                sending.show(dragon, passing, loading, elapsed);
-                if (!dragon.dragonId().equals(Optional.of(id))) {
-                    return;
-                }
-                var server = dragon.level().getServer();
-                var record = SavedVoidDragons.of(server).get(dragon.dragonId().orElseThrow()).orElseThrow();
-                long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
-                passings.add(new Seen(dragon, passing, loading, elapsed, into));
-            });
+            if (this.id != null) {
+                throw new IllegalStateException("already listening for " + this.id);
+            }
+            if (LISTENING.containsKey(id)) {
+                throw new IllegalStateException("another listens for " + id);
+            }
+            this.id = id;
+            if (LISTENING.isEmpty()) {
+                sending = VoidDragon.passer();
+                VoidDragon.onPassing(Shown::hear);
+            }
+            LISTENING.put(id, this);
         }
 
+        /** Stops hearing, setting the hook back once none listens. */
         void stop() {
-            VoidDragon.onPassing(sending);
+            if (id == null || !LISTENING.remove(id, this)) {
+                throw new IllegalStateException("not listening");
+            }
+            if (LISTENING.isEmpty()) {
+                VoidDragon.onPassing(Objects.requireNonNull(sending));
+            }
+        }
+
+        private static void hear(VoidDragon dragon, Passing passing, boolean loading, int elapsed) {
+            Objects.requireNonNull(sending).show(dragon, passing, loading, elapsed);
+            var listening = dragon.dragonId().map(LISTENING::get);
+            if (listening.isEmpty()) {
+                return;
+            }
+            var shown = listening.get();
+            var server = dragon.level().getServer();
+            var record = SavedVoidDragons.of(server).get(shown.id).orElseThrow();
+            long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
+            shown.passings.add(new Seen(dragon, passing, loading, elapsed, into));
         }
     }
 
