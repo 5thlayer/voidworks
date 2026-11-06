@@ -262,15 +262,18 @@ final class SeenLoadingTests {
          * the last stops. A test that fails before it stops leaves {@code Shown::hear} in place for the
          * rest of the run, still sending each passing on to it.
          */
-        private static VoidDragon.Passer sending;
+        private static VoidDragon.@Nullable Passer sending;
 
         final List<Seen> passings = new ArrayList<>();
         private @Nullable UUID id;
 
         /** Hears what the presences of the dragon {@code id} are seen to move: once, and alone for that dragon. */
         void listen(UUID id) {
-            if (this.id != null || LISTENING.containsKey(id)) {
-                throw new IllegalStateException("already listening for " + (this.id != null ? this.id : id));
+            if (this.id != null) {
+                throw new IllegalStateException("already listening for " + this.id);
+            }
+            if (LISTENING.containsKey(id)) {
+                throw new IllegalStateException("another listens for " + id);
             }
             this.id = id;
             if (LISTENING.isEmpty()) {
