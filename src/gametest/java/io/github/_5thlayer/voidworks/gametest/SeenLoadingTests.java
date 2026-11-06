@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -289,12 +290,12 @@ final class SeenLoadingTests {
                 throw new IllegalStateException("not listening");
             }
             if (LISTENING.isEmpty()) {
-                VoidDragon.onPassing(sending);
+                VoidDragon.onPassing(Objects.requireNonNull(sending));
             }
         }
 
         private static void hear(VoidDragon dragon, Passing passing, boolean loading, int elapsed) {
-            sending.show(dragon, passing, loading, elapsed);
+            Objects.requireNonNull(sending).show(dragon, passing, loading, elapsed);
             var listening = dragon.dragonId().map(LISTENING::get);
             if (listening.isEmpty()) {
                 return;
