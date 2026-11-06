@@ -55,10 +55,10 @@ dependencies {
     testImplementation 'maven.modrinth:jade:26.1.11+neoforge'
     // Gearworks' Gear, an FE item to wear while a Void Siphon charges it (ADR 0007). Voidworks names
     // none of its types and requires it nowhere: it charges through NeoForge's item energy capability.
-    clientMods 'io.github.5thlayer:gearworks:0.1.0'
+    clientMods 'io.github.5thlayer:gearworks:0.2.2'
     // Groundworks, which places the Void Well in one step from its core, an Assembly the Module
     // declares as data alone (#65). Voidworks names none of its types and requires it nowhere.
-    clientMods 'io.github.5thlayer:groundworks:0.5.12'
+    clientMods 'io.github.5thlayer:groundworks:0.7.0'
 }
 
 neoForge {
