@@ -4,6 +4,7 @@
 package io.github._5thlayer.voidworks.gametest;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -245,29 +246,49 @@ final class SeenLoadingTests {
                 .thenSucceed();
     }
 
-    /** What each presence is seen to move, as the hook main sends it through hears it, sent on as ever. */
+    /**
+     * What each presence is seen to move, as the hook main sends it through hears it, sent on as ever.
+     * Tests side by side share the one hook: it is set once, while any of them listens, and hands each
+     * passing to the one listening for its dragon, so none stops another hearing whatever order they
+     * start and end in.
+     */
     private static final class Shown {
 
+        /** Who listens for each dragon, while any does; only the server thread touches it. */
+        private static final Map<UUID, Shown> LISTENING = new HashMap<>();
+        /** The hook as it was before the first of them listened, sent each passing on and set back once the last stops. */
+        private static VoidDragon.Passer sending;
+
         final List<Seen> passings = new ArrayList<>();
-        private VoidDragon.Passer sending;
+        private UUID id;
 
         /** Hears what the presences of the dragon {@code id} are seen to move. */
         void listen(UUID id) {
-            sending = VoidDragon.passer();
-            VoidDragon.onPassing((dragon, passing, loading, elapsed) -> {
-                sending.show(dragon, passing, loading, elapsed);
-                if (!dragon.dragonId().equals(Optional.of(id))) {
-                    return;
-                }
-                var server = dragon.level().getServer();
-                var record = SavedVoidDragons.of(server).get(dragon.dragonId().orElseThrow()).orElseThrow();
-                long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
-                passings.add(new Seen(dragon, passing, loading, elapsed, into));
-            });
+            this.id = id;
+            if (LISTENING.isEmpty()) {
+                sending = VoidDragon.passer();
+                VoidDragon.onPassing(Shown::hear);
+            }
+            LISTENING.put(id, this);
         }
 
         void stop() {
-            VoidDragon.onPassing(sending);
+            LISTENING.remove(id);
+            if (LISTENING.isEmpty()) {
+                VoidDragon.onPassing(sending);
+            }
+        }
+
+        private static void hear(VoidDragon dragon, Passing passing, boolean loading, int elapsed) {
+            sending.show(dragon, passing, loading, elapsed);
+            var shown = dragon.dragonId().map(LISTENING::get);
+            if (shown.isEmpty()) {
+                return;
+            }
+            var server = dragon.level().getServer();
+            var record = SavedVoidDragons.of(server).get(dragon.dragonId().orElseThrow()).orElseThrow();
+            long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
+            shown.get().passings.add(new Seen(dragon, passing, loading, elapsed, into));
         }
     }
 
