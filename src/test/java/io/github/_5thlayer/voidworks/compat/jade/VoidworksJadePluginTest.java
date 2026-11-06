@@ -6,7 +6,6 @@ package io.github._5thlayer.voidworks.compat.jade;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URL;
 import java.util.Enumeration;
 
@@ -46,7 +45,7 @@ class VoidworksJadePluginTest {
                 var read = bytes.readAllBytes();
                 return defineClass(name, read, 0, read.length);
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                throw new ClassNotFoundException(name, e);
             }
         }
 
