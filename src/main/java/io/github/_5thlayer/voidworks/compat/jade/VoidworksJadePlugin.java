@@ -4,54 +4,39 @@
 package io.github._5thlayer.voidworks.compat.jade;
 
 import java.util.List;
-import java.util.Optional;
 
 import io.github._5thlayer.libworks.machine.jade.MachineReport;
 import io.github._5thlayer.voidworks.Voidworks;
-import io.github._5thlayer.voidworks.displacer.DisplacerBlock;
 import io.github._5thlayer.voidworks.displacer.DisplacerBlockEntity;
 import io.github._5thlayer.voidworks.displacer.DisplacerReport;
 import io.github._5thlayer.voidworks.dormant.Dormancy;
 import io.github._5thlayer.voidworks.dragon.DragonReport;
 import io.github._5thlayer.voidworks.dragon.DragonlingReport;
-import io.github._5thlayer.voidworks.dragon.StackWares;
 import io.github._5thlayer.voidworks.dragon.VoidDragon;
-import io.github._5thlayer.voidworks.dragon.VoidDragonRecord;
 import io.github._5thlayer.voidworks.energy.TouchingMotes;
 import io.github._5thlayer.voidworks.mutation.ChamberReport;
 import io.github._5thlayer.voidworks.mutation.CrucibleReport;
-import io.github._5thlayer.voidworks.mutation.MutationChamberBlock;
 import io.github._5thlayer.voidworks.mutation.MutationChamberBlockEntity;
-import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlock;
 import io.github._5thlayer.voidworks.mutation.UnmakingChamberBlockEntity;
 import io.github._5thlayer.voidworks.mutation.UnmakingReport;
-import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlock;
 import io.github._5thlayer.voidworks.mutation.VoidCrucibleBlockEntity;
 import io.github._5thlayer.voidworks.network.VoidstoneBlock;
 import io.github._5thlayer.voidworks.well.HatchReport;
 import io.github._5thlayer.voidworks.well.VoidWellBlock;
 import io.github._5thlayer.voidworks.well.VoidWellBlockEntity;
-import io.github._5thlayer.voidworks.well.WellHatchBlock;
 import io.github._5thlayer.voidworks.well.WellHatchBlockEntity;
 import io.github._5thlayer.voidworks.well.WellReport;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.ItemContainerContents;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
-import snownee.jade.api.EntityAccessor;
-import snownee.jade.api.ITooltip;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaCommonRegistration;
 import snownee.jade.api.IWailaPlugin;
 import snownee.jade.api.WailaPlugin;
-import snownee.jade.api.ui.JadeUI;
 
 /**
  * What a void block holds, in Jade, read on the server where networks and Dormancy live: a
@@ -68,36 +53,39 @@ import snownee.jade.api.ui.JadeUI;
  * A Displacer that is Dormant and fed shows both its payment and its fed block, as a Dormant Chamber
  * shows its payment and its input.
  *
- * <p>Found by Jade's annotation scan and named nowhere else, so Jade stays a soft dependency.
+ * <p>Found by Jade's annotation scan and named nowhere else, so Jade stays a soft dependency. A
+ * dedicated server loads it too, to register the server data, and has none of the client's classes,
+ * so how the reports are drawn lives in {@link VoidworksJadeClient}: this class names none of Jade's
+ * tooltip types (#137).
  */
 @WailaPlugin
 public final class VoidworksJadePlugin implements IWailaPlugin {
 
-    private static final MachineReport<BlockEntity, List<Component>> DORMANT = new MachineReport<>(id("dormant"), BlockEntity.class,
+    static final MachineReport<BlockEntity, List<Component>> DORMANT = new MachineReport<>(id("dormant"), BlockEntity.class,
             VoidworksJadePlugin::dormancy, ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()));
 
-    private static final MachineReport<DisplacerBlockEntity, DisplacerReport> DISPLACER =
+    static final MachineReport<DisplacerBlockEntity, DisplacerReport> DISPLACER =
             new MachineReport<>(id("displacer"), DisplacerBlockEntity.class, VoidworksJadePlugin::displacer, DisplacerReport.STREAM_CODEC);
 
-    private static final MachineReport<MutationChamberBlockEntity, ChamberReport> CHAMBER =
+    static final MachineReport<MutationChamberBlockEntity, ChamberReport> CHAMBER =
             new MachineReport<>(id("chamber"), MutationChamberBlockEntity.class, VoidworksJadePlugin::chamber, ChamberReport.STREAM_CODEC);
 
-    private static final MachineReport<UnmakingChamberBlockEntity, UnmakingReport> UNMAKING = new MachineReport<>(id("unmaking"),
+    static final MachineReport<UnmakingChamberBlockEntity, UnmakingReport> UNMAKING = new MachineReport<>(id("unmaking"),
             UnmakingChamberBlockEntity.class, VoidworksJadePlugin::unmaking, UnmakingReport.STREAM_CODEC);
 
-    private static final MachineReport<VoidCrucibleBlockEntity, CrucibleReport> CRUCIBLE =
+    static final MachineReport<VoidCrucibleBlockEntity, CrucibleReport> CRUCIBLE =
             new MachineReport<>(id("crucible"), VoidCrucibleBlockEntity.class, VoidworksJadePlugin::crucible, CrucibleReport.STREAM_CODEC);
 
-    private static final MachineReport<VoidWellBlockEntity, WellReport> WELL =
+    static final MachineReport<VoidWellBlockEntity, WellReport> WELL =
             new MachineReport<>(id("well"), VoidWellBlockEntity.class, VoidworksJadePlugin::well, WellReport.STREAM_CODEC);
 
-    private static final MachineReport<WellHatchBlockEntity, HatchReport> HATCH =
+    static final MachineReport<WellHatchBlockEntity, HatchReport> HATCH =
             new MachineReport<>(id("hatch"), WellHatchBlockEntity.class, VoidworksJadePlugin::hatch, HatchReport.STREAM_CODEC);
 
-    private static final CreatureReport<VoidDragon, DragonReport> DRAGON =
+    static final CreatureReport<VoidDragon, DragonReport> DRAGON =
             new CreatureReport<>(id("dragon"), VoidDragon.class, VoidworksJadePlugin::dragon, DragonReport.STREAM_CODEC);
 
-    private static final CreatureReport<VoidDragon, DragonlingReport> DRAGONLING =
+    static final CreatureReport<VoidDragon, DragonlingReport> DRAGONLING =
             new CreatureReport<>(id("dragonling"), VoidDragon.class, VoidworksJadePlugin::dragonling, DragonlingReport.STREAM_CODEC);
 
     static Identifier id(String path) {
@@ -147,23 +135,6 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
         return !dragonling.grown() && dragonling.level() instanceof ServerLevel level ? DragonlingReport.of(dragonling, level.getServer()) : null;
     }
 
-    /**
-     * A dragon's report, a Matter-line dragon's items between its head and tail: one line per item, its
-     * icon and name and how many, a filled container followed by the icons of what it holds. Client-only.
-     */
-    private static void showDragon(DragonReport report, ITooltip tooltip, EntityAccessor accessor) {
-        report.head().forEach(tooltip::add);
-        var registries = accessor.getLevel().registryAccess();
-        for (var ware : report.items()) {
-            var stack = StackWares.stack(ware, registries);
-            tooltip.add(JadeUI.item(stack.copyWithCount(1)));
-            tooltip.append(JadeUI.text(Component.translatable("voidworks.jade.dragon.item", stack.getHoverName(), ware.count())).alignSelfCenter());
-            var held = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
-            held.forEach(inside -> tooltip.append(JadeUI.item(inside, 0.75F)));
-        }
-        report.tail().forEach(tooltip::add);
-    }
-
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(VoidstoneReport.INSTANCE, VoidstoneBlock.class);
@@ -181,25 +152,6 @@ public final class VoidworksJadePlugin implements IWailaPlugin {
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidstoneBlock.class);
-        registration.registerBlockComponent(VoidstoneReport.Client.INSTANCE, VoidWellBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(DORMANT, (lines, tooltip) -> lines.forEach(tooltip::add)), Block.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(DISPLACER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                DisplacerBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(CHAMBER, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                MutationChamberBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(UNMAKING, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                UnmakingChamberBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(CRUCIBLE, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                VoidCrucibleBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(WELL, (report, tooltip) -> report.lines().forEach(tooltip::add)),
-                VoidWellBlock.class);
-        registration.registerBlockComponent(new MachineReport.Client<>(HATCH, (report, tooltip) -> {
-            report.lines().forEach(line -> tooltip.add(JadeUI.text(line).alignSelfCenter()));
-            report.request().ifPresent(asked -> tooltip.append(JadeUI.item(new ItemStack(asked.item()), 1, Integer.toString(asked.stacks()))));
-        }), WellHatchBlock.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGON, VoidworksJadePlugin::showDragon,
-                report -> Optional.of(new CreatureReport.Health(report.health(), VoidDragonRecord.FULL_HEALTH))), VoidDragon.class);
-        registration.registerEntityComponent(new CreatureReport.Client<>(DRAGONLING, DragonlingReport::lines), VoidDragon.class);
+        VoidworksJadeClient.register(registration);
     }
 }

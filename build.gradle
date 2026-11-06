@@ -51,6 +51,8 @@ dependencies {
     // plugin by its annotation, so the Module runs without it (#37).
     compileOnly 'maven.modrinth:jade:26.1.11+neoforge'
     clientMods 'maven.modrinth:jade:26.1.11+neoforge'
+    // A JUnit test loads the plugin class as a dedicated server would, with no client classes (#137).
+    testImplementation 'maven.modrinth:jade:26.1.11+neoforge'
     // Gearworks' Gear, an FE item to wear while a Void Siphon charges it (ADR 0007). Voidworks names
     // none of its types and requires it nowhere: it charges through NeoForge's item energy capability.
     clientMods 'io.github.5thlayer:gearworks:0.1.0'
