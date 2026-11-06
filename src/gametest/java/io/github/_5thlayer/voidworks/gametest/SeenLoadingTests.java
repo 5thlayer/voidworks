@@ -256,7 +256,11 @@ final class SeenLoadingTests {
 
         /** Who listens for each dragon, while any does; only the server thread touches it. */
         private static final Map<UUID, Shown> LISTENING = new HashMap<>();
-        /** The hook as it was before the first of them listened, sent each passing on and set back once the last stops. */
+        /**
+         * The hook as it was before the first of them listened, sent each passing on and set back once
+         * the last stops; a test that fails before it stops leaves it unset back for the rest of the run,
+         * still sent each passing.
+         */
         private static VoidDragon.Passer sending;
 
         final List<Seen> passings = new ArrayList<>();
@@ -273,7 +277,9 @@ final class SeenLoadingTests {
         }
 
         void stop() {
-            LISTENING.remove(id);
+            if (id == null || !LISTENING.remove(id, this)) {
+                return;
+            }
             if (LISTENING.isEmpty()) {
                 VoidDragon.onPassing(sending);
             }
@@ -286,7 +292,7 @@ final class SeenLoadingTests {
                 return;
             }
             var server = dragon.level().getServer();
-            var record = SavedVoidDragons.of(server).get(dragon.dragonId().orElseThrow()).orElseThrow();
+            var record = SavedVoidDragons.of(server).get(shown.get().id).orElseThrow();
             long into = server.overworld().getGameTime() - record.trip().orElseThrow().began(VoidworksConfig.dragonStopTicks());
             shown.get().passings.add(new Seen(dragon, passing, loading, elapsed, into));
         }
