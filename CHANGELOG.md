@@ -4,6 +4,8 @@ Written for Consumers: what a mod building against Voidworks can use, or will se
 
 ## Unreleased
 
+## 0.2.2
+
 - Jade shows the Module's lines to players on a dedicated server: the Voidstone network, a Dormant machine's payment, the Displacer, the Chambers, the Crucible, the Well, the Well hatch and the Void Dragons' reports. Jade had dropped the plugin there, as it could not load without the client's classes, so no server sent the data the lines show. (#137)
 
 ## 0.2.1
