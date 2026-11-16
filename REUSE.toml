@@ -67,13 +67,6 @@ precedence = "override"
 SPDX-FileCopyrightText = "Gradle"
 SPDX-License-Identifier = "Apache-2.0"
 
-# The engineering skills are copied from mattpocock/skills v1.3.1.
-[[annotations]]
-path = [".claude/skills/**"]
-precedence = "override"
-SPDX-FileCopyrightText = "2026 Matt Pocock"
-SPDX-License-Identifier = "MIT"
-
 # Temporary cover and icon for mod pages, drawn from the Voidstone and Displacer sprites.
 [[annotations]]
 path = ["publish/*.png"]

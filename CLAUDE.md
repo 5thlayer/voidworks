@@ -8,7 +8,7 @@ Commit on the current branch; open a feature branch only when the user asks for 
 
 Pull requests are squash-merged, the PR title becoming the conventional commit on `main`. Work after a merge starts on a new branch from `main`, never on the merged one.
 
-Anything that changes the Module's behaviour gets a `/code-review`: the project skill in `.claude/skills/code-review`, from mattpocock/skills, never the built-in review of the same name. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, submodule bumps, and tooling or CI config.
+Anything that changes the Module's behaviour gets a `/mattpocock-skills:code-review`: the `code-review` skill of the mattpocock/skills plugin, which `.claude/settings.json` enables, never the built-in `/code-review`. Doc and plumbing changes skip it: that covers `CLAUDE.md`, `GLOSSARY.md`, ADRs, `docs/`, `.claude/`, and tooling or CI config. The plugin also brings `implement` and `diagnosing-bugs`: use skillworks' ones, `skillworks:implement` and `skillworks:diagnosing-bugs`.
 
 ## Commits
 
